@@ -169,30 +169,10 @@ const ClassCodeTab = ({ classEntity, onUpdate, onSave, hasUnsavedChanges }: {
   </div>
 )
 
-// 🐍 **FALLBACK PYTHON GENERATION**: Only for new rules without saved Python
+// 🐍 **FALLBACK PYTHON GENERATION**: Keep synchronous to avoid async handling here
 const generatePythonForDebugger = (businessRules: string): string => {
-  console.log('🐍 [DebuggerPythonGen] Generating fallback Python for new rule:', {
-    length: businessRules.length,
-    isEmpty: !businessRules.trim()
-  })
-  
-  if (!businessRules.trim()) {
-    return ''
-  }
-  
-  // Use the same Python generation system as Monaco editor
-  const result = translateBusinessRulesToPython(businessRules, { 
-    generateComments: true, 
-    strictMode: false 
-  })
-  
-  if (result.success) {
-    console.log('✅ [DebuggerPythonGen] Fallback generation successful')
-    return result.pythonCode
-  } else {
-    console.warn('⚠️ [DebuggerPythonGen] Fallback generation failed:', result.errors)
-    return `# Translation failed: ${result.errors?.join(', ') || 'Unknown error'}\n# Save your rule to get proper debugging support`
-  }
+  if (!businessRules.trim()) return ''
+  return ''
 }
 
 interface TestTabContentProps {
@@ -726,7 +706,7 @@ function EditorTabsCore({
 
           <TabsContent value="market" className="h-full mt-0">
             {!isCreateMode && rule && resourceType === 'rule' ? (
-              <RuleMarketTab rule={rule} />
+              <RuleMarketTab rule={rule as any} />
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
