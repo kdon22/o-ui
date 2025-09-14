@@ -60,13 +60,14 @@ const QueryTestBench = dynamic(
 
 
 // 🚀 **PERFORMANCE**: Lazy load editor components to reduce initial bundle
+// Import directly to avoid pulling the entire barrel (which includes Monaco-heavy modules)
 const RuleDetailsTab = dynamic(
-  () => import('../../editor/components').then(mod => ({ default: mod.RuleDetailsTab })),
+  () => import('../../editor/components/rule-details-tab').then(mod => ({ default: mod.RuleDetailsTab })),
   { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Loading...</div></div> }
 )
 
 const RuleDocumentationTab = dynamic(
-  () => import('../../editor/components').then(mod => ({ default: mod.RuleDocumentationTab })),
+  () => import('../../editor/components/rule-documentation-tab').then(mod => ({ default: mod.RuleDocumentationTab })),
   { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Loading...</div></div> }
 )
 
@@ -572,7 +573,7 @@ function EditorTabsCore({
             )}
             
             {tabs.map((tab) => {
-              const Icon = tab.icon
+              const Icon = (tab.icon || Square) as any
               return (
                 <TabsTrigger 
                   key={tab.id} 

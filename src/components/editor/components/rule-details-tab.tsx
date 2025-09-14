@@ -54,7 +54,10 @@ export function RuleDetailsTab({
   // Always include nodeId when available via NavigationContext.sourceContext (handled in provider hook)
   // Include processId only when creating from a process, so auto-creator makes the junction
   const junctionNavigationContext: JunctionNavigationContext = {
-    ...(isCreatingRuleFromProcess && processContext ? { processId: processContext.processId } : {}),
+    // Prefer processId from creation context; otherwise fall back to URL-derived processId
+    ...(isCreatingRuleFromProcess && processContext
+      ? { processId: processContext.processId }
+      : (ssotNav?.processId ? { processId: ssotNav.processId as string } : {})),
     // Prefer provider-derived node, fallback to SSOT-derived nodeId if available
     ...(navigationContextState.sourceContext?.type === 'node' && navigationContextState.sourceContext.id
       ? { nodeId: navigationContextState.sourceContext.id }
@@ -72,7 +75,7 @@ export function RuleDetailsTab({
   const contextualCreateMutation = useActionMutation('rule.create', {
     // Pass navigation context for junction auto-creation
     navigationContext: junctionNavigationContext,
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
         const created = (result as any)?.data || (result as any)?.entity?.data
         console.log('🎉 [RuleDetailsTab] Contextual create completed:', {
           entityId: created?.id,
@@ -96,10 +99,10 @@ export function RuleDetailsTab({
         setHasUnsavedChanges(false)
         onSave?.()
       },
-      onError: (error) => {
+      onError: (error: any) => {
         console.error('❌ [RuleDetailsTab] Contextual create failed:', error)
       }
-    }
+    } as any
   )
   
   // Use update mutation for edit mode

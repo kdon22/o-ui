@@ -361,22 +361,47 @@ class NodeInheritanceService {
         ? (processRulesList as any).data
         : extractJunctionData(rulesArray, processRulesTableName);
 
-      // ✅ FIXED: Use the proven IndexedDB branch overlay data directly
-      // The action queries already returned branch-overlaid data - don't re-process it
+      // ✅ Use the IndexedDB branch overlay data
       const nodeProcessesMerged = baseNodeProcesses;
       const processRulesMerged = baseProcessRules;
+
+      // 🎯 Overlay refinement for nodeProcesses:
+      // If a process has a current-branch attachment to ANY node, drop the default-branch attachment(s)
+      // This prevents the same process (and its rules) from also appearing under the root/default node.
+      const currentBranchId = branchContext.currentBranchId as string;
+      const defaultBranchId = branchContext.defaultBranchId as string;
+      let nodeProcessesEffective = nodeProcessesMerged || [];
+      if (currentBranchId && defaultBranchId && currentBranchId !== defaultBranchId) {
+        const currentProcessIds = new Set(
+          (nodeProcessesMerged || [])
+            .filter((jp: any) => jp?.branchId === currentBranchId)
+            .map((jp: any) => jp.processId)
+        );
+        nodeProcessesEffective = (nodeProcessesMerged || []).filter((jp: any) => {
+          const isDefault = jp?.branchId === defaultBranchId;
+          const isShadowedByCurrent = currentProcessIds.has(jp?.processId);
+          return !(isDefault && isShadowedByCurrent);
+        });
+      }
 
       // 🚨 AGGRESSIVE DEBUG: See what junction data we have
       console.log('🔥 [InheritanceService] JUNCTION DEBUG:', {
         nodeProcessesCount: nodeProcessesMerged?.length || 0,
+        nodeProcessesEffectiveCount: nodeProcessesEffective?.length || 0,
         processRulesCount: processRulesMerged?.length || 0,
-        nodeProcessesPreview: nodeProcessesMerged?.slice(0, 3).map(np => ({
+        nodeProcessesPreview: nodeProcessesMerged?.slice(0, 3).map((np: any) => ({
           id: np?.id,
           nodeId: np?.nodeId,
           processId: np?.processId,
           branchId: np?.branchId
         })),
-        processRulesPreview: processRulesMerged?.slice(0, 3).map(pr => ({
+        nodeProcessesEffectivePreview: nodeProcessesEffective?.slice(0, 3).map((np: any) => ({
+          id: np?.id,
+          nodeId: np?.nodeId,
+          processId: np?.processId,
+          branchId: np?.branchId
+        })),
+        processRulesPreview: processRulesMerged?.slice(0, 3).map((pr: any) => ({
           id: pr?.id,
           processId: pr?.processId,
           ruleId: pr?.ruleId,
@@ -389,7 +414,7 @@ class NodeInheritanceService {
         nodes: allNodes,
         processes: processesData.success ? processesData.data : [],
         rules: rulesData.success ? rulesData.data : [],
-        nodeProcesses: nodeProcessesMerged,
+        nodeProcesses: nodeProcessesEffective,
         processRules: processRulesMerged,
         ruleIgnores: (ruleIgnoresList as any)?.success
           ? (ruleIgnoresList as any).data

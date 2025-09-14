@@ -79,7 +79,7 @@ export const useAutoNavigationContext = (): NavigationContextData => {
   const nodeIdToResolve = nodeIdShortFromPath || nodeIdFromParams || null;
   
   // Use the resolver to get the full nodeId
-  const { fullNodeId, isResolving, error } = useNodeIdResolver(nodeIdToResolve);
+  const { fullId, isResolving, error } = useNodeIdResolver(nodeIdToResolve);
   
   return useMemo(() => {
     const context: NavigationContextData = {
@@ -88,8 +88,8 @@ export const useAutoNavigationContext = (): NavigationContextData => {
       tenantId: session?.user?.tenantId,
       branchId: session?.user?.branchContext?.currentBranchId,
       
-      // Navigation context - only provide nodeId if it's fully resolved
-      nodeId: fullNodeId || undefined,
+      // Navigation context - only provide nodeId if it's resolved (resolver returns fullId or passthrough UUID)
+      nodeId: fullId || undefined,
       parentId: searchParams.get('parentId') || undefined,
       selectedId: selectedIdFromParams || undefined,
       processId: processIdFromParams || undefined,
@@ -97,12 +97,12 @@ export const useAutoNavigationContext = (): NavigationContextData => {
     };
 
     // Debug: Log navigation context extraction (reduced noise)
-    if (process.env.NODE_ENV === 'development' && (nodeIdToResolve || fullNodeId)) {
+    if (process.env.NODE_ENV === 'development' && (nodeIdToResolve || fullId)) {
       console.log('🔍 [useAutoNavigationContext] Navigation context extracted:', {
         currentPath,
         nodeIdShortFromPath,
         nodeIdToResolve,
-        fullNodeId,
+        fullNodeId: fullId,
         isResolving,
         error: error?.message,
         finalNodeId: context.nodeId
@@ -113,7 +113,7 @@ export const useAutoNavigationContext = (): NavigationContextData => {
     return Object.fromEntries(
       Object.entries(context).filter(([_, value]) => value !== undefined)
     );
-  }, [session, searchParams, fullNodeId, isResolving, error, nodeIdShortFromPath, nodeIdFromParams, nodeIdToResolve, currentPath, processIdFromParams, workflowIdFromParams, selectedIdFromParams]);
+  }, [session, searchParams, fullId, isResolving, error, nodeIdShortFromPath, nodeIdFromParams, nodeIdToResolve, currentPath, processIdFromParams, workflowIdFromParams, selectedIdFromParams]);
 };
 
 /**

@@ -494,10 +494,7 @@ export const NODE_PROCESS_SCHEMA = {
       // by looking up which node contains that process
     },
     
-    // Default values for junction creation
-    defaults: {
-      sequence: 0,
-      isActive: true
-    }
+    // Default values for junction creation (none – keep payload Prisma-valid)
+    defaults: {}
   }
 } as const; 
