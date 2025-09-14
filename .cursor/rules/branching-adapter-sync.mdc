@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+// Create the rule file
+```markdown
+# Rule: Branching in Adapter API Calls from Sync Queue
+
+**Goal:** Ensure `branchId` is correctly passed from the `SyncQueue` to the API adapter (`EntityAdapter` implementation, usually `BaseAdapter`) during synchronization operations (create, update, delete).
+
+**Context:** The application uses an offline-first approach with a `SyncQueue` processing local changes. The `SyncQueue` calls methods (`saveToApi`, `deleteFromApi`) on an `EntityAdapter` implementation obtained from the `EntityRegistry` to interact with the backend API. Branching requires passing the correct `branchId` (associated with the *queued operation*) for these API calls.
+
+**Checks:**
+
+1.  **`SyncQueue` (`src/lib/database/sync/SyncQueue.ts`):**
+    *   The `processSaveOperations` method MUST call `adapter.saveToApi`, passing the `branchId` extracted from the `SyncOperation` as the **last argument**.
+    *   The `processDeleteOperations` method MUST call `adapter.deleteFromApi`, passing the `branchId` extracted from the `SyncOperation` as the **last argument**.
+2.  **`EntityAdapter` Interface (`src/lib/database/registry/EntityRegistry.ts`):**
+    *   The `saveToApi` method signature MUST include an optional final parameter for `branchId` (e.g., `branchId?: string | null`).
+    *   The `deleteFromApi` method signature MUST include an optional final parameter for `branchId` (e.g., `branchId?: string | null`).
+3.  **`BaseAdapter` Implementation (`src/lib/database/adapters/BaseAdapter.ts`):**
+    *   The `saveToApi` method MUST accept the optional `branchId` parameter and include it in the request body for POST/PATCH requests. (Verify existing logic).
+    *   The `deleteFromApi` method MUST accept the optional `branchId` parameter and include it in the request body for DELETE requests.
+
+**Rationale:** Explicitly passing the `branchId` from the specific `SyncOperation` to the adapter ensures that the API call uses the correct branch context for that change, regardless of the current UI state. This avoids potential race conditions or incorrect data updates if the user switches branches while sync operations are pending. It keeps the adapter's API call logic stateless concerning the *current* branch.
+```

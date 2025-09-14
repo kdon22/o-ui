@@ -1,0 +1,242 @@
+/**
+ * 🎨 Monaco Editor Hover Styling - Monaco Theme Support
+ * 
+ * Provides clean, accessible hover panels that respect Monaco editor theme preferences:
+ * - vs (Light Theme) 
+ * - vs-dark (Dark Theme)
+ * - hc-black (High Contrast)
+ * 
+ * No scroll bars, content-focused design, theme-aware styling
+ */
+
+/* === MONACO HOVER WIDGET STYLING === */
+
+/* Main hover widget container */
+.monaco-hover {
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  overflow: hidden !important;
+}
+
+/* === MONACO THEME-BASED STYLING === */
+
+/* Default/Light theme (vs) */
+.monaco-editor.vs .monaco-hover,
+.monaco-hover {
+  background: #ffffff !important;
+  color: #333333 !important;
+  border: 1px solid #cccccc !important;
+}
+
+/* Dark theme (vs-dark) */
+.monaco-editor.vs-dark .monaco-hover {
+  background: #252526 !important;
+  color: #cccccc !important;
+  border: 1px solid #3e3e3e !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* High contrast theme (hc-black) */
+.monaco-editor.hc-black .monaco-hover {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Hover content container */
+.monaco-hover .hover-contents {
+  padding: 12px 16px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  max-width: 400px !important;
+  max-height: 300px !important;
+  overflow: hidden !important; /* No scroll bars */
+}
+
+/* Remove scroll bars completely */
+.monaco-hover .hover-contents::-webkit-scrollbar {
+  display: none !important;
+}
+.monaco-hover .hover-contents {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Content styling */
+.monaco-hover .hover-contents p {
+  margin: 0 0 8px 0 !important;
+  color: inherit !important;
+}
+
+.monaco-hover .hover-contents strong {
+  font-weight: 600 !important;
+  color: inherit !important;
+}
+
+/* === MONACO THEME-BASED CONTENT STYLING === */
+
+/* Default/Light theme content */
+.monaco-editor.vs .monaco-hover .hover-contents code,
+.monaco-hover .hover-contents code {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 12px !important;
+}
+
+/* Dark theme content */
+.monaco-editor.vs-dark .monaco-hover .hover-contents code {
+  background: #3e3e3e !important;
+  color: #d4d4d4 !important;
+}
+
+.monaco-editor.vs-dark .monaco-hover .hover-contents strong {
+  color: #cccccc !important;
+}
+
+/* High contrast theme content */
+.monaco-editor.hc-black .monaco-hover .hover-contents code {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+}
+
+.monaco-editor.hc-black .monaco-hover .hover-contents strong {
+  color: #ffffff !important;
+}
+
+/* === EMPHASIS STYLING === */
+
+/* Default/Light theme emphasis */
+.monaco-editor.vs .monaco-hover .hover-contents em,
+.monaco-hover .hover-contents em {
+  font-style: italic !important;
+  color: #6b7280 !important;
+}
+
+/* Dark theme emphasis */
+.monaco-editor.vs-dark .monaco-hover .hover-contents em {
+  color: #9ca3af !important;
+}
+
+/* High contrast theme emphasis */
+.monaco-editor.hc-black .monaco-hover .hover-contents em {
+  color: #cccccc !important;
+}
+
+/* Bullet points */
+.monaco-hover .hover-contents ul {
+  margin: 8px 0 !important;
+  padding-left: 16px !important;
+}
+
+.monaco-hover .hover-contents li {
+  margin: 4px 0 !important;
+  color: inherit !important;
+}
+
+/* Remove any blue link styling */
+.monaco-hover .hover-contents a {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+/* Hover widget positioning - ensure it doesn't get cut off */
+.monaco-hover.hover-above {
+  margin-bottom: 8px !important;
+}
+
+.monaco-hover.hover-below {
+  margin-top: 8px !important;
+}
+
+/* === MONACO SUGGEST WIDGET (COMPLETION) === */
+/* Ensure completion dropdown also respects theme */
+
+.monaco-editor .suggest-widget {
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* === MONACO SUGGEST WIDGET (COMPLETION) === */
+
+/* Default/Light theme completion */
+.monaco-editor.vs .suggest-widget,
+.monaco-editor .suggest-widget {
+  background: #ffffff !important;
+  color: #333333 !important;
+  border: 1px solid #cccccc !important;
+}
+
+/* Dark theme completion */
+.monaco-editor.vs-dark .suggest-widget {
+  background: #252526 !important;
+  color: #cccccc !important;
+  border: 1px solid #3e3e3e !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.monaco-editor.vs-dark .suggest-widget .monaco-list .monaco-list-row {
+  color: #cccccc !important;
+}
+
+.monaco-editor.vs-dark .suggest-widget .monaco-list .monaco-list-row.focused {
+  background: #094771 !important;
+  color: #ffffff !important;
+}
+
+/* High contrast theme completion */
+.monaco-editor.hc-black .suggest-widget {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2) !important;
+}
+
+.monaco-editor.hc-black .suggest-widget .monaco-list .monaco-list-row {
+  color: #ffffff !important;
+}
+
+.monaco-editor.hc-black .suggest-widget .monaco-list .monaco-list-row.focused {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* === CONTENT-FIRST STYLING === */
+
+/* 
+ * Monaco automatically applies theme classes to the editor container:
+ * - .monaco-editor.vs for Light Theme
+ * - .monaco-editor.vs-dark for Dark Theme  
+ * - .monaco-editor.hc-black for High Contrast
+ * 
+ * This CSS targets these classes to ensure hover styling matches 
+ * the user's Monaco editor theme preference, not the app theme.
+ */
+
+/* Remove any distracting blue highlights */
+.monaco-hover .hover-contents *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure text is readable and accessible */
+.monaco-hover .hover-contents {
+  text-rendering: optimizeLegibility !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Responsive max width for smaller screens */
+@media (max-width: 768px) {
+  .monaco-hover .hover-contents {
+    max-width: 280px !important;
+    font-size: 12px !important;
+  }
+} 

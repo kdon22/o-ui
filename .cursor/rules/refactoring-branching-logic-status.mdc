@@ -1,0 +1,71 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Branching/Versioning Refactoring Status & Next Steps
+
+This document summarizes the progress made on refactoring the application to support database branching and outlines the remaining tasks.
+
+## Progress Summary
+
+*   **Phase 1: Foundational Changes:**
+    *   [x] Solidify Branch State Management (`useBranchStore`, `AppInitializer`)
+    *   [x] Define `BranchContext` type.
+    *   [x] Establish Base Repository (`[BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts)`).
+    *   [x] Establish Repository Factory (`[RepositoryFactory.ts](mdc:src/lib/database/repositories/RepositoryFactory.ts)`).
+*   **Phase 2: Core Branching Logic - Repositories & Services:**
+    *   [x] Refactor `Node` -> `[NodeRepository.ts](mdc:src/lib/database/repositories/NodeRepository.ts)` (Fallback, CoW, Service Injection)
+    *   [x] Refactor `Rule` -> `[RuleRepository.ts](mdc:src/lib/database/repositories/RuleRepository.ts)` (Fallback, CoW, Service Injection)
+    *   [x] Refactor `Office` -> `[OfficeRepository.ts](mdc:src/lib/database/repositories/OfficeRepository.ts)` (Fallback, CoW, Service Injection)
+    *   [x] Refactor `Process` -> `[ProcessRepository.ts](mdc:src/lib/database/repositories/ProcessRepository.ts)` (Fallback, CoW, Service Injection)
+    *   [x] Refactor `Workflow` -> `[WorkflowRepository.ts](mdc:src/lib/database/repositories/WorkflowRepository.ts)` (Fallback, CoW, Service Injection)
+        *   [x] Create `[WorkflowRelationshipService.ts](mdc:src/features/workflow/services/WorkflowRelationshipService.ts)`
+        *   [x] Update `[WorkflowRepository.ts](mdc:src/lib/database/repositories/WorkflowRepository.ts)` to use services
+        *   [x] Update `[utils.ts](mdc:src/features/workflow/models/utils.ts)` (`buildIncludeObject`, `normalizeWorkflow`)
+    *   [x] Create `CredentialRepository.ts` from `CredentialModel.ts` implementing the pattern.
+    *   [x] Create basic `SettingRepository.ts` implementing the pattern (needs schema validation).
+    *   [x] Create placeholder Relationship Services (`RuleRelationshipService`, `ProcessRelationshipService`, `OfficeRelationshipService`, `CredentialRelationshipService`, `SettingRelationshipService`)
+    *   [x] Update `[RepositoryFactory.ts](mdc:src/lib/database/repositories/RepositoryFactory.ts)` to correctly inject dependencies into repository constructors.
+*   **Developer Guidance:**
+    *   [x] Create `[new-feature-repository-checklist.mdc](mdc:.cursor/rules/new-feature-repository-checklist.mdc)` rule.
+    *   [x] Create `[entity-service-refactor.mdc](mdc:.cursor/rules/entity-service-refactor.mdc)` rule (Implicitly done)
+    *   [x] Create `[repository-factory-dependency-injection.mdc](mdc:.cursor/rules/repository-factory-dependency-injection.mdc)` rule.
+
+## Remaining Tasks / Next Steps
+
+1.  **Finalize Repository/Service Implementation:**
+    *   [x] **Implement Relationship Services:** Final review and implementation of relationship logic in services (`Rule`, `Process`, `Setting`, `Credential`, `Office`) completed. Placeholders/TODOs addressed.
+    *   [ ] **AT A LATER DATE:: NOT NOW:::Validate/Complete `SettingRepository`:** Confirm the Prisma schema for `Setting` and fix any discrepancies in the generated `SettingRepository.ts`.
+    *   [ ] **Review other potential entities:** Identify any other entities needing repository refactoring (e.g., `Customer`? `Group`?).
+
+2.  **Refactor Data Access Layers:**
+    *   [x] **Refactor API Route Handlers (`src/app/api/...`):**
+        *   **Status:** Core API logic (`ApiController`, `ApiRouteFactory`) refactored to use Repositories and `BranchContext`. Routes using `createApi` should be functional. Main entity routes (e.g., `/api/node/`, `/api/processes`) handle their own relationships via injected Relationship Services (`NodeRelationshipService`, `ProcessRelationshipService`, etc.), making dedicated relationship routes (like `/api/node-rules`) redundant and unnecessary.
+        *   **Node Routes:** All `src/app/api/node/...` routes confirmed refactored.
+        *   **Other Entity Routes:** Routes for `rules`, `offices`, `processes`, `workflows`, `credentials` confirmed refactored for standard CRUD and relationship management via services.
+        *   **Goal:** Ensure *all* individual API route files (`route.ts` within `src/app/api/...`) correctly use the refactored patterns. Remove direct `prisma` calls or old model usage. Confirmed complete for primary entities and their relationships.
+        *   ~~**TODO:** Review and refactor any remaining custom handlers or specific relationship routes in `/api/{entity}/...` directories (e.g., `/api/processes/[processId]/rules/route.ts` if it exists).~~ **DONE:** Relationship routes confirmed redundant/handled by main entity endpoints + services. Need to review *other* non-standard routes if any exist.
+    *   [ ] **Frontend Queries/Mutations (`src/features/...`, `src/components/...`, Server Actions):**
+        *   **Goal:** Ensure all frontend data operations interact with the standardized repository layer (via API routes or Server Actions).
+        *   **Action (API Routes):** Review/update hooks and mutation logic to call correct endpoints and include `branchId`.
+        *   **Action (Server Actions):** Refactor components/hooks to use Server Actions; implement actions using the repository pattern.
+        *   **Cleanup:** Remove old data access patterns.
+        *   **Progress:**
+            *   [x] Refactored `useTreeData` hook and `TreeNavigation`/`TreeNodeRenderer` components to fetch tree data (root + children) using `currentBranchId`.
+        *   **TODO:** Continue refactoring other frontend hooks/mutations (e.g., node detail page fetches, mutation hooks like `useNodes`).
+
+3.  **UI Implementation:**
+    *   [ ] Implement UI components for branch selection.
+    *   [ ] Integrate branch selection state (`useBranchStore`) into data fetching hooks/logic.
+    *   [ ] Potentially add UI indicators for the current branch.
+
+4.  **Testing & Refinement:**
+    *   [ ] Thoroughly test CRUD operations across different branches.
+    *   [ ] Test fallback logic.
+    *   [ ] Test copy-on-write behavior.
+    *   [ ] Test relationship integrity during branching operations.
+    *   [ ] Test version history creation.
+
+5.  **(Optional/Future) Merge Functionality:**
+    *   [ ] Design and implement logic for merging changes between branches.

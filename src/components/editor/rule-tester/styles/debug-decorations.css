@@ -1,0 +1,98 @@
+/* 🎯 **DEBUG DECORATIONS** - Visual styles for Monaco debugging */
+
+/* Simple debugger styles */
+.debug-breakpoint {
+  background-color: #ff0000 !important;
+  border-radius: 50% !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin-left: 2px !important;
+  margin-top: 2px !important;
+}
+
+.debug-execution-line {
+  background-color: rgba(255, 255, 0, 0.2) !important;
+  border-left: 3px solid #ffff00 !important;
+}
+
+.debug-execution-arrow {
+  background-color: #ffff00 !important;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid #ffff00 !important;
+  border-top: 4px solid transparent !important;
+  border-bottom: 4px solid transparent !important;
+  margin-left: 4px !important;
+  margin-top: 6px !important;
+}
+
+/* Breakpoint styles */
+.debug-breakpoint-line {
+  background-color: rgba(255, 0, 0, 0.1) !important;
+  border-left: 3px solid #ff0000 !important;
+}
+
+.debug-breakpoint-glyph {
+  background-color: #ff0000 !important;
+  border-radius: 50% !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin-left: 2px !important;
+  margin-top: 2px !important;
+}
+
+.debug-breakpoint-glyph::before {
+  content: '' !important;
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  background-color: white !important;
+  border-radius: 50% !important;
+  margin: 2px !important;
+}
+
+/* Current execution line styles */
+.debug-current-line {
+  background-color: rgba(255, 255, 0, 0.2) !important;
+  border-left: 3px solid #ffff00 !important;
+}
+
+.debug-current-line-glyph {
+  background-color: #ffff00 !important;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 6px solid #ffff00 !important;
+  border-top: 6px solid transparent !important;
+  border-bottom: 6px solid transparent !important;
+  margin-left: 3px !important;
+  margin-top: 3px !important;
+}
+
+/* Hover effects */
+.debug-breakpoint-glyph:hover {
+  background-color: #cc0000 !important;
+}
+
+.debug-current-line-glyph:hover {
+  border-left-color: #cccc00 !important;
+}
+
+/* Dark theme support */
+.monaco-editor.vs-dark .debug-breakpoint-line {
+  background-color: rgba(255, 0, 0, 0.15) !important;
+}
+
+.monaco-editor.vs-dark .debug-current-line {
+  background-color: rgba(255, 255, 0, 0.25) !important;
+}
+
+/* High contrast theme support */
+.monaco-editor.hc-black .debug-breakpoint-line {
+  background-color: rgba(255, 0, 0, 0.3) !important;
+  border-left: 4px solid #ff0000 !important;
+}
+
+.monaco-editor.hc-black .debug-current-line {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+  border-left: 4px solid #ffff00 !important;
+}

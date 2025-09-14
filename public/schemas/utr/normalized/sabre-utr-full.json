@@ -1,0 +1,499 @@
+{
+  "metadata": {
+    "normalizationVersion": "1.0.0",
+    "generatedAt": "2025-08-01T18:45:37Z",
+    "sourceCount": 1,
+    "dataQuality": {
+      "completenessScore": 0.92,
+      "sourceContributions": {
+        "sabre": 1.0
+      },
+      "missingElements": ["fareCalculation"],
+      "dataAgeHours": 0.0
+    }
+  },
+  "pnrHeader": {
+    "recordLocator": "JAVAAP",
+    "companyId": "1S",
+    "creationDate": "2025-08-01",
+    "creationTime": "13:06",
+    "lastModified": "2025-08-01T13:45:36Z",
+    "pnrSequence": 42,
+    "source": {
+      "system": "sabre",
+      "type": "gds",
+      "associatedRecord": "JAVAAP"
+    }
+  },
+  "associatedRecords": [
+    {
+      "recordLocator": "JAVAAP",
+      "vendor": "sabre",
+      "type": "gds",
+      "isPrimary": true
+    }
+  ],
+  "officeContext": {
+    "responsibilityOffice": "P1CG",
+    "creationOffice": "P1CG",
+    "queueingOffice": "P1CG",
+    "posCity": "SLC",
+    "posCountry": "US",
+    "pseudoCityCode": "P1CG",
+    "primeHostId": "1S",
+    "source": {
+      "system": "sabre",
+      "type": "gds",
+      "associatedRecord": "JAVAAP"
+    }
+  },
+  "agentContext": {
+    "currentAgent": "AC3",
+    "creatorAgent": "AC3",
+    "agentType": "terminal",
+    "creationDateTime": "2025-08-01T13:06:00Z",
+    "lastUpdateAgent": "AWV",
+    "lastUpdateDateTime": "2025-08-01T13:45:36Z",
+    "source": {
+      "system": "sabre",
+      "type": "gds",
+      "associatedRecord": "JAVAAP"
+    }
+  },
+  "passengers": [
+    {
+      "passengerNumber": 1,
+      "passengerType": "ADT",
+      "name": {
+        "first": "HELIO",
+        "last": "ZAPATA",
+        "displayName": "ZAPATA/HELIO"
+      },
+      "documents": [
+        {
+          "type": "passport",
+          "longText": "DOCS/1948-06-01/M/ZAPATA/HELIO",
+          "birthDate": "1948-06-01",
+          "gender": "M",
+          "nationality": null,
+          "documentNumber": null,
+          "expiryDate": null,
+          "associatedSegments": [1],
+          "source": {
+            "system": "sabre",
+            "type": "gds",
+            "associatedRecord": "JAVAAP",
+            "elementId": "79",
+            "elementType": "DOCS"
+          }
+        }
+      ],
+      "contactInfo": [
+        {
+          "type": "mobile",
+          "value": "9565662383",
+          "countryCode": "US",
+          "source": {
+            "system": "sabre",
+            "type": "gds",
+            "associatedRecord": "JAVAAP",
+            "elementId": "266",
+            "elementType": "CTCM"
+          }
+        },
+        {
+          "type": "email",
+          "value": "ZAPATAHELIO@HOTMAIL.COM",
+          "source": {
+            "system": "sabre",
+            "type": "gds",
+            "associatedRecord": "JAVAAP",
+            "elementId": "267",
+            "elementType": "CTCE"
+          }
+        }
+      ],
+      "corporateInfo": {
+        "company": "CHG HEALTHCARE",
+        "corporateId": "Z142",
+        "officeLocation": "MIDVALE, UT",
+        "businessUnit": "WEATHERBY LOCUMS",
+        "contactEmail": "CRYSTAL.ALLEN@CHGHEALTHCARE.COM",
+        "source": {
+          "system": "sabre",
+          "type": "gds",
+          "associatedRecord": "JAVAAP",
+          "extractedFromCorporateData": true
+        }
+      }
+    }
+  ],
+  "segments": [
+    {
+      "segmentNumber": 1,
+      "type": "air",
+      "carrier": "WN",
+      "flightNumber": "0671",
+      "classOfService": "M",
+      "status": "HK",
+      "departureDate": "2025-08-01",
+      "departureTime": "16:20",
+      "arrivalDate": "2025-08-01",
+      "arrivalTime": "19:00",
+      "departureAirport": "ORD",
+      "arrivalAirport": "AUS",
+      "operationalInfo": {
+        "equipment": "73H",
+        "stops": 0,
+        "duration": 160,
+        "mileage": 977,
+        "operatingCarrier": "WN",
+        "operatingCarrierName": "SOUTHWEST AIRLINES"
+      },
+      "terminals": {
+        "departure": "5",
+        "departureName": "INTL TERMINAL 5",
+        "arrival": null
+      },
+      "cabin": {
+        "code": "Y",
+        "name": "ECONOMY",
+        "shortName": "ECONOMY"
+      },
+      "nativeRecordLocator": "DCWN*ACTLC8",
+      "isEticket": true,
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP",
+        "elementId": "7",
+        "elementType": "AIR"
+      }
+    },
+    {
+      "segmentNumber": 2,
+      "type": "car",
+      "vendor": "ET",
+      "status": "HK",
+      "pickupDate": "2025-08-01",
+      "pickupTime": "19:00",
+      "returnDate": "2025-08-04",
+      "returnTime": "15:05",
+      "pickupLocation": "AUS",
+      "returnLocation": "AUS",
+      "confirmation": "1382645299COUNT",
+      "vehicleInfo": {
+        "type": "FCAR",
+        "category": "fullSize",
+        "quantity": 1
+      },
+      "rateInfo": {
+        "dailyRate": {
+          "amount": 47.50,
+          "currency": "USD"
+        },
+        "totalEstimate": {
+          "amount": 213.39,
+          "currency": "USD"
+        },
+        "rateCode": "Z5IND9",
+        "corporateId": "XXXXXX"
+      },
+      "connectedFlight": {
+        "carrier": "WN",
+        "flightNumber": "671"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP",
+        "elementId": "127",
+        "elementType": "VEHICLE"
+      }
+    },
+    {
+      "segmentNumber": 3,
+      "type": "hotel",
+      "chainCode": "HI",
+      "hotelCode": "317864",
+      "hotelName": "HOLIDAY INN EXP EARLY",
+      "status": "HK",
+      "checkInDate": "2025-08-01",
+      "checkOutDate": "2025-08-04",
+      "nights": 3,
+      "cityCode": "ABI",
+      "confirmation": "49423013-",
+      "roomInfo": {
+        "type": "KDN",
+        "description": "KDNBTD",
+        "quantity": 1,
+        "occupancy": 1,
+        "guestName": "ZAPATA HELIO"
+      },
+      "rateInfo": {
+        "averageRate": {
+          "amount": 164.90,
+          "currency": "USD"
+        },
+        "totalEstimate": {
+          "amount": 548.06,
+          "currency": "USD"
+        },
+        "totalTax": {
+          "amount": 63.06,
+          "currency": "USD"
+        },
+        "rateChanges": [
+          {
+            "effectiveDates": "01AUG-03AUG",
+            "rate": {
+              "amount": 164.90,
+              "currency": "USD"
+            }
+          },
+          {
+            "effectiveDates": "03AUG-04AUG",
+            "rate": {
+              "amount": 155.20,
+              "currency": "USD"
+            }
+          }
+        ],
+        "rateCode": "BTD",
+        "corporateId": "100221835"
+      },
+      "address": {
+        "street": "128 EARLY BLVD.",
+        "city": "EARLY",
+        "state": "TX",
+        "postalCode": "76802",
+        "country": "US"
+      },
+      "contactInfo": {
+        "phone": "1-325-6411014",
+        "fax": "1-325-6411015"
+      },
+      "guarantee": {
+        "type": "creditCard",
+        "maskedNumber": "CA556948XxXxXx4296",
+        "expiry": "08/28",
+        "cardHolder": "CHG MANAGEMENT"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP",
+        "elementId": "176",
+        "elementType": "HOTEL"
+      }
+    }
+  ],
+  "serviceRequests": [
+    {
+      "elementId": "266",
+      "type": "CTCM",
+      "status": "HK",
+      "carrier": "WN",
+      "segmentNumbers": [],
+      "passengerNumbers": [1],
+      "details": {
+        "contactMethod": "mobile",
+        "value": "/9565662383/US"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "elementId": "267",
+      "type": "CTCE",
+      "status": "HK",
+      "carrier": "WN",
+      "segmentNumbers": [],
+      "passengerNumbers": [1],
+      "details": {
+        "contactMethod": "email",
+        "value": "/ZAPATAHELIO//HOTMAIL.COM"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "elementId": "307",
+      "type": "TKNE",
+      "status": "HK",
+      "carrier": "WN",
+      "segmentNumbers": [1],
+      "passengerNumbers": [1],
+      "details": {
+        "ticketNumber": "5267278664584",
+        "segmentInfo": "ORDAUS0671M01AUG"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    }
+  ],
+  "remarks": [],
+  "accountingData": [],
+  "formsOfPayment": [
+    {
+      "type": "creditCard",
+      "shortText": "CREDIT CARD DATA EXISTS *CC TO DISPLAY",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    }
+  ],
+  "invoices": [
+    {
+      "documentNumber": "5267278664584",
+      "validatingCarrier": "WN",
+      "issueDate": "2025-08-01",
+      "issueTime": "12:22",
+      "issueOffice": "P1CG",
+      "agentSine": "AWV",
+      "passengerNumbers": [1],
+      "segmentNumbers": [1],
+      "status": "ACTIVE",
+      "passengerName": "ZAPAT/H",
+      "ticketing": {
+        "status": "TE",
+        "isElectronic": true,
+        "issueDate": "2025-08-01",
+        "officeId": "P1CG"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP",
+        "elementId": "304",
+        "ticketElement": true
+      }
+    }
+  ],
+  "pricingCart": [],
+  "communications": [],
+  "technicalData": {
+    "estimatedPurgeDate": "2026-01-28",
+    "updateToken": "akmBkVLJ0WzoysH8wOuGYGTO0L7TsfehkPtECGopwBa19kS31HN3HGaD",
+    "flightRange": {
+      "start": "2025-08-01T16:20:00",
+      "end": "2025-08-01T19:00:00"
+    },
+    "source": {
+      "system": "sabre",
+      "type": "gds",
+      "associatedRecord": "JAVAAP"
+    }
+  },
+  "processingHistory": [
+    {
+      "timestamp": "2025-08-01T13:06:00Z",
+      "action": "PNR_CREATED",
+      "details": "Reservation created by agent AC3",
+      "agent": "AC3",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "timestamp": "2025-08-01T12:22:00Z",
+      "action": "TICKET_ISSUED",
+      "details": "Electronic ticket 5267278664584 issued",
+      "agent": "AWV",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "timestamp": "2025-08-01T13:45:36Z",
+      "action": "PNR_UPDATED",
+      "details": "Last update to reservation",
+      "agent": "AC3",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    }
+  ],
+  "contactDirectory": [
+    {
+      "type": "phone",
+      "category": "mobile",
+      "cityCode": "SLC",
+      "number": "9565662383",
+      "elementId": "81",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "type": "phone",
+      "category": "agency",
+      "cityCode": "SLC",
+      "number": "800-328-3025",
+      "company": "WEATHERBY LOCUMS",
+      "elementId": "70",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "type": "email",
+      "address": "CRYSTAL.ALLEN@CHGHEALTHCARE.COM",
+      "comment": "FR/C ALLEN",
+      "elementId": "102",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    },
+    {
+      "type": "email",
+      "address": "ZAPATAHELIO@HOTMAIL.COM",
+      "elementId": "92",
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP"
+      }
+    }
+  ],
+  "corporateData": {
+    "corporateId": "Z142",
+    "corporateName": "CHG HEALTHCARE",
+    "primeHost": "1S",
+    "prefix": "C",
+    "address": {
+      "company": "CHG HEALTHCARE",
+      "street": "7259 BINGHAM JCT BLVD",
+      "city": "MIDVALE",
+      "postalCode": "84047"
+    },
+    "source": {
+      "system": "sabre",
+      "type": "gds",
+      "associatedRecord": "JAVAAP"
+    }
+  }
+}

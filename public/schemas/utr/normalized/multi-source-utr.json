@@ -1,0 +1,514 @@
+{
+  "metadata": {
+    "normalizationVersion": "1.0.0",
+    "generatedAt": "2025-08-01T18:45:37Z",
+    "sourceCount": 2,
+    "dataQuality": {
+      "completenessScore": 0.97,
+      "sourceContributions": {
+        "amadeus": 0.6,
+        "sabre": 0.4
+      },
+      "missingElements": [],
+      "dataAgeHours": 0.1
+    }
+  },
+  "pnrHeader": {
+    "recordLocator": "MULTI123",
+    "companyId": "COMBINED",
+    "creationDate": "2025-08-01",
+    "creationTime": "14:30",
+    "lastModified": "2025-08-01T15:45:00Z",
+    "source": {
+      "system": "multi-source",
+      "type": "combined",
+      "associatedRecord": "MULTI123"
+    }
+  },
+  "associatedRecords": [
+    {
+      "recordLocator": "AB4P35",
+      "vendor": "amadeus",
+      "type": "edifact",
+      "isPrimary": true,
+      "contribution": "flights, pricing, corporate_data"
+    },
+    {
+      "recordLocator": "JAVAAP",
+      "vendor": "sabre",
+      "type": "gds",
+      "isPrimary": false,
+      "contribution": "hotel, car, additional_contacts"
+    }
+  ],
+  "officeContext": {
+    "responsibilityOffice": "INDG22407",
+    "creationOffice": "INDG22407",
+    "queueingOffice": "INDG22407",
+    "posCity": "IND",
+    "posCountry": "US",
+    "iataCode": "49756206",
+    "source": {
+      "system": "amadeus",
+      "type": "edifact",
+      "associatedRecord": "AB4P35",
+      "note": "Primary office from Amadeus"
+    }
+  },
+  "agentContext": {
+    "currentAgent": "WSSU",
+    "creatorAgent": "70278B",
+    "creatorIataCode": "49756206",
+    "agentType": "T",
+    "creationDateTime": "2025-08-01T13:11:00Z",
+    "source": {
+      "system": "amadeus",
+      "type": "edifact",
+      "associatedRecord": "AB4P35",
+      "note": "Agent context from primary source"
+    }
+  },
+  "passengers": [
+    {
+      "passengerNumber": 1,
+      "passengerType": "ADT",
+      "name": {
+        "first": "JEAN",
+        "last": "GRAMS",
+        "displayName": "GRAMS/JEAN"
+      },
+      "documents": [
+        {
+          "type": "passport",
+          "longText": "////21JUL92/F//GRAMS/JEAN",
+          "birthDate": "1992-07-21",
+          "gender": "F",
+          "nationality": null,
+          "documentNumber": null,
+          "expiryDate": null,
+          "associatedSegments": "all",
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 13,
+            "elementType": "SSR",
+            "ssrType": "DOCS"
+          }
+        }
+      ],
+      "contactInfo": [
+        {
+          "type": "mobile",
+          "value": "16124568569",
+          "countryCode": "US",
+          "isPrimary": true,
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 11,
+            "elementType": "SSR",
+            "ssrType": "CTCM"
+          }
+        },
+        {
+          "type": "email",
+          "value": "JDGRAMS@DELOITTE.COM",
+          "isPrimary": true,
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 12,
+            "elementType": "SSR",
+            "ssrType": "CTCE"
+          }
+        },
+        {
+          "type": "phone",
+          "value": "800-328-3025",
+          "category": "agency",
+          "company": "WEATHERBY LOCUMS",
+          "isPrimary": false,
+          "source": {
+            "system": "sabre",
+            "type": "gds",
+            "associatedRecord": "JAVAAP",
+            "elementId": "70",
+            "note": "Additional contact from Sabre"
+          }
+        }
+      ],
+      "corporateInfo": {
+        "company": "DELOITTE",
+        "employeeId": "50626247",
+        "department": "CONSULTING SERVICES",
+        "businessUnit": "DATA & PRIVACY",
+        "officeLocation": "USA-MCLEAN",
+        "approverEmail": "AATRIPAPPROVALREQUESTS@DELOITTE.COM",
+        "source": {
+          "system": "amadeus",
+          "type": "edifact",
+          "associatedRecord": "AB4P35",
+          "extractedFromRemarks": true
+        }
+      }
+    }
+  ],
+  "segments": [
+    {
+      "segmentNumber": 1,
+      "type": "air",
+      "carrier": "AA",
+      "flightNumber": "937",
+      "classOfService": "N",
+      "status": "HK",
+      "departureDate": "2026-02-10",
+      "departureTime": "19:10",
+      "arrivalDate": "2026-02-11",
+      "arrivalTime": "08:20",
+      "departureAirport": "DFW",
+      "arrivalAirport": "GIG",
+      "dayChangeIndicator": 1,
+      "operationalInfo": {
+        "equipment": "788",
+        "stops": 0,
+        "duration": 1010,
+        "mileage": 5222,
+        "carbonEmissions": {
+          "amount": 398.278266,
+          "unit": "KPP",
+          "source": "ICAO CARBON EMISSIONS CALCULATOR"
+        }
+      },
+      "terminals": {
+        "departure": "0",
+        "arrival": "2"
+      },
+      "nativeRecordLocator": "LEFKPO",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "lineNumber": 2,
+        "elementType": "AIR"
+      }
+    },
+    {
+      "segmentNumber": 2,
+      "type": "air",
+      "carrier": "AA",
+      "flightNumber": "936",
+      "classOfService": "G",
+      "status": "HK",
+      "departureDate": "2026-02-16",
+      "departureTime": "22:30",
+      "arrivalDate": "2026-02-17",
+      "arrivalTime": "06:15",
+      "departureAirport": "GIG",
+      "arrivalAirport": "DFW",
+      "dayChangeIndicator": 1,
+      "operationalInfo": {
+        "equipment": "788",
+        "stops": 0,
+        "duration": 1045,
+        "mileage": 5222,
+        "carbonEmissions": {
+          "amount": 398.278266,
+          "unit": "KPP",
+          "source": "ICAO CARBON EMISSIONS CALCULATOR"
+        }
+      },
+      "terminals": {
+        "departure": "2",
+        "arrival": "D"
+      },
+      "nativeRecordLocator": "LEFKPO",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "lineNumber": 3,
+        "elementType": "AIR"
+      }
+    },
+    {
+      "segmentNumber": 3,
+      "type": "hotel",
+      "chainCode": "HI",
+      "hotelCode": "317864",
+      "hotelName": "HOLIDAY INN EXP EARLY",
+      "status": "HK",
+      "checkInDate": "2026-02-11",
+      "checkOutDate": "2026-02-16",
+      "nights": 5,
+      "cityCode": "RIO",
+      "confirmation": "49423013-",
+      "roomInfo": {
+        "type": "KDN",
+        "description": "KDNBTD",
+        "quantity": 1,
+        "occupancy": 1,
+        "guestName": "GRAMS JEAN"
+      },
+      "rateInfo": {
+        "averageRate": {
+          "amount": 180.00,
+          "currency": "USD"
+        },
+        "totalEstimate": {
+          "amount": 950.00,
+          "currency": "USD"
+        },
+        "totalTax": {
+          "amount": 120.00,
+          "currency": "USD"
+        },
+        "rateCode": "BTD",
+        "corporateId": "100221835"
+      },
+      "address": {
+        "street": "123 COPACABANA BEACH",
+        "city": "RIO DE JANEIRO",
+        "state": "RJ",
+        "postalCode": "22070",
+        "country": "BR"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP",
+        "elementId": "176",
+        "elementType": "HOTEL",
+        "note": "Hotel segment added from Sabre source"
+      }
+    },
+    {
+      "segmentNumber": 4,
+      "type": "car",
+      "vendor": "ET",
+      "status": "HK",
+      "pickupDate": "2026-02-11",
+      "pickupTime": "09:00",
+      "returnDate": "2026-02-16",
+      "returnTime": "18:00",
+      "pickupLocation": "GIG",
+      "returnLocation": "GIG",
+      "confirmation": "1382645299COUNT",
+      "vehicleInfo": {
+        "type": "FCAR",
+        "category": "fullSize",
+        "quantity": 1
+      },
+      "rateInfo": {
+        "dailyRate": {
+          "amount": 65.00,
+          "currency": "USD"
+        },
+        "totalEstimate": {
+          "amount": 350.00,
+          "currency": "USD"
+        },
+        "rateCode": "Z5IND9",
+        "corporateId": "DELOITTE123"
+      },
+      "source": {
+        "system": "sabre",
+        "type": "gds",
+        "associatedRecord": "JAVAAP",
+        "elementId": "127",
+        "elementType": "VEHICLE",
+        "note": "Car rental added from Sabre source"
+      }
+    }
+  ],
+  "serviceRequests": [
+    {
+      "lineNumber": 9,
+      "type": "NSST",
+      "status": "HK",
+      "carrier": "AA",
+      "segmentNumbers": [1],
+      "passengerNumbers": [1],
+      "details": {
+        "seatNumber": "21C",
+        "seatType": "N",
+        "boardPoint": "DFW",
+        "offPoint": "GIG"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "lineNumber": 10,
+      "type": "NSST",
+      "status": "HK",
+      "carrier": "AA",
+      "segmentNumbers": [2],
+      "passengerNumbers": [1],
+      "details": {
+        "seatNumber": "21C",
+        "seatType": "N",
+        "boardPoint": "GIG",
+        "offPoint": "DFW"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ],
+  "remarks": [
+    {
+      "lineNumber": 24,
+      "type": "general",
+      "category": "F",
+      "content": "EMAILCC-K.DONNER@ME.COM",
+      "isStructured": true,
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ],
+  "accountingData": [
+    {
+      "lineNumber": 23,
+      "accountNumber": "7003500",
+      "passengerNumbers": [1],
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ],
+  "formsOfPayment": [
+    {
+      "type": "creditCard",
+      "cardType": "AX",
+      "maskedNumber": "379419XxXxX1001",
+      "expiry": "1226",
+      "approvalCode": "A150140",
+      "isPrimary": true,
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "lineNumber": 101,
+        "elementType": "FP"
+      }
+    }
+  ],
+  "invoices": [
+    {
+      "tstReference": "1",
+      "documentNumber": "7369175719",
+      "validatingCarrier": "AA",
+      "issueDate": "2025-08-01",
+      "issueOffice": "INDG22407",
+      "passengerNumbers": [1],
+      "segmentNumbers": [1, 2],
+      "status": "ACTIVE",
+      "baseFare": {
+        "amount": 1471.00,
+        "currency": "USD"
+      },
+      "totalFare": {
+        "amount": 1555.61,
+        "currency": "USD"
+      },
+      "fareCalculation": "DFW AA RIO696.00AA DFW775.00NUC1471.00END ROE1.00 XF DFW4.5",
+      "fareComponents": [
+        {
+          "componentId": 1,
+          "from": "DFW",
+          "to": "RIO",
+          "amount": 696.00,
+          "currency": "NUC",
+          "fareBasis": "NLX9ABM5",
+          "ticketDesignator": "L040",
+          "fareFamily": "MAINFL"
+        },
+        {
+          "componentId": 2,
+          "from": "RIO",
+          "to": "DFW",
+          "amount": 775.00,
+          "currency": "NUC",
+          "fareBasis": "GLX8ABM5",
+          "ticketDesignator": "L040",
+          "fareFamily": "MAINFL"
+        }
+      ],
+      "taxes": [
+        {
+          "code": "AY",
+          "country": "AY",
+          "nature": "SE",
+          "amount": 5.60,
+          "currency": "USD"
+        },
+        {
+          "code": "US",
+          "country": "US",
+          "nature": "AP",
+          "amount": 22.90,
+          "currency": "USD"
+        }
+      ],
+      "ticketing": {
+        "status": "OK",
+        "isElectronic": true,
+        "issueDate": "2025-08-01",
+        "officeId": "INDG22407"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "tstReference": "1",
+        "ticketElement": true
+      }
+    }
+  ],
+  "pricingCart": [],
+  "communications": [
+    {
+      "type": "notification",
+      "subject": "Complete Itinerary Confirmation",
+      "to": "JDGRAMS@DELOITTE.COM",
+      "cc": "K.DONNER@ME.COM;KIM.CASTRO@KAYAKBTX.COM",
+      "timestamp": "2025-08-01T15:30:00Z",
+      "status": "success",
+      "source": {
+        "system": "multi-source",
+        "type": "combined",
+        "associatedRecord": "MULTI123",
+        "note": "Combined itinerary notification"
+      }
+    }
+  ],
+  "combinationStrategy": {
+    "primarySource": "amadeus",
+    "fallbackHierarchy": ["amadeus", "sabre"],
+    "conflictResolution": {
+      "passengerName": "most-complete",
+      "pricing": "validating-carrier",
+      "segments": "chronological-merge",
+      "contactInfo": "all-sources"
+    },
+    "dataEnrichment": {
+      "carbonEmissions": "amadeus",
+      "corporateInfo": "amadeus",
+      "hotelDetails": "sabre",
+      "contactDirectory": "sabre"
+    }
+  }
+}

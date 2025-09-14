@@ -1,0 +1,142 @@
+/* Helper Block Styling for Monaco Editor */
+
+/* Hide helper markers from users */
+.helper-marker-line {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  line-height: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Read-only helper block styles */
+.helper-block-readonly {
+  background-color: rgba(74, 144, 226, 0.1);
+  border-left: 3px solid #4a90e2;
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+}
+
+.helper-block-content-readonly {
+  background-color: rgba(74, 144, 226, 0.05);
+}
+
+.helper-block-inline-readonly {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.helper-block-glyph-readonly::before {
+  content: "🔒";
+  color: #4a90e2;
+  font-size: 12px;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Edit mode helper block styles */
+.helper-block-editing {
+  background-color: rgba(243, 156, 18, 0.1);
+  border-left: 3px solid #f39c12;
+  border-radius: 3px;
+  position: relative;
+}
+
+.helper-block-content-editing {
+  background-color: rgba(243, 156, 18, 0.05);
+}
+
+.helper-block-inline-editing {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.helper-block-glyph-editing::before {
+  content: "✏️";
+  color: #f39c12;
+  font-size: 12px;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Hover effects */
+.helper-block-readonly:hover {
+  background-color: rgba(74, 144, 226, 0.15);
+}
+
+.helper-block-editing:hover {
+  background-color: rgba(243, 156, 18, 0.15);
+}
+
+/* Marker lines (HELPER_START/END) styling */
+.helper-block-readonly .mtk1:contains("HELPER_START"),
+.helper-block-readonly .mtk1:contains("HELPER_END") {
+  color: #4a90e2;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.helper-block-editing .mtk1:contains("HELPER_START"),
+.helper-block-editing .mtk1:contains("HELPER_END") {
+  color: #f39c12;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* Animation for mode transitions */
+.helper-block-readonly,
+.helper-block-editing {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Selection highlighting for helper blocks */
+.helper-block-readonly .current-line,
+.helper-block-editing .current-line {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Minimap styling */
+.minimap .helper-block-readonly {
+  background-color: #4a90e2;
+}
+
+.minimap .helper-block-editing {
+  background-color: #f39c12;
+}
+
+/* Dark theme support */
+.vs-dark .helper-block-readonly {
+  background-color: rgba(74, 144, 226, 0.15);
+  border-left-color: #5ba0f2;
+}
+
+.vs-dark .helper-block-editing {
+  background-color: rgba(243, 156, 18, 0.15);
+  border-left-color: #f5b041;
+}
+
+.vs-dark .helper-block-content-readonly {
+  background-color: rgba(74, 144, 226, 0.08);
+}
+
+.vs-dark .helper-block-content-editing {
+  background-color: rgba(243, 156, 18, 0.08);
+}
+
+/* High contrast theme support */
+.hc-black .helper-block-readonly {
+  background-color: transparent;
+  border-left: 4px solid #4a90e2;
+  outline: 1px solid #4a90e2;
+}
+
+.hc-black .helper-block-editing {
+  background-color: transparent;
+  border-left: 4px solid #f39c12;
+  outline: 1px solid #f39c12;
+} 

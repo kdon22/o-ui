@@ -1,0 +1,50 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Branching Refactor - Next Steps & Optimizations
+
+This document outlines the remaining tasks and suggested improvements for the branching feature refactoring, aiming for a robust, Git-like implementation.
+
+**Current Status (Phase 1 - Backend API Refactoring):**
+
+*   [x] `/api/branches` (GET, POST, DELETE) refactored to use [BranchService.ts](mdc:src/lib/services/BranchService.ts)
+*   [x] `/api/branches/[branchId]/merge` refactored to use `BranchService.mergeBranches`
+*   [x] `/api/branches/[branchId]/diff/[targetBranchId]` refactored to use `BranchService.diffBranches`
+*   [x] `/api/branches/[branchId]/set-default` refactored to use `BranchService.setDefaultBranch`
+
+**Remaining Phase 1 Tasks:**
+
+*   [ ] **Locate & Refactor History Endpoint(s):**
+    *   Find the API route handler for merge history (e.g., `/api/branches/merge-history`).
+    *   Refactor it to use a potential `BranchService.getMergeHistory` method (or similar).
+*   [ ] **API Response Verification:**
+    *   Review responses from all refactored endpoints (`/api/branches`, merge, diff, set-default, history).
+    *   Ensure data structures align with frontend expectations and standard types (e.g., `Branch`, `Entity` types for diff results as mentioned in [branching-integration-plan.mdc](mdc:.cursor/rules/branching-integration-plan.mdc)).
+*   [ ] **Dependency Injection:**
+    *   Currently, services ([BranchService.ts](mdc:src/lib/services/BranchService.ts)) and Prisma client are instantiated directly in API route files.
+    *   **Optimization:** Fix/Update [RepositoryFactory.ts](mdc:src/lib/database/repositories/RepositoryFactory.ts) or implement a proper Dependency Injection (DI) strategy for cleaner service/repository management.
+
+**Suggested Optimizations & Improvements:**
+
+*   [ ] **Merge Event Logging:**
+    *   The schema ([schema.prisma](mdc:prisma/schema.prisma)) includes a `MergeEvent` model.
+    *   **Action:** Enhance `BranchService.mergeBranches` to create a `MergeEvent` record upon successful completion of a merge transaction. Capture source/target branch info, author, resulting commit SHA (if applicable), etc.
+*   [ ] **Service Layer Consistency (Repository Pattern):**
+    *   [BranchService.ts](mdc:src/lib/services/BranchService.ts) currently uses `prisma` directly.
+    *   **Action:** Refactor `BranchService` methods to interact with corresponding Repositories ([BranchRepository.ts](mdc:src/lib/database/repositories/BranchRepository.ts), potentially a new `VersionRepository`) where appropriate, instead of direct `prisma` calls.
+    *   *Consideration:* Determine the source of truth (backend/Prisma vs. local cache/Dexie) for repository methods called by the service. `BranchRepository` currently targets Dexie via `BaseRepository`. Backend operations might need direct Prisma access within the *service* or require repositories designed for backend interaction.
+*   [ ] **Custom Error Handling:**
+    *   Service methods currently throw generic `Error` objects.
+    *   **Action:** Define and implement specific custom error classes (e.g., `BranchNotFoundError`, `DefaultBranchError`, `MergeConflictError`, `ValidationError`). Throw these from the service layer and catch them in API routes to return precise HTTP status codes (400, 404, 409).
+*   [ ] **Optimize State Fetching/Comparison:**
+    *   The current `getBranchStateForMerge` helper fetches all active entities. This might be inefficient for large branches.
+    *   **Action (Longer Term):** Investigate and potentially implement more efficient diff/merge strategies (e.g., using common ancestors, optimized DB queries via a `VersionRepository`).
+
+**Next Phases (from [branching-integration-plan.mdc](mdc:.cursor/rules/branching-integration-plan.mdc)):**
+
+*   [ ] **Phase 2:** Frontend Versioning Feature Alignment (`src/features/versioning`) - Ensure hooks (`useBranchManagement`, `useSelectiveMerge`, etc.) correctly use the refactored backend APIs.
+*   [ ] **Phase 3:** General Frontend Data Access Refactoring - Ensure *all* data fetching uses `currentBranchId`.
+*   [ ] **Phase 4:** UI Implementation & Polish - Branch selector, automatic refetching, context indicators.
+*   [ ] **Phase 5:** Testing & Refinement - Thorough end-to-end testing.

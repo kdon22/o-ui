@@ -1,0 +1,130 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Branching Integration Plan & Status
+
+**Goal:** Ensure the refactored backend repository pattern (handling Copy-on-Write, fallback, and branch context) is correctly integrated and utilized by all backend APIs and frontend data access layers.
+
+**Prerequisite:** Backend repositories (`NodeRepository`, `OfficeRepository`, etc.) and services (`WorkflowRelationshipService`, etc.) implement the core branching logic. `useBranchStore` manages the active branch state.
+
+---
+
+## Phase 1: Backend API Refactoring & Verification
+
+**Goal:** Ensure all API endpoints related to branching operations correctly leverage the refactored Repositories and `BranchContext`.
+
+*Status: Largely completed during the initial backend refactoring phase which included service splitting, custom errors, DI, etc.*
+
+*   [x] **Review/Refactor `/api/branches` endpoint(s):**
+    *   [x] Verify Create, Delete, List, Set Default operations use `BranchLifecycleService` (via `BranchService` facade) and appropriate helpers.
+    *   [x] Ensure responses align with `Branch` type or appropriate status codes (e.g., 204).
+*   [x] **Review/Refactor Merge Endpoint(s) (e.g., `/api/branches/merge`, `/api/branches/selective-merge`):**
+    *   [x] Confirm handlers use `BranchMergeService` (via facade).
+    *   [x] Confirm service methods use data access helpers (`getBranchState`, `compareBranchStatesForMerge`, `applyMergeChanges`) to apply changes.
+    *   [x] Verify conflict detection logic and response format in `BranchMergeService`.
+    *   [x] Implement `MergeEvent` and `AffectedEntity` logging.
+*   [x] **Review/Refactor Diff Endpoint(s) (e.g., `/api/branches/diff`):**
+    *   [x] Confirm handler uses `BranchDiffService` (via facade).
+    *   [x] Verify service uses `getBranchState` and `generateDiff` helpers.
+    *   [x] Verify response format (`DiffResult`).
+*   [x] **Review/Refactor History Endpoint(s) (e.g., `/api/versions/branches/[branchId]/merge-history`):**
+    *   [x] Verify handler uses `BranchHistoryService` (via facade).
+    *   [x] Verify service retrieves `MergeEvent` records including `affectedEntities` and `author`.
+    *   [ ] Verify revert logic (if implemented - backend likely needed).
+*   [x] **API Response Verification:** Ensured consistent use of custom errors, Prisma types, and standard HTTP responses.
+*   [x] **Dependency Injection:** Confirmed `ServiceFactory` provides singleton services (using Prisma singleton) to API handlers.
+
+---
+
+## Phase 2: Frontend Versioning Feature Alignment (`src/features/versioning`)
+
+**Goal:** Ensure the dedicated versioning UI correctly interacts with the refactored backend APIs.
+
+*   [x] **Verify `[useBranchManagement.ts](mdc:.cursor/rules/src/features/versioning/hooks/useBranchManagement.ts)`:**
+    *   [x] Confirmed calls to refactored backend API endpoints for create, delete, list, switch, set default, merge.
+    *   [x] Updated diff API call (`fetchBranchDiff`) to use correct endpoint/params.
+    *   [x] Verified history API call (`fetchMergeHistory`).
+    *   [x] Check handling of API responses (loading, error, conflict data).
+*   [x] **Verify `[useSelectiveMerge.ts](mdc:.cursor/rules/src/features/versioning/hooks/useSelectiveMerge.ts)`:**
+    *   [x] Identified client-side logic and decided to move to backend.
+    *   [x] Refactored hook to call the new backend API (`POST /api/branches/selective-merge`).
+    *   [x] Check payload construction and response handling.
+*   [ ] **Verify Diff Hooks (`[useBranchDiffQuery.ts](mdc:.cursor/rules/src/features/versioning/hooks/useBranchDiffQuery.ts)`, `[useBranchDiffCounts.ts](mdc:.cursor/rules/src/features/versioning/hooks/useBranchDiffCounts.ts)`):**
+    *   [x] Confirmed `useBranchDiffQuery` (within `useBranchManagement`) uses the updated `fetchBranchDiff`.
+    *   [ ] Verify `useBranchDiffCounts` (if it exists separately) and associated UI components function correctly.
+*   [x] **Verify History Hook (`useMergeHistory` / `useBranchManagement`):**
+    *   [x] Confirmed `useMergeHistory` (within `useBranchManagement`) calls the refactored history API endpoint.
+    *   [ ] Check handling of history data and revert calls in the UI.
+*   [ ] **Review `[VersioningModal.tsx](mdc:.cursor/rules/src/features/versioning/components/VersioningModal.tsx)`:**
+    *   [ ] Check state management logic based on hook states.
+    *   [ ] Verify UI feedback for loading, errors, conflicts.
+*   [ ] **Review Child Components:**
+    *   `[BranchList.tsx](mdc:.cursor/rules/src/features/versioning/components/BranchList.tsx)`
+    *   `[MergeBranchDialog.tsx](mdc:.cursor/rules/src/features/versioning/components/MergeBranchDialog.tsx)`
+    *   `[MergeDetailsModal.tsx](mdc:.cursor/rules/src/features/versioning/components/MergeDetailsModal.tsx)`
+    *   `[BranchDiffViewerModal.tsx](mdc:.cursor/rules/src/features/versioning/components/BranchDiffViewerModal.tsx)`
+    *   [ ] Ensure correct prop passing and interaction with hooks/APIs.
+
+---
+
+## Phase 3: General Frontend Data Access Refactoring
+
+**Goal:** Ensure *all* frontend data fetching/mutation logic correctly incorporates the `currentBranchId`.
+
+*Status: Primarily handled in initial refactoring. Needs final verification.*
+
+*   **Status Check (Previously Refactored Hooks/Components):**
+    *   [x] `[TreeNavigation.tsx](mdc:.cursor/rules/src/components/Navigation/TreeNavigation/TreeNavigation.tsx)`
+    *   [x] `[useNodes.ts](mdc:.cursor/rules/src/features/node/hooks/useNodes.ts)`
+    *   [x] `[useAddNodeForm.ts](mdc:.cursor/rules/src/features/node/components/AddNodeModal/useAddNodeForm.ts)`
+    *   [x] `[useOffices.ts](mdc:.cursor/rules/src/features/office/hooks/useOffices.ts)`
+    *   [x] `[AddOfficeModal.tsx](mdc:.cursor/rules/src/features/office/components/AddOfficeModal/AddOfficeModal.tsx)`
+    *   [x] `[useProcesses.ts](mdc:.cursor/rules/src/features/process/hooks/useProcesses.ts)`
+    *   [x] `[ProcessList.tsx](mdc:.cursor/rules/src/features/process/components/ProcessList.tsx)`
+    *   [x] `[useAddProcessForm.ts](mdc:.cursor/rules/src/features/process/components/AddProcessModal/useAddProcessForm.ts)`
+    *   [x] `[useRules.ts](mdc:.cursor/rules/src/features/rule/hooks/useRules.ts)`
+    *   [x] `[RuleList.tsx](mdc:.cursor/rules/src/features/rule/components/RuleList.tsx)`
+    *   [x] `[useWorkflows.ts](mdc:.cursor/rules/src/features/workflow/hooks/useWorkflows.ts)`
+    *   [x] `[WorkflowDesigner.tsx](mdc:.cursor/rules/src/features/workflow/components/WorkflowDesigner.tsx)`
+*   [ ] **Review Other Data Hooks/Components:**
+    *   [ ] Identify and review any remaining hooks or components performing data fetches/mutations (e.g., Settings, Credentials, Tenants, Users/Groups).
+    *   [ ] Ensure `currentBranchId` from `useBranchStore` is passed to API calls or Server Actions where relevant (especially for reads/updates that should be branch-aware).
+*   [ ] **Server Actions:** If used, verify they instantiate Repositories via `RepositoryFactory` and pass `branchId` correctly.
+*   [ ] **API Client/Wrapper:** Ensure any abstraction layer facilitates passing `branchId` easily.
+
+---
+
+## Phase 4: UI Implementation & Polish
+
+**Goal:** Implement user-facing UI for branch selection and refine the user experience.
+
+*Status: Likely partially implemented, needs review.*
+
+*   [ ] **Branch Selector:** Implement/Verify the main UI component for selecting the active branch.
+*   [ ] **State Update:** Ensure selector correctly updates `useBranchStore`.
+*   [ ] **Automatic Refetching:** Verify data displayed in lists/details refetches automatically when the active branch changes.
+*   [ ] **Context Indicators:** Add/Verify visual cues indicating the currently active branch.
+*   [ ] **Loading/Error States:** Polish loading indicators and error messages for all branch-related operations.
+*   [ ] **Resolve Linter Errors:** Fix outstanding type errors (e.g., persistent ones in `branchHistoryService.ts`, others potentially related to relationship handling).
+
+---
+
+## Phase 5: Testing & Refinement
+
+**Goal:** Thoroughly test end-to-end branching functionality across the application.
+
+*Status: Pending.*
+
+*   [ ] **CRUD Operations:** Test creating, reading, updating, deleting entities on various branches.
+*   [ ] **Branch Lifecycle:** Test creating, switching, deleting, setting default branches.
+*   [ ] **Fallback Logic:** Verify reading data inherited from the default branch.
+*   [ ] **Copy-on-Write:** Verify modifying inherited data creates a branch-specific copy.
+*   [ ] **Full Merge:** Test merging branches, including conflict scenarios.
+*   [ ] **Selective Merge:** Test merging specific changes from the active branch.
+*   [ ] **Diff Viewer:** Test accuracy of branch comparisons.
+*   [ ] **Merge History:** Test display and revert functionality.
+*   [ ] **Relationships:** Test integrity of entity relationships during branching/merging.
+*   [ ] **End-to-End Workflows:** Perform typical user tasks involving multiple branches.
+*   [ ] **Review TODOs:** Search codebase for `// TODO:` comments and address them.

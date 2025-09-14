@@ -1,0 +1,25 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Repository Factory Dependency Injection
+
+This rule explains the ongoing refactoring of the `RepositoryFactory` located at [src/lib/database/repositories/RepositoryFactory.ts](mdc:src/lib/database/repositories/RepositoryFactory.ts).
+
+## Problem
+
+Several repositories, including [WorkflowRepository.ts](mdc:src/lib/database/repositories/WorkflowRepository.ts) and [NodeRepository.ts](mdc:src/lib/database/repositories/NodeRepository.ts), were refactored to depend on specific services for handling tasks like versioning and relationship management (e.g., [VersioningService.ts](mdc:src/features/versioning/services/VersioningService.ts), [WorkflowRelationshipService.ts](mdc:src/features/workflow/services/WorkflowRelationshipService.ts), [NodeTreeService.ts](mdc:src/features/node/services/NodeTreeService.ts)).
+
+The `RepositoryFactory`'s `getRepository` method, which is responsible for creating instances of these repositories, was not updated to provide these new service dependencies. It was still trying to instantiate them by only passing the `DatabaseManager` instance, leading to constructor errors.
+
+## Solution
+
+The `RepositoryFactory.ts` file is being updated to correctly handle these dependencies:
+
+1.  **Import Services:** The necessary services ([VersioningService.ts](mdc:src/features/versioning/services/VersioningService.ts), [WorkflowRelationshipService.ts](mdc:src/features/workflow/services/WorkflowRelationshipService.ts), [NodeTreeService.ts](mdc:src/features/node/services/NodeTreeService.ts), [NodeRelationshipService.ts](mdc:src/features/node/services/NodeRelationshipService.ts), and others for Rules, Offices, Processes) are imported.
+2.  **Import Prisma Client:** The shared Prisma client instance from [/src/shared/api/prismaClient.ts](mdc:src/shared/api/prismaClient.ts) is imported, as the services require it.
+3.  **Instantiate Services:** Instances of the required services are created within the `getRepository` method, using the Prisma client.
+4.  **Inject Dependencies:** The `switch` statement within `getRepository` is modified. The cases for specific repositories (`workflows`, `nodes`, `rules`, `offices`, `processes`) are updated to pass the newly instantiated service instances along with the `DatabaseManager` to the respective repository constructors.
+
+This ensures that repositories receive all their required dependencies when created by the factory.

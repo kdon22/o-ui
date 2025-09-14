@@ -1,0 +1,154 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Detailed Plan: Implementing Git-Like Versioning Features
+
+**Goal:** Refactor the custom database versioning system to provide Git-like branch visibility (fallback), reliable copy-on-write modification, and history revert capabilities.
+
+---
+
+## Phase 1: Stabilize Core Data Fetching & Branch Visibility (Implement Fallback)
+
+**Objective:** Ensure users see a combined view of `main` branch data and current branch changes. Fix visibility issues and errors when switching branches.
+
+1.  **Investigate Core List Fetching Function(s):**
+    *   **Action:** Locate and thoroughly review `fetchNodesFromDB` (likely in [`src/features/node/queries.ts`](mdc:src/features/node/queries.ts)) and equivalent functions for other versioned entities (Rules, Processes, Offices, etc.).
+    *   **Verification:** Critically confirm if these functions currently accept and correctly use the `branchId` parameter for filtering database results.
+    *   **Priority:** If `branchId` filtering is missing or incorrect, **this is the immediate first fix.**
+
+2.  **Implement Fallback Logic in List Fetching (`fetchNodesFromDB`, etc.):**
+    *   **Action:** Modify the list fetching functions identified above.
+    *   **Required Logic:**
+        *   **Primary Query:** Fetch entities matching criteria (e.g., `parentId`, `tenantId`) AND `branchId = currentBranchId`.
+        *   **Fallback Query:** Fetch entities matching criteria AND `branchId = mainBranchId`.
+        *   **Combine Results:**
+            *   Start with all items from the primary query (current branch).
+            *   Identify items from the fallback query (main branch) whose `original<Entity>Id` (or `id` if `originalId` is null/self) **does not** correspond to any item already included from the primary query.
+            *   Add these unique main branch items to the result set.
+            *   Ensure consistent sorting (e.g., by `name` or `sortOrder`) is applied to the final combined list.
+    *   **File References:** Check implementation in [`src/components/Navigation/TreeNavigation/useTreeData.ts`](mdc:src/components/Navigation/TreeNavigation/useTreeData.ts) for how `fetchNodesFromDB` is used.
+
+3.  **Implement Fallback Logic in Single Item Fetching:**
+    *   **Action:** Modify functions responsible for fetching single entities by ID (e.g., `fetchSingleNodeById` in `useTreeData.ts`, and equivalents).
+    *   **Required Logic:**
+        *   Attempt to fetch the entity using `id` and `currentBranchId`.
+        *   If no result is found, attempt a second fetch using the *same* `id` but with the `mainBranchId`.
+
+4.  **Review React Query Integration:**
+    *   **Action:** Examine how `useQuery` is used (e.g., in [`src/components/Navigation/TreeNavigation/useTreeData.ts`](mdc:src/components/Navigation/TreeNavigation/useTreeData.ts)).
+    *   **Verification:** Ensure query keys correctly incorporate `branchId`. Confirm that the caching behaves as expected when fallback logic modifies the data returned by the query function.
+
+5.  **Testing:**
+    *   Create a new branch from `main`.
+    *   Switch between `main` and the new branch; verify the tree/lists initially mirror `main` on the new branch.
+    *   Add an entity on the new branch; verify it appears only there.
+    *   Modify an *inherited* entity (from `main`) while on the new branch; verify the change appears correctly (as a new, branch-specific version) and overrides the `main` version *only* in the new branch's view.
+    *   Delete a branch-specific entity.
+    *   Delete an *inherited* entity (verify defined behavior - see Phase 2).
+    *   Confirm the "data is undefined" error during branch switching is resolved.
+
+---
+
+## Phase 2: Verify & Solidify Modification Logic (Copy-on-Write & Merge)
+
+**Objective:** Ensure creating, updating, deleting, and merging entities strictly follows the defined versioning rules.
+
+1.  **Review & Test Update Logic (Copy-on-Write):**
+    *   **Action:** Examine backend API endpoints and frontend hooks/functions (e.g., potentially within `useNodes`, `useRules`, etc.) that handle entity updates. Reference [`src/features/versioning/versioning.mdc`](mdc:src/features/versioning/versioning.mdc) for intended logic.
+    *   **Verification:**
+        *   Does the logic check if `targetEntity.branchId === currentBranchId`?
+        *   If **yes**, does it correctly perform an *in-place update* on that entity record?
+        *   If **no**, does it correctly:
+            *   Fetch the original entity data?
+            *   Create a **new** entity record?
+            *   Assign `currentBranchId` to the new record?
+            *   Set the new record's `original<Entity>Id` to the ID of the entity being updated?
+            *   Apply the update payload to this **new** record?
+        *   Ensure the associated `Version` record is created correctly for both scenarios.
+
+2.  **Review & Test Create Logic:**
+    *   **Action:** Examine entity creation code.
+    *   **Verification:** Ensure new entities are always assigned the `currentBranchId` and have `original<Entity>Id` set appropriately (e.g., to their own `id` or `null`). Verify `Version` record creation.
+
+3.  **Review & Test Delete Logic:**
+    *   **Action:** Examine entity deletion code.
+    *   **Define Behavior:** Clearly define what happens when deleting an *inherited* item (from `main`). Options:
+        *   Disallow deletion.
+        *   Create a "deleted marker" version on the current branch (prevents fallback). (Recommended for Git-like feel)
+        *   Physical delete (less common in versioning).
+    *   **Verification:** Ensure the implemented logic matches the defined behavior for both inherited and branch-specific items. Verify `Version` record creation (`changeType: DELETE`).
+
+4.  **Review & Test Merge Logic:**
+    *   **Action:** Examine the merge implementation (UI components like `MergeDetailsModal`, backend API). Reference the [`MergeEvent`](mdc:prisma/schema.prisma) model.
+    *   **Verification:**
+        *   How are changes (added, modified, deleted) between the source and target branch calculated?
+        *   How are conflicts identified? Is there a resolution mechanism?
+        *   Does the merge correctly update/create/delete entities on the *target* branch?
+        *   Is the `MergeEvent` record accurately populated, including `sha` and `affectedEntities` details?
+        *   Is a `Version` record created for the merge commit itself on the target branch?
+
+---
+
+## Phase 3: Implement Revert Functionality
+
+**Objective:** Allow users to undo specific changes or entire merge commits using the version history.
+
+1.  **Design Revert API/Logic:**
+    *   **Action:** Define backend functions/API endpoints (e.g., `POST /api/revert`).
+    *   **Inputs:** `versionSha` (for single change), `mergeSha` (for merge), `currentBranchId`.
+    *   **Logic (Single Revert):**
+        *   Find `Version` record `V_bad` by `versionSha`.
+        *   Ensure `V_bad.branchId === currentBranchId`.
+        *   Find parent `Version` `V_good` via `V_bad.parentShas[0]`.
+        *   Create new `Version` `V_revert` on `currentBranchId`:
+            *   `content = V_good.content`
+            *   `parentShas = [V_bad.sha]`
+            *   `changeType = UPDATE` (or `CREATE`/`DELETE` if `V_bad` was `DELETE`/`CREATE`)
+            *   Generate new `sha`.
+        *   Update the live entity table (`Node`, `Rule`, etc.) for `currentBranchId` to match `V_good.content`.
+        *   Must be transactional.
+    *   **Logic (Merge Revert):**
+        *   Find `MergeEvent` by `mergeSha`. Find corresponding `Version` `V_merge`.
+        *   Ensure `V_merge.branchId === currentBranchId`.
+        *   Identify pre-merge state `V_target_before_merge` (usually first parent SHA in `V_merge.parentShas`).
+        *   Analyze `MergeEvent.affectedEntities` or diff `V_merge` vs `V_target_before_merge`.
+        *   For each affected entity: Create a *new* `Version` on `currentBranchId` restoring its state to `V_target_before_merge` (or deleting if added by merge), linking back to `V_merge.sha`.
+        *   Update live entity tables accordingly.
+        *   Must be highly transactional.
+
+2.  **Implement Backend Logic:**
+    *   **Action:** Code the designed revert API/functions.
+    *   **Focus:** Robust error handling, transactional integrity (e.g., using Prisma's `$transaction`).
+
+3.  **Design & Implement UI:**
+    *   **Action:** Develop UI components (e.g., history viewer, revert buttons).
+    *   **Needs:** Display version history (from `Version` table), provide triggers for revert actions, include confirmation dialogs.
+
+4.  **Testing:**
+    *   Test revert on CREATE, UPDATE, DELETE actions.
+    *   Test revert on complex MERGE commits.
+    *   Test reverting a revert.
+    *   Test permissions/authorization for reverting.
+
+---
+
+## Phase 4: Comprehensive Testing, Optimization & Refinement
+
+**Objective:** Ensure the entire system is robust, performant, and well-documented.
+
+1.  **End-to-End Testing:** Conduct thorough testing across all features and edge cases (deep branches, multiple modifications before merge, etc.).
+2.  **Performance Profiling:** Analyze database query performance (especially list fetching with fallback) and API response times. Add/optimize database indexes ([`prisma/schema.prisma`](mdc:prisma/schema.prisma)). Refine application logic where needed.
+3.  **Conflict Resolution:** If not fully addressed in Phase 2, define and implement a clear strategy for handling merge conflicts.
+4.  **Documentation:** Update [`src/features/versioning/versioning.mdc`](mdc:src/features/versioning/versioning.mdc) and other relevant documents to accurately reflect the final implementation details, including fallback and revert logic.
+
+---
+
+## Key Considerations Throughout:
+
+*   **Transactional Integrity:** Use database transactions for multi-step write operations.
+*   **Performance:** Monitor query load; optimize indexes and logic.
+*   **UI Clarity:** Clearly communicate branch state, item status (local/inherited), and history.
+*   **Error Handling:** Implement robust error handling on both frontend and backend.
+*   **`main` Branch Protection:** Consider adding logic to prevent direct edits to the `main` branch if needed, forcing changes through feature branches and merges.

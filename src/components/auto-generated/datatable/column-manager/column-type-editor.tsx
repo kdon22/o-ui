@@ -1,0 +1,350 @@
+/**
+ * Column Type Editor Modal - Airtable-like field configuration
+ * 
+ * Features:
+ * - Field name editing
+ * - Field type selection with icons
+ * - Type-specific options (select options, formatting, etc.)
+ * - Field description
+ * - Rich text formatting toggle
+ */
+
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  TextArea
+} from '@/components/ui';
+import { 
+  Type, 
+  Hash, 
+  Calendar, 
+  ToggleLeft, 
+  List,
+  Plus,
+  X
+} from 'lucide-react';
+
+interface TableColumn {
+  name: string;
+  type: 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'boolean';
+  required?: boolean;
+  options?: string[];
+  format?: string;
+  description?: string;
+  richText?: boolean;
+}
+
+interface ColumnTypeEditorProps {
+  isOpen: boolean;
+  onClose: () => void;
+  column: TableColumn | null;
+  onSave: (column: TableColumn) => void;
+}
+
+const FIELD_TYPES = [
+  {
+    value: 'text',
+    label: 'Single line text',
+    icon: Type,
+    description: 'Enter multiple lines of text.'
+  },
+  {
+    value: 'number',
+    label: 'Number',
+    icon: Hash,
+    description: 'A number with optional decimal places.'
+  },
+  {
+    value: 'select',
+    label: 'Single select',
+    icon: List,
+    description: 'Select one option from a list.'
+  },
+  {
+    value: 'multi_select',
+    label: 'Multiple select',
+    icon: List,
+    description: 'Select multiple options from a list.'
+  },
+  {
+    value: 'date',
+    label: 'Date',
+    icon: Calendar,
+    description: 'A date in MM/DD/YYYY format.'
+  },
+  {
+    value: 'boolean',
+    label: 'Checkbox',
+    icon: ToggleLeft,
+    description: 'Check or uncheck to indicate true/false.'
+  }
+];
+
+export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
+  isOpen,
+  onClose,
+  column,
+  onSave
+}) => {
+  const [formData, setFormData] = useState<TableColumn>({
+    name: '',
+    type: 'text',
+    required: false,
+    options: [],
+    description: '',
+    richText: false
+  });
+
+  const [newOption, setNewOption] = useState('');
+
+  // Initialize form when column changes
+  useEffect(() => {
+    if (column) {
+      setFormData({
+        name: column.name || '',
+        type: column.type || 'text',
+        required: column.required || false,
+        options: column.options || [],
+        description: column.description || '',
+        richText: column.richText || false
+      });
+    } else {
+      setFormData({
+        name: '',
+        type: 'text',
+        required: false,
+        options: [],
+        description: '',
+        richText: false
+      });
+    }
+  }, [column]);
+
+  const selectedFieldType = FIELD_TYPES.find(t => t.value === formData.type);
+  const Icon = selectedFieldType?.icon || Type;
+  const isNewField = !column || !(column.name && String(column.name).trim().length > 0);
+
+  // Convert whitespace-separated words to camelCase; leave other characters intact
+  const toCamelFromSpaces = (input: string): string => {
+    const parts = input.trim().split(/\s+/);
+    if (parts.length === 0) return '';
+    return parts
+      .map((w, i) => {
+        const lower = w.toLowerCase();
+        return i === 0 ? lower : lower.charAt(0).toUpperCase() + lower.slice(1);
+      })
+      .join('');
+  };
+
+  const handleSave = () => {
+    if (!formData.name.trim()) return;
+    const hasSpace = /\s/.test(formData.name);
+    const sanitizedName = hasSpace ? toCamelFromSpaces(formData.name) : formData.name.trim();
+    const payload = { ...formData, name: sanitizedName };
+    onSave(payload);
+    onClose();
+  };
+
+  const handleCancel = () => {
+    onClose();
+  };
+
+  const addOption = () => {
+    if (!newOption.trim()) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      options: [...(prev.options || []), newOption.trim()]
+    }));
+    setNewOption('');
+  };
+
+  const removeOption = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      options: prev.options?.filter((_, i) => i !== index) || []
+    }));
+  };
+
+  const isSelectType = formData.type === 'select' || formData.type === 'multi_select';
+  const isTextType = formData.type === 'text';
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Icon className="w-5 h-5" />
+            {isNewField ? 'Add field' : 'Edit field'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Field Name */}
+          <div className="space-y-2">
+            <Label htmlFor="field-name">Name</Label>
+            <Input
+              id="field-name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Field name"
+              className="w-full"
+            />
+          </div>
+
+          {/* Field Type */}
+          <div className="space-y-2">
+            <Label>Field type</Label>
+            <Select 
+              value={formData.type} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                type: value as TableColumn['type'],
+                options: value === 'select' || value === 'multi_select' ? prev.options : []
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FIELD_TYPES.map((fieldType) => {
+                  const FieldIcon = fieldType.icon;
+                  return (
+                    <SelectItem key={fieldType.value} value={fieldType.value}>
+                      <div className="flex items-center gap-2">
+                        <FieldIcon className="w-4 h-4" />
+                        <span>{fieldType.label}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {selectedFieldType && (
+              <p className="text-sm text-gray-500">{selectedFieldType.description}</p>
+            )}
+          </div>
+
+          {/* Select Options */}
+          {isSelectType && (
+            <div className="space-y-2">
+              <Label>Options</Label>
+              <div className="space-y-2">
+                {formData.options?.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = [...(formData.options || [])];
+                        newOptions[index] = e.target.value;
+                        setFormData(prev => ({ ...prev, options: newOptions }));
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeOption(index)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newOption}
+                    onChange={(e) => setNewOption(e.target.value)}
+                    placeholder="Add option"
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addOption();
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={addOption}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rich Text for Text Fields */}
+          {isTextType && (
+            <div className="space-y-2">
+              <Label>Formatting</Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.richText}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, richText: checked }))}
+                  />
+                  <span className="text-sm">Enable rich text formatting</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Toggle description field visibility
+                const hasDescription = formData.description !== undefined;
+                if (!hasDescription) {
+                  setFormData(prev => ({ ...prev, description: '' }));
+                }
+              }}
+              className="p-0 h-auto text-blue-600 hover:text-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add description
+            </Button>
+            
+            {formData.description !== undefined && (
+              <TextArea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe this field..."
+                className="min-h-[60px]"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-4">
+          <Button variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!formData.name.trim()}>
+            Save
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

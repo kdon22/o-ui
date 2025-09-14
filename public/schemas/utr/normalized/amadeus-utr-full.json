@@ -1,0 +1,533 @@
+{
+  "metadata": {
+    "normalizationVersion": "1.0.0",
+    "generatedAt": "2025-08-01T18:45:37Z",
+    "sourceCount": 1,
+    "dataQuality": {
+      "completenessScore": 0.95,
+      "sourceContributions": {
+        "amadeus": 1.0
+      },
+      "missingElements": [],
+      "dataAgeHours": 0.1
+    }
+  },
+  "pnrHeader": {
+    "recordLocator": "AB4P35",
+    "companyId": "1A",
+    "creationDate": "2025-08-01",
+    "creationTime": "16:17",
+    "lastModified": "2025-08-01",
+    "source": {
+      "system": "amadeus",
+      "type": "edifact",
+      "associatedRecord": "AB4P35"
+    }
+  },
+  "associatedRecords": [
+    {
+      "recordLocator": "AB4P35",
+      "vendor": "amadeus",
+      "type": "edifact",
+      "isPrimary": true
+    }
+  ],
+  "officeContext": {
+    "responsibilityOffice": "INDG22407",
+    "creationOffice": "INDG22407",
+    "queueingOffice": "INDG22407",
+    "posCity": "IND",
+    "posCountry": "US",
+    "iataCode": "49756206",
+    "source": {
+      "system": "amadeus",
+      "type": "edifact",
+      "associatedRecord": "AB4P35"
+    }
+  },
+  "agentContext": {
+    "currentAgent": "WSSU",
+    "creatorAgent": "70278B",
+    "creatorIataCode": "49756206",
+    "agentType": "T",
+    "creationDateTime": "2025-08-01T13:11:00Z",
+    "source": {
+      "system": "amadeus",
+      "type": "edifact",
+      "associatedRecord": "AB4P35"
+    }
+  },
+  "passengers": [
+    {
+      "passengerNumber": 1,
+      "passengerType": "ADT",
+      "name": {
+        "first": "JEAN",
+        "last": "GRAMS",
+        "displayName": "GRAMS/JEAN"
+      },
+      "documents": [
+        {
+          "type": "passport",
+          "longText": "////21JUL92/F//GRAMS/JEAN",
+          "birthDate": "1992-07-21",
+          "gender": "F",
+          "nationality": null,
+          "documentNumber": null,
+          "expiryDate": null,
+          "associatedSegments": "all",
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 13,
+            "elementType": "SSR",
+            "ssrType": "DOCS"
+          }
+        }
+      ],
+      "contactInfo": [
+        {
+          "type": "mobile",
+          "value": "16124568569",
+          "countryCode": "US",
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 11,
+            "elementType": "SSR",
+            "ssrType": "CTCM"
+          }
+        },
+        {
+          "type": "email",
+          "value": "JDGRAMS@DELOITTE.COM",
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 12,
+            "elementType": "SSR",
+            "ssrType": "CTCE"
+          }
+        }
+      ],
+      "seats": [
+        {
+          "segmentNumber": 3,
+          "seatNumber": "21C",
+          "characteristics": ["N", "A", "LS"],
+          "status": "HK",
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 9,
+            "elementType": "SSR",
+            "ssrType": "NSST"
+          }
+        },
+        {
+          "segmentNumber": 4,
+          "seatNumber": "21C",
+          "characteristics": ["N", "A", "LS"],
+          "status": "HK",
+          "source": {
+            "system": "amadeus",
+            "type": "edifact",
+            "associatedRecord": "AB4P35",
+            "lineNumber": 10,
+            "elementType": "SSR",
+            "ssrType": "NSST"
+          }
+        }
+      ],
+      "corporateInfo": {
+        "company": "DELOITTE",
+        "employeeId": "50626247",
+        "department": "CONSULTING SERVICES",
+        "businessUnit": "DATA & PRIVACY",
+        "officeLocation": "USA-MCLEAN",
+        "approverEmail": "AATRIPAPPROVALREQUESTS@DELOITTE.COM",
+        "source": {
+          "system": "amadeus",
+          "type": "edifact",
+          "associatedRecord": "AB4P35",
+          "extractedFromRemarks": true
+        }
+      }
+    }
+  ],
+  "segments": [
+    {
+      "segmentNumber": 3,
+      "type": "air",
+      "carrier": "AA",
+      "flightNumber": "937",
+      "classOfService": "N",
+      "status": "HK",
+      "departureDate": "2026-02-10",
+      "departureTime": "19:10",
+      "arrivalDate": "2026-02-11",
+      "arrivalTime": "08:20",
+      "departureAirport": "DFW",
+      "arrivalAirport": "GIG",
+      "dayChangeIndicator": 1,
+      "operationalInfo": {
+        "equipment": "788",
+        "stops": 0,
+        "duration": 1010,
+        "mileage": 5222,
+        "carbonEmissions": {
+          "amount": 398.278266,
+          "unit": "KPP",
+          "source": "ICAO CARBON EMISSIONS CALCULATOR"
+        }
+      },
+      "terminals": {
+        "departure": "0",
+        "arrival": "2"
+      },
+      "nativeRecordLocator": "LEFKPO",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "lineNumber": 2,
+        "elementType": "AIR"
+      }
+    },
+    {
+      "segmentNumber": 4,
+      "type": "air",
+      "carrier": "AA",
+      "flightNumber": "936",
+      "classOfService": "G",
+      "status": "HK",
+      "departureDate": "2026-02-16",
+      "departureTime": "22:30",
+      "arrivalDate": "2026-02-17",
+      "arrivalTime": "06:15",
+      "departureAirport": "GIG",
+      "arrivalAirport": "DFW",
+      "dayChangeIndicator": 1,
+      "operationalInfo": {
+        "equipment": "788",
+        "stops": 0,
+        "duration": 1045,
+        "mileage": 5222,
+        "carbonEmissions": {
+          "amount": 398.278266,
+          "unit": "KPP",
+          "source": "ICAO CARBON EMISSIONS CALCULATOR"
+        }
+      },
+      "terminals": {
+        "departure": "2",
+        "arrival": "D"
+      },
+      "nativeRecordLocator": "LEFKPO",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "lineNumber": 3,
+        "elementType": "AIR"
+      }
+    }
+  ],
+  "serviceRequests": [
+    {
+      "lineNumber": 9,
+      "type": "NSST",
+      "status": "HK",
+      "carrier": "AA",
+      "segmentNumbers": [3],
+      "passengerNumbers": [1],
+      "details": {
+        "seatNumber": "21C",
+        "seatType": "N",
+        "boardPoint": "DFW",
+        "offPoint": "GIG"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "lineNumber": 10,
+      "type": "NSST",
+      "status": "HK",
+      "carrier": "AA",
+      "segmentNumbers": [4],
+      "passengerNumbers": [1],
+      "details": {
+        "seatNumber": "21C",
+        "seatType": "N",
+        "boardPoint": "GIG",
+        "offPoint": "DFW"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "lineNumber": 11,
+      "type": "CTCM",
+      "status": "HK",
+      "carrier": "AA",
+      "passengerNumbers": [1],
+      "details": {
+        "contactMethod": "mobile",
+        "value": "16124568569/US"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "lineNumber": 12,
+      "type": "CTCE",
+      "status": "HK",
+      "carrier": "AA",
+      "passengerNumbers": [1],
+      "details": {
+        "contactMethod": "email",
+        "value": "JDGRAMS//DELOITTE.COM"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "lineNumber": 13,
+      "type": "DOCS",
+      "status": "HK",
+      "carrier": "AA",
+      "passengerNumbers": [1],
+      "details": {
+        "documentType": "passport",
+        "longText": "////21JUL92/F//GRAMS/JEAN"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ],
+  "remarks": [
+    {
+      "lineNumber": 24,
+      "type": "general",
+      "category": "F",
+      "content": "EMAILCC-K.DONNER@ME.COM",
+      "isStructured": true,
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "lineNumber": 25,
+      "type": "general",
+      "category": "F",
+      "content": "EMAILCC-KIM.CASTRO@KAYAKBTX.COM",
+      "isStructured": true,
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ],
+  "accountingData": [
+    {
+      "lineNumber": 23,
+      "accountNumber": "7003500",
+      "passengerNumbers": [1],
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ],
+  "formsOfPayment": [
+    {
+      "type": "creditCard",
+      "cardType": "AX",
+      "maskedNumber": "379419XxXxX1001",
+      "expiry": "1226",
+      "approvalCode": "A150140",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "lineNumber": 101,
+        "elementType": "FP"
+      }
+    }
+  ],
+  "invoices": [
+    {
+      "tstReference": "1",
+      "documentNumber": "7369175719",
+      "validatingCarrier": "AA",
+      "issueDate": "2025-08-01",
+      "issueOffice": "INDG22407",
+      "passengerNumbers": [1],
+      "segmentNumbers": [3, 4],
+      "status": "ACTIVE",
+      "baseFare": {
+        "amount": 1471.00,
+        "currency": "USD"
+      },
+      "totalFare": {
+        "amount": 1555.61,
+        "currency": "USD"
+      },
+      "fareCalculation": "DFW AA RIO696.00AA DFW775.00NUC1471.00END ROE1.00 XF DFW4.5",
+      "fareComponents": [
+        {
+          "componentId": 1,
+          "from": "DFW",
+          "to": "RIO",
+          "amount": 696.00,
+          "currency": "NUC",
+          "fareBasis": "NLX9ABM5",
+          "ticketDesignator": "L040",
+          "fareFamily": "MAINFL"
+        },
+        {
+          "componentId": 2,
+          "from": "RIO",
+          "to": "DFW",
+          "amount": 775.00,
+          "currency": "NUC",
+          "fareBasis": "GLX8ABM5",
+          "ticketDesignator": "L040",
+          "fareFamily": "MAINFL"
+        }
+      ],
+      "taxes": [
+        {
+          "code": "AY",
+          "country": "AY",
+          "nature": "SE",
+          "amount": 5.60,
+          "currency": "USD"
+        },
+        {
+          "code": "US",
+          "country": "US",
+          "nature": "AP",
+          "amount": 22.90,
+          "currency": "USD"
+        }
+      ],
+      "ticketing": {
+        "status": "OK",
+        "isElectronic": true,
+        "issueDate": "2025-08-01",
+        "officeId": "INDG22407"
+      },
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "tstReference": "1",
+        "ticketElement": true
+      }
+    }
+  ],
+  "pricingCart": [],
+  "communications": [
+    {
+      "type": "notification",
+      "subject": "Itinerary Email Sent",
+      "timestamp": "2025-08-01T10:58:00Z",
+      "status": "success",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "extractedFromRemarks": true
+      }
+    },
+    {
+      "type": "invoice",
+      "subject": "Invoice Email Sent",
+      "timestamp": "2025-08-01T12:16:00Z",
+      "status": "success",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35",
+        "extractedFromRemarks": true
+      }
+    }
+  ],
+  "technicalData": {
+    "envelopeNumber": 45,
+    "lastTransmittedEnvelope": 44,
+    "purgeDate": "2026-02-20",
+    "source": {
+      "system": "amadeus",
+      "type": "edifact",
+      "associatedRecord": "AB4P35"
+    }
+  },
+  "processingHistory": [
+    {
+      "timestamp": "2025-08-01T10:58:00Z",
+      "action": "ITINERARY_EMAIL_SENT",
+      "details": "Itinerary email sent to passenger",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "timestamp": "2025-08-01T11:42:00Z",
+      "action": "SENT_TO_AUTOTKT",
+      "details": "Sent to automatic ticketing",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "timestamp": "2025-08-01T12:15:00Z",
+      "action": "AUTO_TICKETING_SUCCESSFUL",
+      "details": "Auto-ticketing completed successfully",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    },
+    {
+      "timestamp": "2025-08-01T12:16:00Z",
+      "action": "INVOICE_EMAIL_SENT",
+      "details": "Invoice email sent to customer",
+      "source": {
+        "system": "amadeus",
+        "type": "edifact",
+        "associatedRecord": "AB4P35"
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Refactor DataManager & Repositories for Consistent Dexie Access
+
+**Goal:** Consolidate all Dexie database interactions within Repositories, making `DataManager` a pure orchestrator and establishing a single, consistent data access pattern.
+
+## Phase 1: Define Repository Interface & Implement Core Methods
+
+-   [ ] **Define Standard Methods:** Define/review standard methods in `[BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts)` or a shared interface:
+    -   [ ] `getById(id, tenantId, branchContext)`
+    -   [ ] `query(tenantId, filters, options, branchContext)`
+    -   [ ] `create(data, tenantId, branchContext)`
+    -   [ ] `update(id, changes, tenantId, branchContext)`
+    -   [ ] `delete(id, tenantId, branchContext)`
+    -   [ ] `save(data, tenantId)`
+    -   [ ] `batchSave(data, tenantId)`
+-   [ ] **(Optional/Recommended) Define Formal Interface:** Create a `IRepository<T>` interface and have `BaseRepository<T>` implement it.
+-   [ ] **Define Error Handling Strategy:** Specify how errors (e.g., Dexie errors, validation errors) should be handled/thrown by repository methods.
+-   [ ] **Implement Base Methods:** Add default implementations in `[BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts)` using the `db` instance.
+    -   [ ] Move ID generation logic from `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` to `create`.
+    -   [ ] Move fetch/merge/put logic from `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` to `update`.
+    -   [ ] Move delete logic from `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` to `delete`.
+    -   [ ] **Integrate Branching Logic:** Implement Phase 2 TODOs within `update`/`delete`.
+    -   [ ] **Consider Transaction Management:** Ensure complex operations (especially involving branching) within `update`/`delete` are atomic, potentially using `db.transaction(...)` if needed.
+    -   [ ] **Define Query Parameter Mapping:** Clarify how `filters` and `options` passed to `Repository.query` are mapped to Dexie queries.
+-   [ ] **Review Specific Repositories:** Check implementations in `[src/lib/database/repositories/](mdc:src/lib/database/repositories)` for necessary overrides.
+-   [ ] **Verify Factory:** Ensure `[RepositoryFactory.ts](mdc:src/lib/database/repositories/RepositoryFactory.ts)` is up-to-date.
+
+## Phase 2: Refactor `DataManager` Read Operations
+
+-   [ ] **Verify/Implement `branchContext` Sourcing:** Ensure `DataManager` can provide the correct `branchContext` for repository calls.
+-   [ ] **Refactor `fetchEntity` in `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`:**
+    -   [ ] Remove direct `db.table.get()`.
+    -   [ ] Call `repository.getById()` for cache check.
+    -   [ ] On cache miss/force refresh, call `adapter.fetchFromApi()`.
+    -   [ ] On API success, call `repository.save()`.
+-   [ ] **Refactor `fetchEntities` in `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`:**
+    -   [ ] Remove direct `db.table.where()`.
+    -   [ ] Call `repository.query()` for cache check.
+    -   [ ] On cache miss/force refresh, call `adapter.queryFromApi()`.
+    -   [ ] On API success, call `repository.batchSave()`.
+
+## Phase 3: Refactor `DataManager` Write Operations
+
+-   [ ] **Refactor `createEntity` in `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`:**
+    -   [ ] Remove direct `db.table.put()` and ID generation.
+    -   [ ] Call `repository.create()`.
+    -   [ ] After success, call `syncManager.queueOperation('save', createdEntity, ...)`.
+    -   [ ] Ensure consistent return type (full entity).
+    -   [ ] Ensure `notifyEntityChange(...)` is called correctly after repository success and queueing.
+-   [ ] **Refactor `updateEntity` in `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`:**
+    -   [ ] Remove direct get/merge/put logic.
+    -   [ ] Call `repository.update()`.
+    -   [ ] After success, call `syncManager.queueOperation('save', updatedEntity, ...)`.
+    -   [ ] Ensure consistent return type (full entity).
+    -   [ ] Ensure `notifyEntityChange(...)` is called correctly after repository success and queueing.
+-   [ ] **Refactor `deleteEntity` in `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`:**
+    -   [ ] Remove direct `db.table.delete()`.
+    -   [ ] Call `repository.delete()`.
+    -   [ ] If successful, call `syncManager.queueOperation('delete', { id: entityId }, ...)`.
+    -   [ ] Ensure `notifyEntityChange(...)` is called correctly after repository success and queueing.
+
+## Phase 4: Cleanup and Verification
+
+-   [ ] **Remove Dead Code:** Delete unused direct Dexie access in `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`.
+-   [ ] **Review `DataManager` Dependencies:** Confirm if `db` instance is still needed for entity tables.
+-   [ ] **Review Repository `SyncManager` Dependencies:** Check specific repositories (e.g., `NodeRepository`, `OfficeRepository`) for `SyncManager` usage and remove if now redundant.
+-   [ ] **Add/Update Unit Tests:**
+    -   [ ] Test new/modified methods in `[BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts)` (including error handling, transactions).
+    -   [ ] Update `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` tests to mock RepositoryFactory/SyncManager and verify event firing.
+-   [ ] **Integration Testing:** Cover full read/write flows, including branching and error cases.
+-   [ ] **Manual Testing:** Verify core features, offline behavior, and branching.

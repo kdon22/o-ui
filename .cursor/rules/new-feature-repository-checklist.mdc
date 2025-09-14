@@ -1,0 +1,100 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# New Feature Repository Checklist
+
+This guide outlines the steps required when adding a new database entity (feature) that needs to support the branching logic (fallback, copy-on-write) implemented via the Repository pattern.
+
+**Use existing repositories like `[RuleRepository.ts](mdc:src/lib/database/repositories/RuleRepository.ts)` or `[NodeRepository.ts](mdc:src/lib/database/repositories/NodeRepository.ts)` as templates.**
+
+## Checklist:
+
+1.  **Define Types (`features/<feature>/types.ts`):**
+    *   Define the core `[<Entity>Entity](<define path>)` type.
+    *   Define `[Create<Entity>DTO](<define path>)`.
+    *   Define `[Update<Entity>DTO](<define path>)`.
+    *   Define necessary relationship types if applicable.
+
+2.  **Update Prisma Schema (`prisma/schema.prisma`):**
+    *   Ensure the `model <Entity>` exists.
+    *   **Add Branching Fields:**
+        *   `branchId String`
+        *   `original<Entity>Id String? // Link to original if branched`
+    *   **Add Branching Relations:**
+        *   `branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)`
+        *   `original<Entity> <Entity>? @relation("BranchVersion<Entity>", fields: [original<Entity>Id], references: [id], onDelete: NoAction, onUpdate: NoAction)`
+        *   `branched<Entities> <Entity>[] @relation("BranchVersion<Entity>")`
+    *   **Add Indexes:**
+        *   `@@index([branchId])`
+        *   `@@index([tenantId, branchId])`
+        *   `@@index([original<Entity>Id])`
+    *   Run `npx prisma generate` to update the client types.
+
+3.  **Create Repository (`lib/database/repositories/<Entity>Repository.ts`):**
+    *   Create the file `<Entity>Repository.ts`.
+    *   Extend `[BaseRepository](mdc:src/lib/database/repositories/BaseRepository.ts)<<Entity>Entity>$.
+    *   Implement the constructor, passing the correct entity key (e.g., `'<feature>s'`) to `super()`.
+    *   Import necessary types (`Prisma`, `<Entity>`, DTOs, `BranchContext`, etc.).
+    *   Import/define necessary utils (e.g., `normalize<Entity>`, `buildIncludeObject`).
+
+4.  **Implement Core Methods:**
+    *   **`create`:**
+        *   Accept `data` (compatible with BaseRepository, potentially using type intersection with DTO), `tenantId`, `branchContext`.
+        *   Generate a new `id` (e.g., `uuidv4`).
+        *   Set `branchId` from `branchContext`.
+        *   Set `original<Entity>Id` to the new `id`.
+        *   Set audit fields (`createdBy`, `updatedBy`) using `branchContext.userId`.
+        *   Use `prisma.<entity>.create`.
+        *   Add `// TODO: [Versioning]` comment.
+        *   Add `// TODO: [Relationships]` comment and placeholder logic.
+        *   Normalize and return the result.
+    *   **`getById`:**
+        *   Accept `id`, `tenantId`, `branchContext`.
+        *   Attempt to fetch from `branchContext.currentBranchId` using `prisma.<entity>.findFirst`.
+        *   If not found and `currentBranchId !== defaultBranchId`, attempt fetch from `branchContext.defaultBranchId`.
+        *   Normalize and return the result or `null`.
+    *   **`query`:**
+        *   Accept `tenantId`, `filters` (based on Entity/DTO), `branchContext`, `queryOptions`.
+        *   Implement internal helper `fetchBranch<Entities>Internal`:
+            *   Accepts `tenantId`, `filters`, `branchId`, `queryOptions`.
+            *   Builds `where` clause including `branchId`.
+            *   Handles specific entity filters.
+            *   Uses `prisma.<entity>.findMany`.
+        *   Implement internal helper `combine<Entity>ResultsInternal`:
+            *   Accepts `currentBranchEntities`, `defaultBranchEntities`.
+            *   Uses `original<Entity>Id` to merge lists correctly (avoiding duplicates/overrides).
+        *   Call `fetchBranch<Entities>Internal` for `currentBranchId`.
+        *   If `currentBranchId !== defaultBranchId`, call `fetchBranch<Entities>Internal` for `defaultBranchId` and merge using `combine<Entity>ResultsInternal`.
+        *   Re-sort if necessary based on `queryOptions`.
+        *   Normalize and return results.
+    *   **`update`:**
+        *   Accept `id`, `data` (compatible with BaseRepository), `tenantId`, `branchContext`.
+        *   Fetch `target<Entity>` using `prisma.<entity>.findUnique({ where: { id } })`.
+        *   Check tenant ownership.
+        *   Prepare update payload (`cleanedPrismaUpdateData`), setting `updatedBy`.
+        *   **If `target<Entity>.branchId === branchContext.currentBranchId` (Update In Place):**
+            *   Use `prisma.<entity>.update({ where: { id }, data: cleanedPrismaUpdateData })`.
+            *   Add `// TODO: [Versioning]` comment.
+        *   **Else (Copy-on-Write):**
+            *   Generate `newId`.
+            *   Prepare `new<Entity>Data` by merging `target<Entity>` and `cleanedPrismaUpdateData`.
+            *   Set `id` to `newId`, `branchId` to `currentBranchId`, `original<Entity>Id` to `target<Entity>.id`, `createdBy` to `userId`, `version` to `1`.
+            *   Clean the data for `create` (remove relation objects).
+            *   Use `prisma.<entity>.create({ data: cleanedPrismaCreateData })`.
+            *   Add `// TODO: [Versioning]` comment.
+            *   Add `// TODO: [Relationships]` comment (copy relationships).
+            *   Update `final<Entity>Id` to `newId`.
+        *   Add `// TODO: [Relationships]` comment and placeholder logic for applying relationship updates after create/update.
+        *   Fetch and return the final entity using `this.getById(final<Entity>Id, ...)`.
+    *   **`delete`:**
+        *   Accept `id`, `tenantId`, `branchContext`.
+        *   Check if entity exists on `branchContext.currentBranchId` using `prisma.<entity>.findFirst`.
+        *   Add `// TODO: [Relationships]` comment (handle related data deletion/cleanup specific to this branch).
+        *   Use `prisma.<entity>.deleteMany({ where: { id, tenantId, branchId: branchContext.currentBranchId } })`.
+        *   Add `// TODO: [Versioning]` comment.
+
+5.  **Update Repository Factory (`lib/database/repositories/RepositoryFactory.ts`):**
+    *   Import the new `<Entity>Repository`.
+    *   Add a `case` for the entity type key (e.g., `'<feature>s'`) in the `switch` statement within `getRepository` to instantiate the new repository.

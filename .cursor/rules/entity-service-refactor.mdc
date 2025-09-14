@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Entity Service Refactoring Pattern
+
+## Purpose
+
+This rule outlines the preferred architectural pattern for handling entity logic within this codebase. The goal is to maintain clean, focused repositories by extracting complex domain logic into dedicated, feature-specific services. This promotes separation of concerns, improves testability, and enhances code maintainability.
+
+## Repository Role (`BaseRepository` Subclasses)
+
+Repositories, like `[src/lib/database/repositories/NodeRepository.ts](mdc:src/lib/database/repositories/NodeRepository.ts)`, are primarily responsible for:
+
+1.  **Data Access:** Direct interaction with the Prisma client (`prisma` or a transaction client `tx`) for basic CRUD (Create, Read, Update, Delete) and querying operations specific to the entity.
+2.  **Orchestration:** Coordinating operations that involve multiple steps or services. For example, creating a node involves calling the `NodeTreeService` and potentially `NodeRelationshipService` within a transaction managed by the repository.
+3.  **Branching Logic:** Implementing core branching behaviors like Copy-on-Write (CoW) during updates and fallback logic during reads.
+4.  **Data Mapping:** Normalizing data fetched from Prisma into the application's entity types (e.g., using `normalizeNode`).
+5.  **Dependency Injection:** Accepting necessary services (like Tree, Relationship, Versioning) via the constructor.
+6.  **Transaction Management:** Initiating Prisma transactions (`prisma.$transaction`) to ensure atomicity for complex operations like creation, updates involving parent changes, or deletion.
+
+Repositories should remain relatively thin concerning complex business rules specific to entity features.
+
+## Feature Service Role (e.g., Tree, Relationship Services)
+
+Feature-specific services, such as `[src/features/node/services/NodeTreeService.ts](mdc:src/features/node/services/NodeTreeService.ts)` and `[src/features/node/services/NodeRelationshipService.ts](mdc:src/features/node/services/NodeRelationshipService.ts)`, are responsible for:
+
+1.  **Encapsulating Complex Domain Logic:** Handling intricate calculations or processes related to a specific aspect of an entity. Examples include:
+    *   Calculating tree structures (`path`, `level`, `ancestorIds`, `sortOrder`).
+    *   Managing updates to tree structures when nodes move (including descendant recalculation).
+    *   Applying, cleaning up, or copying junction table relationships.
+2.  **Operating within Transactions:** Accepting a Prisma transaction client (`tx`) from the calling repository method to ensure their operations are part of the larger atomic unit.
+3.  **Location:** Residing within the relevant feature directory (e.g., `src/features/<entity-name>/services/`).
+
+## Versioning Service Role
+
+The `[src/features/versioning/services/VersioningService.ts](mdc:src/features/versioning/services/VersioningService.ts)` handles the logging of changes (Creates, Updates, Deletes) to entities.
+
+*   It is typically injected into repositories.
+*   Repositories call its `logChange` method, usually as the final step within a transaction, passing the relevant entity snapshot and transaction client (`tx`).
+
+## Guidance for Future Development
+
+When implementing logic for other entities:
+
+*   **Keep Repositories Focused:** If an entity requires complex logic beyond basic CRUD, branching, and data mapping (e.g., state management, intricate validation rules, specific workflows, tree-like structures), extract that logic into one or more dedicated services within the entity's feature folder (e.g., `src/features/<new-entity>/services/`).
+*   **Follow the Pattern:** Use the `Node` entity (`NodeRepository`, `NodeTreeService`, `NodeRelationshipService`) as a reference implementation for this pattern.
+*   **Use Transactions:** Ensure complex operations spanning the repository and multiple services are wrapped in `prisma.$transaction` within the repository method.

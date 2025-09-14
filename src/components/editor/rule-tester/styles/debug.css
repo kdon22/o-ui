@@ -1,0 +1,91 @@
+/* Monaco Debug System - Native Monaco Integration ✨ */
+
+/* 🎯 **NATIVE MONACO DEBUGGING**: Using Monaco's built-in Codicon system */
+
+/* Import Monaco's native Codicons for breakpoints and debug indicators */
+@import url('https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.33/dist/codicon.css');
+
+/* 🔴 **BREAKPOINT STYLING**: Enhance Monaco's native breakpoint icons */
+.monaco-editor .codicon-debug-breakpoint {
+  color: #e51400 !important;
+  font-size: 16px !important;
+  line-height: 16px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.monaco-editor .codicon-debug-breakpoint:hover {
+  color: #ff1a00 !important;
+  transform: scale(1.1) !important;
+}
+
+.monaco-editor .codicon-debug-breakpoint:active {
+  color: #c41200 !important;
+  transform: scale(0.95) !important;
+}
+
+/* 🟢 **EXECUTION LINE STYLING**: Enhance Monaco's native execution indicators */
+.monaco-editor .codicon-debug-stackframe {
+  color: #22c55e !important;
+  font-size: 16px !important;
+  line-height: 16px !important;
+  animation: executionPulse 1.5s ease-in-out infinite !important;
+}
+
+/* ✨ **EXECUTION LINE BACKGROUND**: Subtle highlight for current execution line */
+.monaco-editor .editor-line-highlight {
+  background-color: rgba(34, 197, 94, 0.08) !important;
+  border-left: 3px solid rgba(34, 197, 94, 0.6) !important;
+  border-radius: 2px !important;
+}
+
+/* 📏 **DEBUG LINE DECORATOR**: Additional visual indicator for execution line */
+.monaco-editor .debug-line-decorator {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, transparent 100%) !important;
+  width: 4px !important;
+}
+
+/* 🎨 **ANIMATIONS**: Smooth transitions for debug indicators */
+@keyframes executionPulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+/* 💬 **DEBUG HOVER STYLING**: Enhanced variable inspection */
+.monaco-hover {
+  border: 1px solid #454545 !important;
+  background-color: #252526 !important;
+  color: #cccccc !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.monaco-hover .hover-contents {
+  padding: 8px 12px !important;
+  font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+/* 🎯 **DEBUG SESSION STATUS**: Visual feedback for debug states */
+.debug-session-active {
+  border-left: 3px solid #41b883;
+  background-color: rgba(65, 184, 131, 0.05);
+}
+
+.debug-session-paused {
+  border-left: 3px solid #ff9800;
+  background-color: rgba(255, 152, 0, 0.05);
+}
+
+/* 🔄 **VARIABLE CHANGE INDICATOR**: Highlight modified variables */
+.debug-variable-changed {
+  background-color: rgba(86, 156, 214, 0.15) !important;
+  border-left: 2px solid #569cd6 !important;
+  transition: all 0.3s ease !important;
+} 

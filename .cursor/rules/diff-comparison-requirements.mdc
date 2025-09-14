@@ -1,0 +1,58 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Branch Diff Comparison Requirements
+
+This rule outlines the key considerations and requirements for implementing a robust and informative diff comparison feature between branches in this application.
+
+## Core Goals
+
+*   Identify specific changes (added, modified, deleted) for relevant entities between a source and target branch.
+*   Provide a clear and understandable representation of these changes to the user.
+*   Support decision-making for merging or understanding branch divergence.
+
+## Key Requirements
+
+### 1. Entity Scope
+
+*   **Define Compared Entities:** Clearly specify which entity types are included in the diff. Candidates include:
+    *   `nodes` ([src/features/node/types.ts](mdc:src/features/node/types.ts))
+    *   `rules` ([src/features/rule/types.ts](mdc:src/features/rule/types.ts))
+    *   `processes` ([src/features/process/types.ts](mdc:src/features/process/types.ts))
+    *   `workflows` ([src/features/workflow/types.ts](mdc:src/features/workflow/types.ts))
+    *   Associated relationships (e.g., `nodeRules`, `nodeProcess`, `nodeWorkflow`, `processRules`)
+*   **Configuration:** Consider making the compared entity types configurable if needed.
+
+### 2. Change Detection Logic
+
+*   **Identify Additions:** Entities present in the target branch but not the source branch (based on `originalId` or a stable identifier if branching creates new primary `id`s).
+*   **Identify Deletions:** Entities present in the source branch but not the target branch.
+*   **Identify Modifications:** Entities present in both branches but with differing properties.
+    *   **Property Scope:** Determine which properties within an entity are relevant for comparison (e.g., ignore `updatedAt`, `version`?).
+    *   **Relationship Changes:** Detect changes in linked entities (e.g., a rule added/removed from a node, a process added/removed from a node). This requires comparing join table entries or relationship arrays.
+*   **Copy-on-Write Awareness:** The diff logic must understand the branching model ([src/lib/database/repositories/BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts), [src/lib/database/repositories/NodeRepository.ts](mdc:src/lib/database/repositories/NodeRepository.ts)). A modified entity in the target branch might have the same `originalId` as the source but a different primary `id`.
+
+### 3. API Endpoint (`GET /api/branches/diff`)
+
+*   **Handler:** Implement the route handler in `src/app/api/branches/diff/route.ts`.
+*   **Parameters:** Accept `sourceBranchId` and `targetBranchId` as query parameters. Potentially add `tenantId`.
+*   **Authentication/Authorization:** Ensure proper checks are in place ([src/lib/auth/auth.ts](mdc:src/lib/auth/auth.ts)).
+*   **Data Fetching:** Efficiently query all necessary data for both branches from the database (Prisma client: [src/shared/api/prismaClient.ts](mdc:src/shared/api/prismaClient.ts)).
+*   **Response Format:** Define a clear JSON structure representing the diff results (e.g., grouped by entity type, listing added/modified/deleted items with relevant details).
+
+### 4. Frontend Integration
+
+*   **Data Fetching:** Call the `/api/branches/diff` endpoint (consider using React Query/TanStack Query: [src/app/providers/query-client.tsx](mdc:src/app/providers/query-client.tsx)).
+*   **UI Presentation:** Design a component to display the diff results clearly.
+    *   Group changes by entity type.
+    *   Visually distinguish additions, deletions, and modifications.
+    *   Show specific changed fields for modifications.
+    *   Consider linking to the actual entities where applicable.
+
+## Implementation Considerations
+
+*   **Performance:** Diffing large datasets can be resource-intensive. Optimize database queries and comparison logic. Consider pagination or background processing for very large branches.
+*   **Scalability:** Ensure the solution scales as the number of entities and branches grows.
+*   **Consistency:** The diff logic must be consistent with the branching and merging strategy.

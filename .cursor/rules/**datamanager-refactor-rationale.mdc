@@ -1,0 +1,50 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rationale for DataManager/Repository Refactoring
+
+**Goal:** Explain the current architectural inconsistencies and why refactoring `DataManager` and `Repositories` is necessary.
+
+## Current Problem
+
+The current data access flow, as confirmed in `[data-architecture_20240516.md](mdc:docs/data/data-architecture_20240516.md)` and `[data-manager_detail_20240516.md](mdc:docs/data/data-manager_detail_20240516.md)`, has critical inconsistencies:
+
+1.  **Multiple Paths to Dexie:**
+    *   `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` **directly** accesses Dexie for:
+        *   Initial cache reads (`fetchEntity`/`fetchEntities`).
+        *   All optimistic writes (`createEntity`, `updateEntity`, `deleteEntity`).
+    *   `[Repositories](mdc:src/lib/database/repositories)` (e.g., `[BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts)`) are used by `DataManager` **only** to save data back to Dexie *after* it has been successfully fetched from the API, as noted in `[repositories_detail_20240516.md](mdc:docs/data/repositories_detail_20240516.md)`.
+
+2.  **Blurred Responsibilities:**
+    *   `DataManager` acts as both an orchestrator (deciding API vs Cache) *and* a direct database access layer for reads/optimistic writes.
+    *   `Repositories` are intended to encapsulate database logic (including complex queries and **branching rules** mentioned in `[BaseRepository.ts](mdc:src/lib/database/repositories/BaseRepository.ts)` TODOs) but are bypassed for critical read and optimistic write operations initiated by `DataManager`.
+
+## Why Refactor?
+
+This inconsistent approach leads to:
+
+*   **Reduced Clarity:** The data flow is harder to understand and trace, as database interactions happen in multiple places.
+*   **Inconsistent Logic Implementation:** Business logic related to database operations (e.g., filtering, data transformation, **branching/copy-on-write rules**) is difficult to implement consistently when access is split. Centralizing logic in Repositories ensures rules are applied uniformly.
+*   **Difficult Maintenance:** Changes to database interaction logic (e.g., updating branching behavior) require modifications in both `DataManager` and potentially multiple Repositories.
+*   **Harder Testing:** Unit testing `DataManager` is overly complex, requiring mocks for direct Dexie interactions alongside its orchestration dependencies.
+*   **Violation of Single Responsibility Principle:** `DataManager` mixes orchestration with direct data persistence logic.
+*   **Unreliable Optimistic Updates:** Inconsistent write paths can make optimistic updates less predictable, potentially impacting UI reactivity that relies on tools like `[useLiveQuery](mdc:docs/data/using-useLiveQuery.md)`.
+
+## Proposed Solution & Benefits
+
+The proposed refactoring, detailed in the `[Refactor Plan](mdc:.cursor/rules/refactor-datamanager-repository.mdc)`, aims to:
+
+1.  **Centralize Dexie Logic:** Move **all** Dexie read and write operations into the corresponding `Repositories`.
+2.  **Clarify Roles:**
+    *   `DataManager` becomes a pure **orchestrator**: Determines cache vs API, calls Repository for DB operations, calls Adapter for API operations, calls `SyncManager` for queuing.
+    *   `Repositories` become the **sole owners** of database interaction logic for their specific entity, including reads, writes, complex queries, and the **correct place to implement branching logic**.
+
+This will result in:
+
+*   **A Single, Consistent Pattern:** All database access goes through Repositories.
+*   **Improved Maintainability:** Database logic (including branching) is localized.
+*   **Enhanced Testability:** Clearer responsibilities simplify testing.
+*   **Better Adherence to Architectural Principles.**
+*   **Robust Optimistic Updates:** Consistent writes strengthen the foundation for reactive UI updates (e.g., via `useLiveQuery`).

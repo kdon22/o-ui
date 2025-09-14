@@ -1,0 +1,175 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+\
+# Refactoring Plan: Implementing Robust Branching Logic
+
+**Goal:** Refactor the data access and API layers to implement a consistent, robust, and maintainable branching system based on the principles of data isolation, copy-on-write, and fallback visibility, resolving current bugs and aligning with best practices.
+
+**Core Principles:**
+*   Centralize branch-aware logic (fallback, copy-on-write) within the **Repository Layer**.
+*   Ensure consistent use of `branchId` context throughout the data flow (UI -> Hooks -> API -> Repository -> DB).
+*   Simplify frontend fetching logic by relying on the backend/repository for complex branching behaviors.
+
+---
+
+## Phase 1: Foundational Changes & Branch State
+
+**Objective:** Establish reliable branch state management and standardize on a branch-aware repository pattern.
+
+1.  **Solidify Branch State Management:**
+    *   **Action:** Verify/Implement a Zustand store (likely `useBranchStore`, potentially in `src/features/versioning/stores/` or `src/lib/stores/`) to reliably hold:
+        *   `currentBranchId: string | null`
+        *   `defaultBranch: Branch | null` (or `defaultBranchId: string | null`)
+    *   **Action:** Ensure `AppInitializer.tsx` correctly fetches the default branch and user's preferred branch on startup, populating the store. Check session loading logic.
+    *   **File Reference:** @`src/app/providers/AppInitializer.tsx`
+    *   **File Reference:** `src/features/versioning/stores/useBranchStore.ts` (Verify Path/Create if needed)
+    *   **Verification:** Confirm components and hooks can consistently access `currentBranchId` and `defaultBranch.id` (or `defaultBranchId`).
+
+2.  **Standardize on Repository Pattern:**
+    *   **Decision:** Confirm primary use of the Repository pattern (`lib/database/repositories`) for all versioned entity CRUD operations initiated via the backend API. Deprecate direct DB access or alternative patterns (like `DataManager`) for these operations if conflicting.
+    *   **Action:** Ensure repositories exist for all versioned entities (Nodes, Rules, Processes, Offices, etc.) within `lib/database/repositories/`. Create missing ones based on a common interface/base class.
+    *   **File Reference:** @`src/lib/database/repositories/`
+
+3.  **Enhance Repository Interfaces & Implementations:**
+    *   **Action:** Define or modify a base repository interface/class (e.g., `BaseRepository.ts`) and update all specific repository implementations (e.g., `RuleRepository.ts`, `NodeRepository.ts`).
+    *   **Required Method Signatures Changes:** Core methods must accept a `branchContext` object.
+        ```typescript
+        interface BranchContext {
+          currentBranchId: string;
+          defaultBranchId: string;
+          userId: string; // For auditing/versioning
+        }
+
+        // Example method signatures:
+        async getById(id: string, tenantId: string, branchContext: BranchContext): Promise<T | null>;
+        async query(filter: Partial<T>, tenantId: string, branchContext: BranchContext): Promise<T[]>;
+        async create(data: CreateData, tenantId: string, branchContext: BranchContext): Promise<T>;
+        async update(id: string, data: UpdateData, tenantId: string, branchContext: BranchContext): Promise<T>;
+        async delete(id: string, tenantId: string, branchContext: BranchContext): Promise<void>;
+        ```
+    *   **File Reference:** `src/lib/database/repositories/BaseRepository.ts` (Verify Path/Create if needed)
+    *   **File Reference:** `src/lib/database/repositories/RuleRepository.ts` (Verify Path/Update)
+    *   **File Reference:** `src/lib/database/repositories/NodeRepository.ts` (Verify Path/Update)
+    *   **File Reference:** (Add other repository files as needed)
+
+---
+
+## Phase 2: Implement Core Branching Logic in Repositories
+
+**Objective:** Centralize fallback fetching and copy-on-write logic within the repository methods, and implement comprehensive relationship handling.
+
+1.  **Implement Fetching Logic (Fallback):**
+    *   **Action:** Implement the fallback logic within the `repository.query` and `repository.getById` methods for all versioned entities.
+    *   **Logic:**
+        1.  Fetch entities matching criteria + `branchId = branchContext.currentBranchId`.
+        2.  Fetch entities matching criteria + `branchId = branchContext.defaultBranchId`.
+        3.  Combine results: Prioritize current branch versions. Include default branch versions *only if* no corresponding version (linked by `original<Entity>Id` or `id`) exists from the current branch query.
+        4.  Ensure consistent sorting.
+    *   **File Reference:** All specific repository implementation files (e.g., `RuleRepository.ts`, `NodeRepository.ts`) in @`src/lib/database/repositories/`
+
+2.  **Implement Update Logic (Copy-on-Write):**
+    *   **Action:** Implement the copy-on-write logic within the `repository.update` method for all versioned entities.
+    *   **Logic:**
+        1.  Fetch the specific entity version by `id` (internal fetch ignoring branch).
+        2.  If `entity.branchId === branchContext.currentBranchId`: Update in place. Create `Version` record.
+        3.  If `entity.branchId !== branchContext.currentBranchId`:
+            *   Create a *new record* based on the fetched entity + incoming `data`.
+            *   Set new record's `branchId = branchContext.currentBranchId`.
+            *   Set new record's `original<Entity>Id = entity.id`.
+            *   Create `Version` record for this *new* entity.
+            *   Return the *new* entity.
+    *   **File Reference:** First implement in `src/features/rule/models/RuleModel.ts` (or refactor into `RuleRepository.ts`). Then replicate for other repositories in @`src/lib/database/repositories/`.
+
+3.  **Implement Create/Delete Logic:**
+    *   **Action:** Ensure `repository.create` sets `branchId = branchContext.currentBranchId`, sets `originalId` appropriately, and creates a `Version` record.
+    *   **Action:** Ensure `repository.delete` targets the specific version using `id` and `branchContext.currentBranchId`. Implement "deleted marker" strategy if chosen. Create `Version` record.
+    *   **File Reference:** All specific repository implementation files in @`src/lib/database/repositories/`
+
+4.  **Implement Comprehensive Relationship Handling:**
+    *   **Objective:** Ensure join table relationships (e.g., NodeRule, ProcessRule, NodeWorkflow) are handled correctly during create/update operations, including updates to join table attributes.
+    *   **Refactor Relationship Services:**
+        *   **Action:** Implement connect, disconnect, AND update logic in `handleRelationships` for all relevant services (`NodeRelationshipService`, `RuleRelationshipService`, `ProcessRelationshipService`, `WorkflowRelationshipService`, `SettingRelationshipService`, etc.).
+        *   **Action:** Define local `RelationshipData` types within each service.
+        *   **Action:** Import specific join table attribute types (e.g., `NodeRuleAttributes`) from `@/shared/types/relationships.ts` for use in local `RelationshipData` connect/update payloads.
+        *   **Action:** Ensure `handleRelationships` uses the `effective<Entity>Id` (original ID) for modifying join table entries.
+    *   **Update DTO Definitions (`types.ts`):**
+        *   **Action:** Modify `Create...DTO` and `Update...DTO` for Nodes, Rules, Processes, Workflows, etc.
+        *   **Action:** Ensure their `relationships` field structure matches the *local* `RelationshipData` type defined in the corresponding relationship service.
+        *   **File Reference:** `src/features/node/types.ts`, `src/features/rule/types.ts`, `src/features/process/types.ts`, `src/features/workflow/types.ts`, etc.
+    *   **Update DTO Usage:**
+        *   **Action:** Review API handlers and UI components that construct DTOs.
+        *   **Action:** Ensure they populate the `relationships` field correctly, including `connect`, `disconnect`, and `update` arrays with the appropriate join table attributes (e.g., `{ id: '...', sequence: 5 }` for updating `NodeWorkflow`).
+    *   **Test Relationship Updates:**
+        *   **Action:** Add specific tests verifying the update functionality for join table attributes (e.g., `NodeRule.enabled`, `ProcessRule.order`, `NodeWorkflow.sequence`).
+
+---
+
+## Phase 3: Refactor API Layer
+
+**Objective:** Make API endpoints explicitly aware of branch context and utilize the branch-aware repositories.
+
+1.  **Modify API Routes:**
+    *   **Action:** Update API route handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) for versioned entities.
+    *   **File Reference:** @`src/app/api/node/[nodeId]/route.ts`, @`src/app/api/processes/route.ts`, `src/app/api/rules/[ruleId]/route.ts`, etc.
+    *   **Changes:**
+        *   Accept `branchId` as an optional query parameter (e.g., `?branchId=xyz`).
+        *   Retrieve `tenantId`, `userId` from request context/session.
+        *   Retrieve `currentBranchId` (from query param or session/store default) and `defaultBranchId` (from session/store).
+
+2.  **Pass Context to Repository:**
+    *   **Action:** Modify the API logic handlers (e.g., `handleGetById`, `handleGetAll`, `handlePost`, `handlePut`, `handleDelete` - likely within the `createApi` structure).
+    *   **File Reference:** @`src/lib/api/createApi.ts` (or where handlers are defined/generated)
+    *   **Changes:**
+        *   Construct the `BranchContext` object using IDs gathered in the previous step.
+        *   Pass the `BranchContext` object to the corresponding repository method calls (`RuleRepository.update(id, data, tenantId, branchContext)`).
+
+---
+
+## Phase 4: Refactor Frontend
+
+**Objective:** Simplify frontend logic by relying on the branch-aware API and repository layer. Remove redundant fallback/branching logic from hooks.
+
+1.  **Simplify Frontend Fetching Hooks:**
+    *   **Action:** Refactor `useTreeData.ts`. Remove internal fallback logic (`fetchSingleNodeWithFallback`, `fetchNodesFromDB` direct calls). It should now primarily:
+        *   Get `tenantId`, `currentBranchId`, `defaultBranchId` from store/context.
+        *   Use `useQuery` to call the relevant backend API endpoint(s) (e.g., `/api/node/...`), passing `currentBranchId` as a query param.
+    *   **File Reference:** @`src/components/Navigation/TreeNavigation/useTreeData.ts`
+    *   **File Reference:** Potentially remove/deprecate @`src/features/node/queries.ts` if `fetchNodesFromDB` is no longer needed directly by frontend.
+    *   **Action:** Refactor other data hooks (`useNodesQuery`, `useProcesses`, `useRules`, etc.).
+    *   **File Reference:** @`src/hooks/useNodesQuery.ts`, @`src/features/process/hooks/useProcesses.ts`, @`src/features/rule/hooks/useRules.ts`, etc.
+    *   **Changes:**
+        *   Ensure `queryFn` calls the backend API, passing `currentBranchId` query parameter.
+        *   Ensure mutation functions pass necessary context (like `currentBranchId`) to API calls.
+
+2.  **Update UI Components:**
+    *   **Action:** Ensure components needing branch context read `currentBranchId` from the correct store (`useBranchStore`).
+    *   **File Reference:** Various components within @`src/features/` and potentially @`src/components/`.
+
+---
+
+## Phase 5: Resolve Prisma Type Errors & Testing
+
+**Objective:** Unblock development by fixing Prisma type issues and ensuring the refactored system works correctly.
+
+1.  **Resolve Type Errors:**
+    *   **Action:** Follow systematic steps: Clean build (`rm -rf node_modules .next .prisma`), `npm install`, `npx prisma generate`. Inspect generated types. Simplify code in `RuleModel.ts`/`RuleRepository.ts` to isolate the error.
+    *   **File Reference:** `src/features/rule/models/RuleModel.ts` (or `RuleRepository.ts`)
+    *   **File Reference:** @`prisma/schema.prisma`
+
+2.  **Testing:**
+    *   **Action:** Conduct thorough end-to-end testing as outlined in Phase 1, Step 5 and Phase 2 of the original `@versioning-implementation-plan.mdc`, focusing on:
+        *   Branch creation and switching.
+        *   Fallback visibility (seeing main branch items).
+        *   Creating items on a branch.
+        *   Updating inherited items (verify copy-on-write).
+        *   Updating branch-specific items (verify in-place update).
+        *   Deleting items (inherited vs. specific).
+        *   Confirming errors related to missing nodes or incorrect data visibility are resolved.
+    *   **Action:** Include tests specifically covering the relationship updates implemented in Phase 2.4.
+
+---
+
+*This rule provides a detailed roadmap. Specific implementation details within each file will require careful coding and adherence to the project's conventions.*

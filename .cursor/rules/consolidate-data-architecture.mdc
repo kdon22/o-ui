@@ -1,0 +1,71 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rule: Consolidate Data Architecture
+
+**Goal:** Standardize data fetching and state management on the `DataManager`/`SyncManager`/Adapters/Dexie/TanStack Query system. Deprecate and remove the parallel `entity-hooks` system (`useEntityDataHook`, `useNormalizedEntity`, associated utilities) to reduce complexity and ensure a single, consistent approach.
+
+**Rationale:** The `DataManager`-centric system provides superior offline capabilities (Dexie persistence, reliable background sync via `SyncManager`), better separation of concerns (Adapters handling API specifics based on `EntityDefinitions`), and robust integration with TanStack Query for UI state and optimistic updates. The `entity-hooks` system uses direct `fetch`, relies on less persistent `localStorage` caching, and lacks integrated offline write handling.
+
+**Target Architecture Components (Keep & Enhance):**
+
+*This architecture follows the core flow: UI -> TanStack Query -> DataManager -> Dexie (IndexedDB) -> SyncManager -> Server API.*
+
+*   **Orchestration:** `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`
+*   **Offline Sync:** `[SyncManager.ts](mdc:src/lib/database/sync/SyncManager.ts)`, `[SyncQueue.ts](mdc:src/lib/database/sync/SyncQueue.ts)`
+*   **Entity Contracts:** `[EntityDefinitions.ts](mdc:src/lib/registry/EntityDefinitions.ts)` (and files in `src/lib/registry/entity-definitions/`), `[types.ts](mdc:src/lib/registry/types.ts)`
+*   **API Interaction:** `src/lib/database/adapters/` (including `[BaseAdapter.ts](mdc:src/lib/database/adapters/BaseAdapter.ts)`, `[AdapterFactory.ts](mdc:src/lib/database/adapters/AdapterFactory.ts)`, specific adapters)
+*   **Persistence:** `src/lib/database/core/` (including `[DatabaseManager.ts](mdc:src/lib/database/core/DatabaseManager.ts)`, `[SchemaRegistry.ts](mdc:src/lib/database/core/SchemaRegistry.ts)`, Dexie setup)
+*   **UI State/Fetching:** `@tanstack/react-query` integration (`[query-client.ts](mdc:src/lib/query-client.ts)`, `[query-provider.tsx](mdc:src/lib/query-provider.tsx)`, `useQuery`/`useMutation` usage)
+
+**Components to Deprecate & Remove:**
+
+*   The entire `src/lib/entity-hooks/` directory, including:
+    *   `[useEntityDataHook.ts](mdc:src/lib/entity-hooks/entityData/useEntityDataHook.ts)`
+    *   `[normalizer.ts](mdc:src/lib/entity-hooks/entityData/normalizer.ts)`
+    *   `[cache.ts](mdc:src/lib/entity-hooks/entityData/cache.ts)` (localStorage caching)
+    *   `[urlUtils.ts](mdc:src/lib/entity-hooks/entityData/urlUtils.ts)` (endpoint building)
+    *   Associated types in `[types.ts](mdc:src/lib/entity-hooks/entityData/types.ts)`
+    *   The re-export file `[useEntityData.ts](mdc:src/lib/entity-hooks/useEntityData.ts)`
+*   `[useNormalizedEntity.ts](mdc:src/hooks/useNormalizedEntity.ts)`
+*   Verify and potentially remove `[useEntityData.ts](mdc:src/lib/hooks/useEntityData.ts)` if it's confirmed to be part of the deprecated system.
+*   Outdated documentation: `[README.md](mdc:docs/entity-hooks/README.md)`, `[ADDITIONAL-DOCS.md](mdc:docs/entity-hooks/ADDITIONAL-DOCS.md)`
+
+**Consolidation Plan:**
+
+1.  **Audit & Enhance `DataManager`/Adapters:**
+    *   Review use cases currently handled by `useEntityDataHook`.
+    *   Ensure corresponding `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` methods and relevant Adapters in `src/lib/database/adapters/` exist and function correctly for all required read scenarios (fetching, filtering, parameter passing).
+    *   Refine or add Adapter logic if necessary.
+
+2.  **Refactor UI Components & Hooks:**
+    *   Identify all usages of `useEntityDataHook` and `useNormalizedEntity`.
+    *   Replace these with standard `@tanstack/react-query` `useQuery` hooks.
+    *   The `queryFn` within `useQuery` **must** call the appropriate `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` method (e.g., `DataManager.getInstance().fetchEntity(...)`).
+    *   Configure `queryKey`s appropriately, likely using helpers from `[query-keys.ts](mdc:src/lib/query-keys.ts)`.
+    *   If mutations were implicitly handled, replace with `useMutation`, ensuring the `mutationFn` calls `DataManager` write methods (`createEntity`, `updateEntity`, `deleteEntity`) and that `onMutate`, `onSuccess`, `onError` handle optimistic updates and cache invalidation correctly.
+
+3.  **Migrate Normalization Logic:**
+    *   Analyze the logic within `[normalizer.ts](mdc:src/lib/entity-hooks/entityData/normalizer.ts)`.
+    *   If essential data transformation occurs here, migrate this logic to the appropriate place in the target architecture:
+        *   *Preferred:* Inside the relevant **Adapter** method before returning data from the API call.
+        *   *Alternatively:* Within `[DataManager.ts](mdc:src/lib/data/DataManager.ts)` after receiving data from an Adapter.
+        *   *Alternatively:* Using the `select` option in `useQuery` if the transformation is purely for UI display purposes.
+
+4.  **Consolidate Caching Strategy:**
+    *   Remove reliance on `localStorage` caching implemented in `[cache.ts](mdc:src/lib/entity-hooks/entityData/cache.ts)`.
+    *   Leverage the combination of TanStack Query's in-memory cache and Dexie's persistent offline cache managed via `[DataManager.ts](mdc:src/lib/data/DataManager.ts)`.
+    *   Evaluate if any critical "instant load" scenarios previously met by `localStorage` need alternative solutions like pre-populating the TanStack Query cache during `[SyncManager.ts](mdc:src/lib/database/sync/SyncManager.ts)`'s `loadInitialData`.
+
+5.  **Testing:**
+    *   Implement comprehensive tests for refactored components and hooks.
+    *   Verify data fetching, caching, optimistic updates, offline behavior, and background synchronization work correctly under the consolidated system.
+
+6.  **Code Removal:**
+    *   Once all dependent code is refactored and thoroughly tested, delete the `src/lib/entity-hooks/` directory and other identified deprecated files (`useNormalizedEntity.ts`, etc.).
+
+7.  **Documentation Cleanup:**
+    *   Update `[data-architecture_20240516.md](mdc:docs/data/data-architecture_20240516.md)` and its linked detail files (`*-detail_20240516.md`) to remove any mention of the deprecated system and accurately reflect the final, consolidated architecture.
+    *   Delete `[README.md](mdc:docs/entity-hooks/README.md)` and `[ADDITIONAL-DOCS.md](mdc:docs/entity-hooks/ADDITIONAL-DOCS.md)`. Ensure no stale links remain in other documentation.

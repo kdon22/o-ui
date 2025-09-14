@@ -1,0 +1,153 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Refactoring Entity Relationship Handling Checklist
+
+This checklist outlines the detailed steps required to refactor an existing entity (e.g., "Widget") to use the centralized relationship definition pattern and standardized API payloads. This ensures consistency in how relationships are defined, updated optimistically on the client, and processed on the server.
+
+**Target Architecture:**
+
+*   Relationship metadata is defined solely within the entity's `[EntityDefinition](mdc:src/lib/registry/types.ts)` in `[src/lib/registry/entity-definitions/](mdc:src/lib/registry/entity-definitions)`.
+*   Relationship updates are communicated using standard payload types defined in `[src/shared/types/api-payloads.ts](mdc:src/shared/types/api-payloads.ts)`.
+*   Client-side optimistic updates modify both the TanStack Query cache and the local Dexie database.
+*   Server-side logic uses the `EntityDefinition` to interpret the standard payload and perform correct Prisma operations.
+
+--- 
+
+## Phase 1: Setup & Definitions
+
+1.  **[REQUIRED] Update `EntityDefinition` Type (`[src/lib/registry/types.ts](mdc:src/lib/registry/types.ts)`)**
+    *   [ ] Ensure the `EntityDefinition` interface includes the `relationships` field.
+    *   [ ] Ensure the supporting types (`BaseRelationship`, `OneToOneRelationship`, `OneToManyRelationship`, `ManyToManyRelationship`) are defined and **exported**.
+        *   *Reference commit/PR where this was done for Processes.*
+
+2.  **[REQUIRED] Define Standard API Payloads (`[src/shared/types/api-payloads.ts](mdc:src/shared/types/api-payloads.ts)`)**
+    *   [ ] Ensure the file exists and defines standard structures like `ConnectDisconnectPayload`, `ConnectDisconnectUpdatePayload<T>`, and `SetPayload`.
+    *   [ ] Define the generic `RelationshipUpdatePayload` type.
+        *   *Reference commit/PR where this was done for Processes.*
+
+3.  **[REQUIRED] Update Entity Definition (`[src/lib/registry/entity-definitions/<entity>.definition.ts](mdc:src/lib/registry/entity-definitions)`)**
+    *   [ ] Locate the specific definition file for the entity being refactored (e.g., `rule.definition.ts`).
+    *   [ ] Add the `relationships` field to the definition object.
+    *   [ ] For **each** relationship the entity has:
+        *   [ ] Add an entry in the `relationships` object (key = relation name, e.g., `nodes`, `tags`).
+        *   [ ] Define `type`: `'one-to-one'`, `'one-to-many'`, or `'many-to-many'`.
+        *   [ ] Define `relatedEntity`: The key of the related entity in `ALL_ENTITY_DEFINITIONS` (e.g., `'nodes'`, `'tags'`).
+        *   [ ] Define `accessor`: The field name used in the Prisma schema to access the relation (e.g., `nodeRules`, `documentation`, `tags`).
+        *   [ ] Define `description` (optional).
+        *   [ ] Define `localCacheField` (optional): The field name used in the Dexie schema for this entity to store related IDs (e.g., `nodeIds`, `tagIds`, `documentationId`). Defaults to `${relationName}Id(s)` if omitted.
+        *   [ ] **If M2M:** Define `junction`: `{ tableName, field, relatedField }`.
+        *   [ ] **If O2M (owned by other):** Define `foreignKey` (the field on the *related* entity pointing back).
+        *   [ ] **If O2O (owner):** Define `foreignKey` (the field on *this* entity pointing to the related one).
+    *   [ ] Import necessary join attribute types (e.g., `NodeRuleAttributes`) from `[src/shared/types/relationships.ts](mdc:src/shared/types/relationships.ts)` if needed (though `attributesType` was removed from definition, the info is still relevant).
+
+4.  **[REQUIRED] Clean Up Old Definitions**
+    *   [ ] Locate any entity-specific relationship metadata files (e.g., `[src/features/<entity>/models/relationships.ts](mdc:src/features)`).
+    *   [ ] **Delete** these redundant files.
+
+5.  **[REQUIRED] Update Entity Types (`[src/features/<entity>/types.ts](mdc:src/features)`)**
+    *   [ ] Define (or verify) the main `[<Entity>Entity](mdc:<define path>)` type.
+    *   [ ] Add local cache fields to `[<Entity>Entity](mdc:<define path>)` corresponding to the `localCacheField` values defined in the entity definition (e.g., `nodeIds?: string[]`, `tagIds?: string[]`, `documentationId?: string | null`).
+    *   [ ] Define (or verify) a specific relationship data type (e.g., `RuleRelationshipData`) that mirrors the structure expected by the standard `RelationshipUpdatePayload` but potentially uses more specific attribute types for `connect`/`update` payloads where applicable (e.g., `nodes?: { connect?: NodeRuleAttributes[], ...}`).
+    *   [ ] Update `[Create<Entity>DTO](mdc:<define path>)` / `[Create<Entity>Input](mdc:<define path>)` type used by the mutation hook to include `relationships?: <Entity>RelationshipData`.
+    *   [ ] Update `[Update<Entity>DTO](mdc:<define path>)` / `[Update<Entity>Input](mdc:<define path>)` type used by the mutation hook to include `relationships?: Partial<<Entity>RelationshipData>` within the `updates` object.
+
+## Phase 2: Client-Side Refactoring
+
+6.  **[REQUIRED] Refactor Mutation Hook (`[src/features/<entity>/hooks/use<Entity>Mutations.ts](mdc:src/features)`)**
+    *   [ ] Locate the hook using `useOptimisticEntityMutation` or `useMutation`.
+    *   [ ] Update `repositoryAction` calls:
+        *   Modify the `variables` parameter type to match the updated Input types (including `relationships`).
+        *   Separate the `relationships` payload from direct entity data within the function body.
+        *   Update the call to the client repository's `create`/`update` method to pass the `relationships` payload (adjust signature assumptions as needed, pending repository refactor).
+    *   [ ] Refactor `buildOptimisticCreateEntity` (if using `useOptimisticEntityMutation`):
+        *   Calculate initial values for relationship cache fields (`nodeIds`, `tagIds`, etc.) based on the `variables.relationships` payload using helper functions (like `calculateOptimisticIds`).
+        *   Add these fields to the returned optimistic entity object.
+    *   [ ] Refactor `buildOptimisticUpdatePatch` (if using `useOptimisticEntityMutation`):
+        *   **Crucially (Option A):** Ensure this function *only* returns patches for direct fields, **excluding** relationship cache fields (`nodeIds`, `tagIds`, etc.). The TQ cache will rely on refetch for relationship consistency on updates.
+    *   [ ] Refactor `getSyncPayload` (if used):
+        *   Ensure it correctly includes the standard `relationships` payload object to be queued for the `SyncManager`.
+    *   [ ] Refactor `getInvalidationQueryKeys`:
+        *   Add logic to check `variables.relationships` and invalidate additional query keys relevant to the changed relationships (e.g., invalidate related entity lists).
+    *   **[REQUIRED - TODO] Implement Optimistic Dexie Updates:**
+        *   Add/modify logic within the `onMutate` phase (either directly in `useMutation` options or by enhancing/modifying `useOptimisticEntityMutation`).
+        *   This logic **must** interact with Dexie (`[db](mdc:src/lib/database/db.ts)`) **within `onMutate`**.
+        *   For **updates**, it needs to:
+            *   Fetch the *current* entity state from Dexie.
+            *   Calculate the final state of relationship cache fields (`nodeIds`, etc.) by applying the connect/disconnect operations from `variables.relationships` to the current state.
+            *   Apply these relationship cache field updates (along with direct field updates) to Dexie using `db.table(...).update(...)`.
+            *   *Potentially* update local Dexie join tables if used.
+        *   For **creates**, ensure the Dexie add operation (likely happening in the client repo logic called by `repositoryAction`) includes the correctly initialized cache fields and creates necessary join table records.
+
+7.  **[REQUIRED] Refactor Client Repository Logic (`[src/lib/database/repositories/<entity>/logic/<entity>-mutation-logic.ts](mdc:src/lib/database/repositories)`)**
+    *   [ ] Locate the `-mutation-logic.ts` file.
+    *   [ ] Update signatures of `create<Entity>Logic` and `update<Entity>Logic` to accept the DTOs containing the `relationships` payload.
+    *   [ ] Refactor `create<Entity>Logic`:
+        *   Separate `relationships` from direct data.
+        *   Calculate and set initial values for relationship cache fields (`nodeIds`, etc.) on the `new<Entity>` object **before** adding it to Dexie.
+        *   If using local Dexie join tables, add logic within the Dexie transaction to create the necessary join records based on `relationships.connect` data.
+    *   [ ] Refactor `update<Entity>Logic`:
+        *   Separate `relationships` from direct data.
+        *   Implement/verify Copy-on-Write logic if applicable.
+        *   **Within the Dexie transaction:**
+            *   For **direct updates**: Fetch the existing entity, calculate the final state of relationship cache fields (applying connect/disconnect from payload), merge into the `updatePatch`, and call `processTable.update(...)`.
+            *   For **CoW**: Fetch the original entity, create the `new<Entity>Data`, calculate the initial state of relationship cache fields based on the *original* entity plus the relationship *payload*, set these on `new<Entity>Data`, and call `processTable.add(...)`.
+            *   If using local Dexie join tables, add logic to create/delete/update join records based on the `relationships` payload (connect/disconnect/update) for both direct updates and CoW (acting on the relevant `entityId`). Use helper functions (like `applyRelationshipUpdatesToJoinTables`) for clarity.
+    *   [ ] Remove or refactor old, separate relationship methods in the corresponding `[<Entity>Repository.ts](mdc:src/lib/database/repositories)` file (e.g., `addRuleToProcess`) as this logic is now integrated.
+    *   [ ] Review sync queuing calls (`syncManager.queueOperation`) within the Repository. Consider if payload generation should move entirely to the hook's `getSyncPayload` for consistency.
+
+## Phase 3: Server-Side Refactoring
+
+8.  **[REQUIRED] Refactor Server Service (`[src/lib/server/services/<entity>/<entity>Service.ts](mdc:src/lib/server/services)`)**
+    *   [ ] Update signatures of `create` and `update` methods to accept DTOs containing the `relationships` payload.
+    *   [ ] Ensure the calls to underlying CRUD/transaction functions (e.g., `execute<Entity>CreationTransaction`) pass the full data object including `relationships`.
+
+9.  **[REQUIRED] Refactor Server CRUD Logic (`[src/lib/server/services/<entity>/<entity>Crud.ts](mdc:src/lib/server/services)`)**
+    *   [ ] Update signatures of `execute<Entity>CreationTransaction` and `execute<Entity>UpdateTransaction` to accept DTOs containing the `relationships` payload.
+    *   [ ] Ensure the calls to `handle<Entity>Relationships` pass the full data object including `relationships`.
+
+10. **[REQUIRED] Refactor Server Relationship Logic (`[src/lib/server/services/<entity>/<entity>Relationships.ts](mdc:src/lib/server/services)`)**
+    *   [ ] Locate the `-Relationships.ts` file.
+    *   [ ] Remove any old, ad-hoc type definitions for relationship data.
+    *   [ ] Update the signature of `handle<Entity>Relationships` to accept `data: { relationships?: Partial<<Entity>RelationshipData> }`.
+    *   [ ] **Rewrite `handle<Entity>Relationships`:**
+        *   Import `ALL_ENTITY_DEFINITIONS` and standard payload types.
+        *   Get the specific `entityDefinition`.
+        *   Return early if `data.relationships` is missing or empty.
+        *   Initialize an empty `prismaRelationshipUpdates: Prisma.<Entity>UpdateInput = {}`.
+        *   Iterate through `Object.entries(data.relationships)`.
+        *   For each `[relationName, payload]`, get the `config` from the definition.
+        *   Based on `config.type` (`'many-to-many'`, `'one-to-many'`, etc.) and `config.accessor`:
+            *   Parse the `payload` (`connect`, `disconnect`, `update`, `set`).
+            *   Construct the corresponding Prisma nested write structure (e.g., `{ create: [...] }`, `{ deleteMany: [...] }`, `{ connect: [...] }`, `{ set: [...] }`).
+            *   Assign this structure to `prismaRelationshipUpdates[config.accessor]` (using type assertion `as any` if needed for dynamic keys).
+        *   After the loop, if `prismaRelationshipUpdates` has keys, call `await tx.<entity>.update({ where: { id: entityId }, data: prismaRelationshipUpdates });`.
+        *   Remove all old logic that handled ad-hoc DTO fields (`connectRuleIds`, etc.).
+    *   [ ] **Refactor `copy<Entity>Relationships` (for CoW):**
+        *   Use the `entityDefinition` to iterate through M2M relationships.
+        *   For each, access the original relation data via `config.accessor` on the `originalEntity`.
+        *   Use the `config.junction` details (`tableName`, `field`, `relatedField`) to dynamically find the Prisma junction model delegate on the `tx` client.
+        *   Construct the `createMany` data using the junction config fields, linking to the `newEntityId`.
+        *   Remove old hardcoded logic.
+    *   [ ] **Refactor `cleanup<Entity>Relationships`:**
+        *   Use the `entityDefinition` to iterate through M2M relationships.
+        *   Use `config.junction` details (`tableName`, `field`) to dynamically find the delegate and call `deleteMany({ where: { [config.junction.field]: entityId } })`.
+        *   Remove old hardcoded logic.
+    *   [ ] **Refactor `entityRelationsToIncludeForCopy`:**
+        *   Dynamically build the `Prisma.<Entity>Include` object based on M2M relationships in the definition, selecting necessary fields from the junction table for the `copy` logic.
+
+## Phase 4: Testing
+
+11. **[REQUIRED] Test Thoroughly**
+    *   [ ] Test **Create** operations, verifying direct fields and relationships are saved correctly in Prisma.
+    *   [ ] Test **Optimistic Create**, verifying UI updates instantly (via TQ Cache & `useLiveQuery`) and matches Dexie state for relationships.
+    *   [ ] Test **Update (In-Place)**, verifying direct fields and relationship changes (connect/disconnect/update attributes) are saved correctly in Prisma.
+    *   [ ] Test **Optimistic Update (In-Place)**, verifying UI updates instantly for direct fields (TQ Cache), and relationships update instantly (Dexie/`useLiveQuery`). Verify TQ Cache becomes consistent for relationships after refetch.
+    *   [ ] Test **Update (Copy-on-Write)**, verifying a new entity is created on the correct branch, direct fields are updated, and relationships are correctly **copied** and then **modified** according to the payload.
+    *   [ ] Test **Optimistic Update (CoW)**, verifying UI updates instantly for direct fields, and relationships update instantly (Dexie/`useLiveQuery`).
+    *   [ ] Test **Delete**, verifying relationship cleanup occurs correctly (check join tables).
+    *   [ ] Test **Offline Behavior**: Perform create/update/delete offline, go online, and verify `SyncManager` processes the queued operations correctly using the standard relationship payload.
+
+---

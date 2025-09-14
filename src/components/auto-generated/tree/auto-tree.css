@@ -1,0 +1,404 @@
+/**
+ * Auto-Tree CSS Styles
+ * 
+ * Features:
+ * - Dotted parent-child connection lines
+ * - Tree node styling and animations
+ * - Responsive design for mobile
+ * - Hover and selection states
+ * - Smooth transitions
+ * - Easy to customize via CSS variables
+ */
+
+/* ============================================================================
+   CSS VARIABLES FOR EASY CUSTOMIZATION
+   ============================================================================ */
+
+:root {
+  --tree-indent-size: 20px;
+  --tree-line-color: #d1d5db; /* gray-300 */
+  --tree-line-width: 1px;
+  --tree-line-style: dotted;
+  --tree-node-height: 32px;
+  --tree-node-padding: 4px 8px;
+  --tree-icon-size: 16px;
+  --tree-expand-size: 16px;
+  
+  /* Colors */
+  --tree-hover-bg: #f1f5f9; /* slate-100 */
+  --tree-selected-bg: #e2e8f0; /* slate-200 */
+  --tree-selected-border: #3b82f6; /* blue-500 */
+  --tree-text-color: #374151; /* gray-700 */
+  --tree-text-selected: #1e40af; /* blue-800 */
+  --tree-text-root: #991b1b; /* red-800 */
+  
+  /* Animations */
+  --tree-transition-duration: 200ms;
+  --tree-transition-easing: ease-in-out;
+}
+
+/* ============================================================================
+   MAIN TREE CONTAINER
+   ============================================================================ */
+
+.auto-tree {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tree-text-color);
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.tree-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f1f5f9;
+}
+
+.tree-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tree-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.tree-container::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.tree-container::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ============================================================================
+   TREE NODE STRUCTURE
+   ============================================================================ */
+
+.tree-nodes {
+  position: relative;
+  padding: 4px 0;
+}
+
+.tree-node-container {
+  position: relative;
+}
+
+.tree-children {
+  position: relative;
+}
+
+/* ============================================================================
+   DOTTED CONNECTION LINES
+   ============================================================================ */
+
+.tree-node-container::before {
+  content: '';
+  position: absolute;
+  border-left: var(--tree-line-width) var(--tree-line-style) var(--tree-line-color);
+  top: 0;
+  bottom: 50%;
+  left: calc(var(--tree-indent-size) * var(--level) - 10px);
+  width: var(--tree-line-width);
+  pointer-events: none;
+}
+
+.tree-node-container::after {
+  content: '';
+  position: absolute;
+  border-top: var(--tree-line-width) var(--tree-line-style) var(--tree-line-color);
+  top: 50%;
+  left: calc(var(--tree-indent-size) * var(--level) - 10px);
+  width: 10px;
+  height: var(--tree-line-width);
+  pointer-events: none;
+}
+
+/* Hide lines for root level nodes */
+.tree-node-container[data-level="0"]::before,
+.tree-node-container[data-level="0"]::after {
+  display: none;
+}
+
+/* Extend vertical line through children */
+.tree-node-container:not(:last-child)::before {
+  bottom: 0;
+}
+
+/* ============================================================================
+   NODE CONTENT STYLING
+   ============================================================================ */
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  padding: var(--tree-node-padding);
+  min-height: var(--tree-node-height);
+  cursor: pointer;
+  transition: 
+    background-color var(--tree-transition-duration) var(--tree-transition-easing),
+    color var(--tree-transition-duration) var(--tree-transition-easing);
+  position: relative;
+  border-radius: 4px;
+  margin: 1px 0;
+}
+
+.tree-node-content:hover {
+  background-color: var(--tree-hover-bg);
+}
+
+.tree-node-content.selected {
+  background-color: var(--tree-selected-bg);
+  border-right: 2px solid var(--tree-selected-border);
+  color: var(--tree-text-selected);
+}
+
+.tree-node-content.root {
+  font-weight: 500;
+  color: var(--tree-text-root);
+}
+
+/* ============================================================================
+   EXPAND/COLLAPSE TOGGLE
+   ============================================================================ */
+
+.tree-expand-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tree-expand-size);
+  height: var(--tree-expand-size);
+  margin-right: 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #9ca3af; /* gray-400 */
+  transition: color var(--tree-transition-duration) var(--tree-transition-easing);
+  flex-shrink: 0;
+}
+
+.tree-expand-toggle:hover {
+  color: #4b5563; /* gray-600 */
+}
+
+.tree-expand-toggle svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--tree-transition-duration) var(--tree-transition-easing);
+}
+
+.tree-expand-toggle.expanded svg {
+  transform: rotate(90deg);
+}
+
+.tree-expand-toggle.spacer {
+  cursor: default;
+}
+
+/* ============================================================================
+   NODE ICONS
+   ============================================================================ */
+
+.tree-node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tree-icon-size);
+  height: var(--tree-icon-size);
+  margin-right: 8px;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.tree-node-icon.root {
+  color: #dc2626; /* red-600 */
+}
+
+.tree-node-icon.folder {
+  color: #d97706; /* yellow-600 */
+}
+
+.tree-node-icon.file {
+  color: #6b7280; /* gray-500 */
+}
+
+/* ============================================================================
+   NODE TEXT
+   ============================================================================ */
+
+.tree-node-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--tree-transition-duration) var(--tree-transition-easing);
+}
+
+.tree-node-text.root {
+  font-weight: 500;
+  color: var(--tree-text-root);
+}
+
+.tree-node-text.selected {
+  color: var(--tree-text-selected);
+}
+
+/* ============================================================================
+   NODE BADGES
+   ============================================================================ */
+
+.tree-node-badge {
+  font-size: 12px;
+  color: #9ca3af; /* gray-400 */
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity var(--tree-transition-duration) var(--tree-transition-easing);
+}
+
+.tree-node-content:hover .tree-node-badge {
+  opacity: 1;
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+
+.tree-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #6b7280; /* gray-500 */
+}
+
+.tree-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb; /* gray-200 */
+  border-top: 2px solid #3b82f6; /* blue-500 */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   ERROR STATES
+   ============================================================================ */
+
+.tree-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #dc2626; /* red-600 */
+  font-size: 14px;
+}
+
+.tree-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #6b7280; /* gray-500 */
+  font-size: 14px;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  :root {
+    --tree-indent-size: 16px;
+    --tree-node-height: 40px;
+    --tree-node-padding: 8px 12px;
+  }
+  
+  .tree-node-content {
+    padding: 8px 12px;
+  }
+  
+  .tree-node-icon {
+    margin-right: 12px;
+  }
+  
+  .tree-node-text {
+    font-size: 16px;
+  }
+  
+  .tree-expand-toggle {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+  }
+  
+  .tree-expand-toggle svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+.tree-node-content:focus {
+  outline: 2px solid var(--tree-selected-border);
+  outline-offset: -2px;
+}
+
+.tree-node-content:focus-visible {
+  outline: 2px solid var(--tree-selected-border);
+  outline-offset: -2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tree-node-content,
+  .tree-expand-toggle,
+  .tree-expand-toggle svg,
+  .tree-node-text,
+  .tree-node-badge {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   DARK MODE SUPPORT
+   ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tree-line-color: #4b5563; /* gray-600 */
+    --tree-hover-bg: #1f2937; /* gray-800 */
+    --tree-selected-bg: #1e3a8a; /* blue-900 */
+    --tree-selected-border: #60a5fa; /* blue-400 */
+    --tree-text-color: #f9fafb; /* gray-50 */
+    --tree-text-selected: #dbeafe; /* blue-100 */
+    --tree-text-root: #fca5a5; /* red-300 */
+  }
+  
+  .tree-container::-webkit-scrollbar-track {
+    background: #1f2937;
+  }
+  
+  .tree-container::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
+  
+  .tree-container::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+} 

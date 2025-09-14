@@ -1,0 +1,63 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Refactoring `useProcessesMutation.ts` with `useOptimisticEntityMutation`
+
+This rule outlines how to refactor the `[useProcessesMutation.ts](mdc:src/features/process/hooks/useProcessesMutation.ts)` hook to utilize the generic optimistic mutation hook `[useOptimisticEntityMutation.ts](mdc:src/lib/database/hooks/useOptimisticEntityMutation.ts)`. The goal is to leverage the shared optimistic update logic and standardize the mutation pattern, following the example set by `[useNodeMutations.ts](mdc:src/features/node/hooks/useNodeMutations.ts)`.
+
+## Steps:
+
+1.  **Import Dependencies:**
+    *   Import `useOptimisticEntityMutation` and `BaseOptimisticMutationContext` (or a custom context if needed) from `@/lib/database/hooks/useOptimisticEntityMutation`.
+    *   Import necessary types like `ProcessEntity`, `CreateProcessInput`, `UpdateProcessInput`, `DeleteProcessInput` from `../types` (or the correct path).
+    *   Import the `useProcessRepository` hook.
+    *   Import query key generation utilities or define them locally (e.g., `getProcessListQueryKey`, `getProcessItemQueryKey`).
+
+2.  **Replace Existing Mutation Logic:** Remove the previous implementation that likely used `useEntityMutation` directly or had manual optimistic logic.
+
+3.  **Implement `createProcessMutation`:**
+    *   Call `useOptimisticEntityMutation` with the appropriate generic types (`ProcessEntity`, repository type, `CreateProcessInput`, result type, context type).
+    *   Configure the hook options:
+        *   `entityType`: `'processes'`
+        *   `operationType`: `'create'`
+        *   `getRepository`: `useProcessRepository`
+        *   `repositoryAction`: A function that calls `repo.create(variables, ...)`. 
+        *   `getListQueryKey`: A function returning the query key for the list where the new process should appear (e.g., `getProcessListQueryKey(variables.nodeId)` if grouped by node).
+        *   `getItemQueryKey`: Optional, returns the query key for the specific new process item.
+        *   `buildOptimisticCreateEntity`: A function that takes `variables` and `context` (containing `optimisticId`, `userId`, `tenantId`, `branchId`, `now`) and returns a temporary `ProcessEntity` object with `__optimistic: true`.
+        *   `getInvalidationQueryKeys`: A function that returns an array of query keys to invalidate upon successful creation (e.g., the list key, related node keys).
+
+4.  **Implement `updateProcessMutation`:**
+    *   Call `useOptimisticEntityMutation` similarly, with generics for `UpdateProcessInput`.
+    *   Configure options:
+        *   `entityType`: `'processes'`
+        *   `operationType`: `'update'`
+        *   `getRepository`: `useProcessRepository`
+        *   `repositoryAction`: A function calling `repo.update(variables.processId, variables.updates, ...)`. 
+        *   `getListQueryKey`: Returns the relevant list query key. Be mindful if updates can change which list an item belongs to. Returning a generic list key or `null` (relying solely on invalidation) are options.
+        *   `getItemQueryKey`: Returns the query key for the specific process item being updated (`variables.processId`).
+        *   `buildOptimisticUpdatePatch`: A function taking `variables` and `context` and returning a partial `ProcessEntity` object containing only the changed fields, plus `updatedAt`, `updatedBy`, and `__optimistic: true`.
+        *   `getInvalidationQueryKeys`: Returns keys to invalidate (e.g., the item key, list key(s)).
+
+5.  **Implement `deleteProcessMutation`:**
+    *   Call `useOptimisticEntityMutation` with generics for `DeleteProcessInput` and `void` result type.
+    *   Configure options:
+        *   `entityType`: `'processes'`
+        *   `operationType`: `'delete'`
+        *   `getRepository`: `useProcessRepository`
+        *   `repositoryAction`: A function calling `repo.delete(variables.processId, ...)`. 
+        *   `getListQueryKey`: Returns the query key for the list from which the item should be removed.
+        *   `getItemQueryKey`: Returns the query key for the item being deleted.
+        *   `getInvalidationQueryKeys`: Returns keys to invalidate (often just list keys, as the item key is removed automatically by `useOptimisticEntityMutation`).
+
+6.  **Return Mutations:** Export the created mutation hooks (`createProcess`, `updateProcess`, `deleteProcess`).
+
+## Considerations:
+
+*   **Query Keys:** Define robust query key functions. The effectiveness of optimistic updates depends heavily on targeting the correct list keys. Consider if processes are associated with nodes, branches, or tenants.
+*   **Context:** Decide if the `BaseOptimisticMutationContext` is sufficient or if a custom context (like `NodeOptimisticContext`) is needed to pass extra information between `onMutate` and `onSettled`/`onError`.
+*   **Relationships:** Ensure `CreateProcessInput` and `UpdateProcessInput` correctly handle any relationship data (e.g., connecting/disconnecting rules) and that the repository actions manage these. Optimistic updates might not easily reflect relationship changes; rely on invalidation.
+*   **Error Handling:** The base optimistic hook handles basic rollback. Add custom `onMutationError` logic if needed beyond simple rollback.
+*   **Referencing:** Use `[useNodeMutations.ts](mdc:src/features/node/hooks/useNodeMutations.ts)` as a practical example for implementation details.

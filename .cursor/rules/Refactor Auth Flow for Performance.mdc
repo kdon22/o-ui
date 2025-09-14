@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Checklist: Optimizing Auth Flow & Reducing Initial Load Time
+
+This checklist outlines steps to refactor the authentication flow, moving away from the client-heavy [tenant-redirect/page.tsx](mdc:src/app/(auth)/tenant-redirect/page.tsx) pattern towards a more performant server-side session enrichment strategy. The goal is to improve initial application load speed, similar to patterns seen in fast applications like Linear.app.
+
+## 1. Server-Side Session Enrichment (NextAuth Callbacks)
+
+-   [ ] **Identify Key Session Data:** Determine all critical user and context data needed immediately after login (e.g., `userId`, `email`, `tenantId`, `rootNodeId`, `userTenants` list, display name).
+-   [ ] **Modify `jwt` Callback:**
+    -   Locate your NextAuth `jwt` callback (likely in `src/auth/callbacks/jwt-callback.ts` or similar, configured via [auth-options.ts](mdc:src/auth/auth-options.ts)).
+    -   On user sign-in or when the token is first created, fetch the essential data (user details, tenant list, default tenant, default `rootNodeId`) from your database/backend.
+    -   Add this fetched data directly to the JWT token.
+    -   Ensure the token remains within reasonable size limits.
+-   [ ] **Modify `session` Callback:**
+    -   Locate your NextAuth `session` callback (likely in `src/auth/callbacks/session-callback.ts` or similar).
+    -   Transfer the enriched data from the `token` object (from the `jwt` callback) to the `session.user` object.
+    -   This makes the data readily available via `useSession()` on the client-side immediately after authentication.
+-   [ ] **Verify Data Availability:** After these changes, confirm that `useSession()` on any authenticated page immediately returns the enriched session object with all necessary data without further client-side fetching for this core context.
+
+## 2. Simplify or Eliminate `tenant-redirect/page.tsx`
+
+-   [ ] **Assess Necessity:** With server-enriched sessions, evaluate if the [tenant-redirect/page.tsx](mdc:src/app/(auth)/tenant-redirect/page.tsx) page is still needed or if its responsibilities can be significantly reduced.
+-   [ ] **Remove Client-Side Fetching:** If keeping the page for some transitional reason, remove client-side fetching of data that is now available directly from the enriched `session` object.
+-   [ ] **Update Redirect Logic:**
+    -   If the NextAuth `redirect` callback (check [src/auth/callbacks/redirect-callback.ts](mdc:src/auth/callbacks/redirect-callback.ts)) can now determine the final destination (e.g., `/nodes/${session.user.rootNodeId}`) because `rootNodeId` is in the session early, use it for a direct redirect.
+    -   Alternatively, if a minimal client-side redirect is still needed (e.g., from `/tenant-redirect` or another simple landing page), use the enriched `session` data for the redirect.
+-   [ ] **Handle Cases Without `rootNodeId`:** If a `rootNodeId` might still be legitimately missing, ensure there's a defined user flow (e.g., redirect to a "select workspace" page, or a true dashboard if one exists, or an error page if it's an unexpected state).
+
+## 3. Client-Side Navigation Best Practices
+
+-   [ ] **Use `router.push()`:** For any remaining client-side navigations (e.g., from the simplified `tenant-redirect` or another landing page), use `router.push()` from `next/navigation` instead of `window.location.href` for smoother SPA-like transitions, unless a full page reload is explicitly intended.
+
+## 4. Review Client-Side Storage and Globals
+
+-   [ ] **Reduce `localStorage`/`sessionStorage` for Session Context:** If data is now in the NextAuth session, re-evaluate if it also needs to be redundantly stored in `localStorage` or `sessionStorage` by [tenant-redirect/page.tsx](mdc:src/app/(auth)/tenant-redirect/page.tsx). The session from `useSession()` should be the primary source of truth for session context.
+-   [ ] **Eliminate Global Window Variables:** Review the use of `(window as any).__TENANT_ID__` etc., in [tenant-redirect/page.tsx](mdc:src/app/(auth)/tenant-redirect/page.tsx). Refactor to pass this data via React Context if needed by other parts of the app, or ensure components fetch it from the `useSession()` hook.
+
+## 5. `SessionProvider` Placement
+
+-   [ ] **Verify Optimal Placement:** Ensure that your main `SessionProvider` is placed at a high enough level in your component tree (typically in the root `layout.tsx`) to cover all authenticated routes. Avoid redundant nested `SessionProvider` instances if not necessary.
+
+## 6. Testing and Validation
+
+-   [ ] **Test Login Flow:** Thoroughly test the entire login and initial redirection flow.
+-   [ ] **Monitor Network Requests:** Use browser developer tools to ensure that redundant client-side requests for session context data have been eliminated.
+-   [ ] **Check Performance:** Measure initial load times and perceived performance.
+-   [ ] **Verify Error States:** Ensure all error conditions (e.g., user with no tenants, missing `rootNodeId` if critical) are handled gracefully.
