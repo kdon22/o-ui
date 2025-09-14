@@ -163,7 +163,7 @@ export async function getServerAuth(request?: NextRequest): Promise<ServerSessio
     }
 
     const userId = session.user.id;
-    const tenantId = session.user.tenantId || request?.headers.get('x-tenant-id') || null;
+    const tenantId = session.user.tenantId; // 🔒 SECURITY: Only from session, never from headers
 
     const branchContext: BranchContext | null = session.user.branchContext ? {
       currentBranchId: session.user.branchContext.currentBranchId,

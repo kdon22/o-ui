@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, use } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useActionQuery } from '@/hooks/use-action-api'
 import { useNodeIdResolver } from '@/lib/utils/entity-id-resolver'
 import { MainLayout } from '@/components/layout/main'
@@ -16,6 +16,9 @@ interface NodePageProps {
 export default function NodePage({ params }: NodePageProps) {
   const router = useRouter()
   
+  // Handle async params properly for Next.js 15.5+
+  const [nodeIdShort, setNodeIdShort] = useState<string | null>(null)
+  
   // ✅ DEBUG: Track NodePage mount/unmount
   React.useEffect(() => {
     console.log('🔥 [NodePage] COMPONENT MOUNTED with params:', params);
@@ -23,13 +26,25 @@ export default function NodePage({ params }: NodePageProps) {
       console.log('🔥 [NodePage] COMPONENT UNMOUNTED');
     };
   }, []);
+  
+  useEffect(() => {
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await params
+        setNodeIdShort(resolvedParams.nodeId)
+      } catch (error) {
+        console.error('Error resolving params:', error)
+        setNodeIdShort(null)
+      }
+    }
+    
+    resolveParams()
+  }, [params])
+  
   const { session, isAuthenticated, isLoading: sessionLoading, branchContext } = useEnterpriseSession()
   
-  // Unwrap params using React.use() for Next.js 15
-  const { nodeId: nodeIdShort } = use(params)
-  
-  // 🔥 NEW: Use consolidated ID resolver
-  const { fullId: fullNodeId, isResolving: isResolvingId, error: resolveError, notFound } = useNodeIdResolver(nodeIdShort);
+  // 🔥 NEW: Use consolidated ID resolver (only when nodeIdShort is available)
+  const { fullId: fullNodeId, isResolving: isResolvingId, error: resolveError, notFound } = useNodeIdResolver(nodeIdShort || '');
   
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -134,6 +149,23 @@ export default function NodePage({ params }: NodePageProps) {
 
   // Removed redirect-on-error to avoid navigation loops between / and /nodes
   // When the node cannot be resolved, we render the error state below.
+
+  // Show loading while params are being resolved
+  if (!nodeIdShort) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-6">
+          <AnimatedLogo size="lg" showText={true} />
+          <div className="space-y-2">
+            <p className="text-foreground font-medium">Resolving node...</p>
+            <div className="w-48 h-1 bg-primary/20 rounded-full mx-auto overflow-hidden">
+              <div className="w-full h-full bg-primary rounded-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Show loading while session is loading or cache is not ready
   if (sessionLoading || !shouldUseCacheContext || !cacheContext?.isInitialized) {

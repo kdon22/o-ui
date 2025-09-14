@@ -41,7 +41,7 @@ export class APIClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-tenant-id': this.currentTenantId || branchContext?.tenantId || 'default',
+        // 🔒 SECURITY: No tenant ID in headers - tenant comes from session only
       },
       body: JSON.stringify(requestPayload)
     });

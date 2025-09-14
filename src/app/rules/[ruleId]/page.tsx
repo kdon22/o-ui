@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useActionQuery } from '@/hooks/use-action-api'
 import { useRuleIdResolver } from '@/lib/utils/entity-id-resolver'
@@ -39,7 +39,23 @@ interface RuleEditPageProps {
 export default function RuleEditPage({ params }: RuleEditPageProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { ruleId: ruleIdShort } = use(params) // This is actually idShort from URL
+  
+  // Handle async params properly for Next.js 15.5+
+  const [ruleIdShort, setRuleIdShort] = useState<string | null>(null)
+  
+  useEffect(() => {
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await params
+        setRuleIdShort(resolvedParams.ruleId)
+      } catch (error) {
+        console.error('Error resolving params:', error)
+        setRuleIdShort(null)
+      }
+    }
+    
+    resolveParams()
+  }, [params])
   
   // Get branch from URL params, default to 'main'
   const branchParam = searchParams.get('branch')
@@ -49,8 +65,8 @@ export default function RuleEditPage({ params }: RuleEditPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [rule, setRule] = useState<ExtendedRule | null>(null)
 
-  // 🔥 Resolve idShort to real ID
-  const { fullId: ruleId, isResolving: isResolvingId, error: resolveError } = useRuleIdResolver(ruleIdShort);
+  // 🔥 Resolve idShort to real ID (only when ruleIdShort is available)
+  const { fullId: ruleId, isResolving: isResolvingId, error: resolveError } = useRuleIdResolver(ruleIdShort || '');
 
   // Load rule data using the action system (only after ID is resolved)
   // 🚀 PERFORMANCE: Single data fetch for entire rule page
@@ -58,7 +74,7 @@ export default function RuleEditPage({ params }: RuleEditPageProps) {
     'rule.read',
     { id: ruleId, branch },
     { 
-      enabled: !!ruleId, // Only fetch when we have the real ID
+      enabled: !!ruleId && !!ruleIdShort, // Only fetch when we have both the real ID and resolved params
       staleTime: 30000, // Cache for 30 seconds to prevent redundant fetches
       refetchOnWindowFocus: false // Don't refetch when switching tabs
     }
@@ -77,8 +93,8 @@ export default function RuleEditPage({ params }: RuleEditPageProps) {
 
     // State update - silent
 
-    // Show loading while resolving ID or loading rule data
-    if (isResolvingId || isLoadingRule) {
+    // Show loading while resolving params, ID, or loading rule data
+    if (!ruleIdShort || isResolvingId || isLoadingRule) {
       setIsLoading(true)
       return
     }
@@ -147,6 +163,18 @@ export default function RuleEditPage({ params }: RuleEditPageProps) {
 
     setIsLoading(false)
   }, [ruleData, isLoadingRule, ruleError, isResolvingId, resolveError, branch, ruleIdShort, router, searchParams])
+
+  // Show loading state while params are being resolved
+  if (!ruleIdShort) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Resolving rule...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Show loading state
   if (isLoading) {

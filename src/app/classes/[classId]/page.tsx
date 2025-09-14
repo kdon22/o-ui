@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useActionQuery } from '@/hooks/use-action-api'
 import { useClassIdResolver } from '@/lib/utils/entity-id-resolver'
@@ -13,7 +13,23 @@ interface ClassEditPageProps {
 
 export default function ClassEditPage({ params }: ClassEditPageProps) {
   const searchParams = useSearchParams()
-  const { classId: classIdShort } = use(params) // This is actually idShort from URL
+  
+  // Handle async params properly for Next.js 15.5+
+  const [classIdShort, setClassIdShort] = useState<string | null>(null)
+  
+  useEffect(() => {
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await params
+        setClassIdShort(resolvedParams.classId)
+      } catch (error) {
+        console.error('Error resolving params:', error)
+        setClassIdShort(null)
+      }
+    }
+    
+    resolveParams()
+  }, [params])
   
   // Get branch from URL params, default to 'main'
   const branchParam = searchParams.get('branch')
@@ -23,21 +39,21 @@ export default function ClassEditPage({ params }: ClassEditPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [classEntity, setClassEntity] = useState<ExtendedClass | null>(null)
 
-  // 🔥 Resolve idShort to real ID
-  const { fullId: classId, isResolving: isResolvingId, error: resolveError } = useClassIdResolver(classIdShort);
+  // 🔥 Resolve idShort to real ID (only when classIdShort is available)
+  const { fullId: classId, isResolving: isResolvingId, error: resolveError } = useClassIdResolver(classIdShort || '');
 
   // Load class data using the action system (only after ID is resolved)
   const { data: classData, isLoading: isLoadingClass, error: classError } = useActionQuery(
     'class.read',
     { id: classId, branch },
-    { enabled: !!classId } // Only fetch when we have the real ID
+    { enabled: !!classId && !!classIdShort } // Only fetch when we have both the real ID and resolved params
   )
 
   useEffect(() => {
     // State update - silent
 
-    // Show loading while resolving ID or loading class data
-    if (isResolvingId || isLoadingClass) {
+    // Show loading while resolving params, ID, or loading class data
+    if (!classIdShort || isResolvingId || isLoadingClass) {
       setIsLoading(true)
       return
     }
@@ -86,6 +102,18 @@ export default function ClassEditPage({ params }: ClassEditPageProps) {
 
     setIsLoading(false)
   }, [classData, isLoadingClass, classError, isResolvingId, resolveError, branch])
+
+  // Show loading state while params are being resolved
+  if (!classIdShort) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Resolving class...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Show loading state
   if (isLoading) {

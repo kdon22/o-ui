@@ -103,8 +103,19 @@ export async function POST(request: NextRequest) {
     // Extracting context from request and session
     
     const session = await getServerSession(authOptions);
-    const tenantId = request.headers.get('x-tenant-id') || session?.user?.tenantId!;
-    const userId = session?.user?.id || 'system';
+    
+    // 🔒 SECURITY: Tenant ID must ONLY come from authenticated session
+    if (!session?.user?.tenantId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication required - no valid session found',
+        timestamp: Date.now(),
+        action: actionRequest.action
+      }, { status: 401 });
+    }
+    
+    const tenantId = session.user.tenantId; // Only from session - never from headers
+    const userId = session.user.id;
 
     // IMPORTANT: Branch context must always come from the authenticated session.
     // Never trust client-provided branch identifiers and never fall back to names.
@@ -142,7 +153,6 @@ export async function POST(request: NextRequest) {
       sessionUserId: session?.user?.id,
       sessionTenantId: session?.user?.tenantId,
       sessionBranchContext: session?.user?.branchContext,
-      headerTenantId: request.headers.get('x-tenant-id'),
       timestamp: new Date().toISOString()
     });
 
@@ -193,10 +203,10 @@ export async function POST(request: NextRequest) {
         executionTime: Date.now() - startTime,
         timestamp: Date.now(),
         action: actionRequest.action,
+        // @ts-expect-error - meta field needed for client storage helpers
         meta: {
           operation: 'read',
           branchId,
-          // @ts-expect-error include default for client storage helpers
           defaultBranchId
         }
       };
@@ -241,7 +251,7 @@ export async function POST(request: NextRequest) {
       executionTime: Date.now() - startTime,
       timestamp: Date.now(),
       action: actionRequest?.action || 'unknown',
-      // Add detailed error information for debugging
+      // @ts-expect-error - debug field needed for development debugging
       debug: process.env.NODE_ENV === 'development' ? {
         stack: error instanceof Error ? error.stack : undefined,
         errorType: error instanceof Error ? error.constructor.name : typeof error,
