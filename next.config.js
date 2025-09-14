@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+const path = require('path');
 
 const nextConfig = {
   reactStrictMode: false, // 🚫 DISABLED: Prevents duplicate Monaco editor instances
@@ -34,6 +35,8 @@ const nextConfig = {
       },
     ],
   },
+  // Silence monorepo root inference warning by pointing to the workspace root
+  outputFileTracingRoot: path.join(__dirname, '..'),
   // This ensures that both routers can handle API calls correctly
   rewrites: async () => {
     return [
