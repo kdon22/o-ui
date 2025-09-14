@@ -243,7 +243,7 @@ class JunctionAutoCreatorFactory {
   private getExplicitParentActions(databaseKey: string): string[] | null {
     switch (databaseKey) {
       case 'nodeProcesses':
-        return ['process.create'];
+        return ['process.create', 'rule.create']; // ← Also trigger on rule.create when nodeId + processId present
       case 'nodeWorkflows':
         return ['workflow.create'];
       case 'processRules':
@@ -278,7 +278,38 @@ class JunctionAutoCreatorFactory {
       return false;
     }
 
-    // Check if navigation context fields are present in parent data OR in provided navigationContext
+    // Special handling for NodeProcess junction when rule is created with processId
+    if (junctionSchema.databaseKey === 'nodeProcesses' && parentAction === 'rule.create') {
+      // For rule creation, we should create NodeProcess junction if:
+      // 1. We have a processId (from rule creation)
+      // 2. We have a nodeId (from navigation context)
+      const hasProcessId = parentData?.processId || navigationContext?.processId;
+      const hasNodeId = parentData?.nodeId || navigationContext?.nodeId;
+      
+      if (hasProcessId && hasNodeId) {
+        console.log('🔍 [JunctionFactory] NodeProcess auto-creation for rule.create:', {
+          parentAction,
+          junctionSchema: junctionSchema.databaseKey,
+          hasProcessId: !!hasProcessId,
+          hasNodeId: !!hasNodeId,
+          processId: hasProcessId,
+          nodeId: hasNodeId,
+          decision: 'CREATE'
+        });
+        return true;
+      }
+      
+      console.log('🔍 [JunctionFactory] NodeProcess auto-creation skipped for rule.create:', {
+        parentAction,
+        junctionSchema: junctionSchema.databaseKey,
+        hasProcessId: !!hasProcessId,
+        hasNodeId: !!hasNodeId,
+        decision: 'SKIP - Missing required context'
+      });
+      return false;
+    }
+
+    // Standard navigation context check for other junctions
     const requiredFields = Object.keys(config.navigationContext);
     const fieldChecks = requiredFields.map(field => {
       const fromParent = parentData ? parentData[field] : undefined;
@@ -296,7 +327,7 @@ class JunctionAutoCreatorFactory {
     // Require ALL configured navigationContext fields to be present to auto-create
     const hasRequiredContext = fieldChecks.every(check => check.hasValue);
 
-    console.log('🔍 [JunctionFactory] Detailed auto-creation check:', {
+    console.log('🔍 [JunctionFactory] Standard auto-creation check:', {
       parentAction,
       junctionTable: junctionSchema.databaseKey,
       actionPrefix: junctionSchema.actionPrefix,
@@ -473,6 +504,32 @@ class JunctionAutoCreatorFactory {
     navigationContext?: Record<string, any> | null
   ): any {
     const config = junctionSchema.junctionConfig!;
+    
+    // Special handling for NodeProcess junction when rule is created
+    if (junctionSchema.databaseKey === 'nodeProcesses' && parentAction === 'rule.create') {
+      const nodeId = parentData?.nodeId || navigationContext?.nodeId;
+      const processId = parentData?.processId || navigationContext?.processId;
+      
+      const junctionData: any = {
+        nodeId,
+        processId,
+        // Apply schema defaults
+        ...config.defaults,
+        // Add system fields
+        tenantId: branchContext?.tenantId,
+        branchId: branchContext?.currentBranchId || 'main'
+      };
+
+      console.log('🏭 [JunctionFactory] Built NodeProcess junction data for rule.create:', {
+        junction: junctionSchema.databaseKey,
+        nodeId,
+        processId,
+        providedFields: Object.keys(junctionData),
+        data: junctionData
+      });
+
+      return junctionData;
+    }
     
     // 🚀 MINIMAL DATA: Only provide what's needed - action system will auto-generate the rest
     const junctionData: any = {

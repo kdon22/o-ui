@@ -481,17 +481,23 @@ export const NODE_PROCESS_SCHEMA = {
   // JUNCTION AUTO-CREATION CONFIGURATION
   // ============================================================================
   junctionConfig: {
-    // When creating a node, check if we should auto-create NodeProcess junction
+    // When creating a process OR rule, check if we should auto-create NodeProcess junction
     autoCreateOnParentCreate: true,
     
     // Navigation context detection - if these fields are present, auto-create junction
     navigationContext: {
-      // Auto-create only when creating a Process with a nodeId context
-      // processId comes from the parent result (set by factory via fieldMappings)
+      // Auto-create when creating a Process with a nodeId context
+      // OR when creating a Rule with both nodeId and processId context
       nodeId: 'string'
+      // NOTE: processId is handled by the parent action detection, not navigation context
+      // When a rule is created with processId, the system should auto-create NodeProcess
+      // by looking up which node contains that process
     },
     
     // Default values for junction creation
-    defaults: {}
+    defaults: {
+      sequence: 0,
+      isActive: true
+    }
   }
 } as const; 
