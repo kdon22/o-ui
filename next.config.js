@@ -16,13 +16,13 @@ const nextConfig = {
     webpackBuildWorker: true,
     // 🚀 **PERFORMANCE**: Enable optimized package imports
     optimizePackageImports: ['@monaco-editor/react', 'monaco-editor', 'lucide-react'],
-    // 🚀 **PERFORMANCE**: Enable turbo mode for faster builds
-    turbo: {
-      rules: {
-        '*.tsx': {
-          loaders: ['swc-loader'],
-          as: '*.js',
-        },
+  },
+  // 🚀 **PERFORMANCE**: Turbopack configuration (moved from experimental.turbo)
+  turbopack: {
+    rules: {
+      '*.tsx': {
+        loaders: ['swc-loader'],
+        as: '*.js',
       },
     },
   },
