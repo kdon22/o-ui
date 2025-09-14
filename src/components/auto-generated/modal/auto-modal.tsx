@@ -91,6 +91,7 @@ export const AutoModal: React.FC<AutoModalProps> = ({
   });
   
   const createMutation = useResourceCreate(config.resource, {
+    navigationContext: effectiveNavigationContext,
     onSuccess: (data) => {
       console.log('🎉 [AutoModal] Create SUCCESS callback triggered!', {
         resource: config.resource,
