@@ -271,7 +271,7 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
           navigationContext={(() => {
             // Provide processId to the table actions when a specific process is selected
             if (activeTopLevelTab === 'processes' && level2Filter && level2Filter !== 'all') {
-              return { processId: level2Filter } as any
+              return { processId: level2Filter, nodeId } as any
             }
             return undefined
           })()}

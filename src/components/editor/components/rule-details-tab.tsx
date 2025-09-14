@@ -12,6 +12,7 @@ import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
 import { useRuleSaveCoordinator } from '@/components/editor/services/rule-save-coordinator'
 import { RULE_SCHEMA } from '@/features/rules/rules.schema'
 import { useNavigationContext, useRuleCreationContext } from '@/lib/context/navigation-context'
+import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context'
 import { useReadyBranchContext } from '@/lib/context/branch-context'
 
 // Local navigation context type
@@ -47,15 +48,17 @@ export function RuleDetailsTab({
   // Get rule creation context to detect if coming from process
   const { isCreatingRuleFromProcess, processContext, clearContext } = useRuleCreationContext()
   const navigationContextState = useNavigationContext()
+  const ssotNav = useAutoNavigationContext()
 
   // Convert navigation context to simple junction format for factory pattern
   // Always include nodeId when available via NavigationContext.sourceContext (handled in provider hook)
   // Include processId only when creating from a process, so auto-creator makes the junction
   const junctionNavigationContext: JunctionNavigationContext = {
     ...(isCreatingRuleFromProcess && processContext ? { processId: processContext.processId } : {}),
+    // Prefer provider-derived node, fallback to SSOT-derived nodeId if available
     ...(navigationContextState.sourceContext?.type === 'node' && navigationContextState.sourceContext.id
       ? { nodeId: navigationContextState.sourceContext.id }
-      : {}),
+      : (ssotNav?.nodeId ? { nodeId: ssotNav.nodeId as string } : {})),
   }
 
   // Only fetch rule data if not in create mode
@@ -243,6 +246,8 @@ export function RuleDetailsTab({
                 compact={true}
                 enableAnimations={false}
                 className="space-y-6"
+                // Pass full navigation context so junction auto-creator can upsert NodeProcess/ProcessRule
+                navigationContext={junctionNavigationContext}
                 onError={(error) => {
                   console.error('Form error:', error)
                   setIsSaving(false)

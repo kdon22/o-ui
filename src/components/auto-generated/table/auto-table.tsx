@@ -315,15 +315,7 @@ export const AutoTable: React.FC<AutoTableProps> = ({
           onCancel={actions.handleFormCancel}
           mode={tableStateHook.formMode}
           parentData={filters.nodeId ? { nodeId: filters.nodeId } : undefined}
-          navigationContext={(() => {
-            const navContext = filters.nodeId ? { 
-              nodeId: filters.nodeId,
-              parentId: filters.nodeId,
-              selectedId: filters.nodeId 
-            } : undefined;
-            
-            return navContext;
-          })()}
+          navigationContext={effectiveNavigationContext}
         />
       )}
 

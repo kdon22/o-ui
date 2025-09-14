@@ -184,7 +184,13 @@ export const useTableActions = ({
       // Set target context for rule creation
       navigateToCreateRule();
       
-      router.push('/rules');
+      // Include context in the URL so the rules page can derive SSOT nav (nodeId/processId)
+      const nodeId = navigationContext?.nodeId || navigationContext?.parentId;
+      const qp: string[] = [];
+      if (nodeId) qp.push(`nodeId=${encodeURIComponent(String(nodeId))}`);
+      if (processId) qp.push(`processId=${encodeURIComponent(String(processId))}`);
+      const suffix = qp.length > 0 ? `?${qp.join('&')}` : '';
+      router.push(`/rules${suffix}`);
       return;
     }
     

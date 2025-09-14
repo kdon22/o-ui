@@ -20,8 +20,7 @@ import { ModalPortal } from './modal-portal';
 import { 
   getModalStyles, 
   getDefaultModalConfig, 
-  getModalTitle,
-  generateDefaultValues 
+  getModalTitle
 } from './utils';
 import type { AutoModalProps } from './types';
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context';
@@ -92,7 +91,6 @@ export const AutoModal: React.FC<AutoModalProps> = ({
   });
   
   const createMutation = useResourceCreate(config.resource, {
-    navigationContext: effectiveNavigationContext,
     onSuccess: (data) => {
       console.log('🎉 [AutoModal] Create SUCCESS callback triggered!', {
         resource: config.resource,
@@ -128,7 +126,6 @@ export const AutoModal: React.FC<AutoModalProps> = ({
   });
 
   const updateMutation = useResourceUpdate(config.resource, {
-    navigationContext: effectiveNavigationContext,
     onSuccess: (data) => {
       onSuccess?.(data);
       // CRITICAL FIX: Force immediate portal cleanup before closing
@@ -289,7 +286,7 @@ export const AutoModal: React.FC<AutoModalProps> = ({
               mode={config.action === 'update' ? 'edit' : 'create'} // Map update -> edit
               initialData={initialData}
               parentData={parentData}
-              navigationContext={navigationContext}
+              navigationContext={effectiveNavigationContext}
               onSubmit={handleSubmit}
               onCancel={handleCancel}
               isLoading={isSubmitting}

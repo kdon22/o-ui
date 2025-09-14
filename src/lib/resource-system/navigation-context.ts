@@ -14,6 +14,9 @@ import { useNodeIdResolver } from '@/lib/utils/entity-id-resolver';
 export interface NavigationContextData {
   nodeId?: string | null;
   parentId?: string | null;
+  selectedId?: string | null;
+  processId?: string | null;
+  workflowId?: string | null;
   branchId?: string | null;
   tenantId?: string | null;
   userId?: string | null;
@@ -39,6 +42,9 @@ export const useNavigationContext = (overrides?: Partial<NavigationContextData>)
       // Navigation context from URL params
       nodeId: searchParams.get('nodeId') ?? undefined,
       parentId: searchParams.get('parentId') ?? undefined,
+      selectedId: searchParams.get('selectedId') ?? undefined,
+      processId: searchParams.get('processId') ?? undefined,
+      workflowId: searchParams.get('workflowId') ?? undefined,
       
       // Override with any provided values
       ...overrides
@@ -65,6 +71,9 @@ export const useAutoNavigationContext = (): NavigationContextData => {
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const nodeIdShortFromPath = currentPath.match(/\/nodes\/([^\/]+)/)?.[1];
   const nodeIdFromParams = searchParams.get('nodeId');
+  const processIdFromParams = searchParams.get('processId');
+  const workflowIdFromParams = searchParams.get('workflowId');
+  const selectedIdFromParams = searchParams.get('selectedId');
   
   // Determine what we need to resolve
   const nodeIdToResolve = nodeIdShortFromPath || nodeIdFromParams || null;
@@ -82,6 +91,9 @@ export const useAutoNavigationContext = (): NavigationContextData => {
       // Navigation context - only provide nodeId if it's fully resolved
       nodeId: fullNodeId || undefined,
       parentId: searchParams.get('parentId') || undefined,
+      selectedId: selectedIdFromParams || undefined,
+      processId: processIdFromParams || undefined,
+      workflowId: workflowIdFromParams || undefined,
     };
 
     // Debug: Log navigation context extraction (reduced noise)
@@ -101,7 +113,7 @@ export const useAutoNavigationContext = (): NavigationContextData => {
     return Object.fromEntries(
       Object.entries(context).filter(([_, value]) => value !== undefined)
     );
-  }, [session, searchParams, fullNodeId, isResolving, error, nodeIdShortFromPath, nodeIdFromParams, nodeIdToResolve, currentPath]);
+  }, [session, searchParams, fullNodeId, isResolving, error, nodeIdShortFromPath, nodeIdFromParams, nodeIdToResolve, currentPath, processIdFromParams, workflowIdFromParams, selectedIdFromParams]);
 };
 
 /**
