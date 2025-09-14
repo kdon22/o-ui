@@ -451,12 +451,35 @@ export class WriteOperations {
         }
         
         // Execute through action system with preserved navigation context
-        return await actionClient.executeAction({
-          action,
-          data,
-          ...originalOptions,
-          _processingJunctions: true // Prevent infinite recursion
-        });
+        try {
+          const result = await actionClient.executeAction({
+            action,
+            data,
+            ...originalOptions,
+            _processingJunctions: true // Prevent infinite recursion
+          });
+          
+          return result;
+        } catch (error) {
+          console.error('🔥 [WriteOperations] Junction execution error:', { 
+            action, 
+            data,
+            error: error instanceof Error ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name
+            } : error,
+            errorType: typeof error,
+            fullError: error
+          });
+          
+          return {
+            success: false,
+            error: `Junction execution failed: ${error instanceof Error ? error.message : String(error)}`,
+            timestamp: Date.now(),
+            action
+          };
+        }
       };
 
       console.log('🔍 [WriteOperations] Calling autoCreateJunctions...', {

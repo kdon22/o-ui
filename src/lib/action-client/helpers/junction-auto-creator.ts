@@ -437,7 +437,16 @@ class JunctionAutoCreatorFactory {
       } catch (error) {
         console.error('🔥 [JunctionFactory] Junction creation error:', {
           junction: junctionSchema.databaseKey,
-          error: error instanceof Error ? error.message : error
+          parentAction,
+          junctionAction: `${junctionSchema.actionPrefix}.create`,
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          } : error,
+          errorType: typeof error,
+          errorConstructor: error?.constructor?.name,
+          fullError: error
         });
 
         results.push({
