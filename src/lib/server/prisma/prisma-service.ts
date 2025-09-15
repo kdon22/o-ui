@@ -119,6 +119,40 @@ export class PrismaService {
         }
         
         createData = addAuditFields(createData, schema, resolvedContext.userId, true);
+        
+        // 🎯 ENTERPRISE FIX: Idempotent junction creation
+        // Check if junction record already exists with compound key to avoid unique constraint errors
+        const compoundWhere: any = {};
+        const junctionKeyFields = ['nodeId', 'processId', 'ruleId', 'workflowId', 'tenantId', 'branchId'];
+        
+        for (const field of junctionKeyFields) {
+          if (createData[field] !== undefined && createData[field] !== null) {
+            compoundWhere[field] = createData[field];
+          }
+        }
+        
+        if (Object.keys(compoundWhere).length > 0) {
+          console.log('🔍 [PrismaService] Checking for existing junction record', {
+            modelName,
+            compoundWhere,
+            timestamp: new Date().toISOString()
+          });
+          
+          const existingJunction = await model.findFirst({
+            where: compoundWhere
+          });
+          
+          if (existingJunction) {
+            console.log('📋 [PrismaService] Junction already exists, returning existing record (idempotent success)', {
+              modelName,
+              existingId: existingJunction.id,
+              timestamp: new Date().toISOString()
+            });
+            
+            return existingJunction;
+          }
+        }
+        
       } else {
         // For regular resources, use the clean factory approach
         // The factory handles all context, audit fields, and relationship conversion

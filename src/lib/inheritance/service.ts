@@ -162,97 +162,69 @@ class NodeInheritanceService {
         userId: (branchContext as any).userId as string,
       })
 
-      // Fetch all required data in parallel from IndexedDB
-      // Factory-driven data fetching using schemas
+      console.log('🔥 [InheritanceService] SIMPLIFIED FETCH - Using IndexedDB overlay system directly')
+
+      // ✅ STREAMLINED: Let IndexedDB branch overlay system handle everything
+      // Only fetch what we actually need - no duplicates, no manual overlay
       const [
         nodeDetails,
         processesData,
         rulesData,
-        processesWithJunctions,
-        rulesWithJunctions,
-        // Explicit junction reads (branch-aware, IndexedDB-first)
         nodeProcessesList,
         processRulesList,
-        // Direct ruleIgnores junctions (deep ignore resolution later in engine)
         ruleIgnoresList
       ] = await Promise.all([
-        // Get node details including hierarchy
+        // Current node details
         actionClient.executeAction({
-          action: `${INHERITANCE_SCHEMAS.nodes.actionPrefix}.read`,
+          action: 'node.read',
           data: { id: nodeId },
           branchContext
         }),
         
-        // Get all processes for the tenant/branch  
+        // All processes (IndexedDB overlay handles branch logic)
         actionClient.executeAction({
-          action: `${INHERITANCE_SCHEMAS.processes.actionPrefix}.list`,
-          data: { },
+          action: 'process.list',
+          data: {},
           branchContext
         }),
         
-        // Get all rules for the tenant/branch
+        // All rules (IndexedDB overlay handles branch logic)
         actionClient.executeAction({
-          action: `${INHERITANCE_SCHEMAS.rules.actionPrefix}.list`,
-          data: { },
+          action: 'rule.list',
+          data: {},
           branchContext
         }),
         
-        // Get processes with their node relationships included
+        // NodeProcess junctions (IndexedDB overlay handles branch logic)
         actionClient.executeAction({
-          action: `${INHERITANCE_SCHEMAS.processes.actionPrefix}.list`,
-          data: { 
-            // Branch filtering handled by server via branchContext
-            options: {
-              include: [getJunctionTableName(INHERITANCE_SCHEMAS.processes, 'nodes')] // Include junction relationships
-            }
-          },
+          action: 'nodeProcesses.list',
+          data: {},
           branchContext
         }),
         
-        // Get rules with their process relationships included  
+        // ProcessRule junctions (IndexedDB overlay handles branch logic)
         actionClient.executeAction({
-          action: `${INHERITANCE_SCHEMAS.rules.actionPrefix}.list`,
-          data: { 
-            // Branch filtering handled by server via branchContext
-            options: {
-              include: [getJunctionTableName(INHERITANCE_SCHEMAS.rules, 'processes')] // Include junction relationships
-            }
-          },
+          action: 'processRules.list',
+          data: {},
           branchContext
         }),
         
-        // Direct nodeProcesses junctions
+        // RuleIgnore junctions
         actionClient.executeAction({
-          action: `${getJunctionTableName(INHERITANCE_SCHEMAS.processes, 'nodes')}.list`,
-          data: { },
-          branchContext
-        }),
-        // Direct processRules junctions
-        actionClient.executeAction({
-          action: `${getJunctionTableName(INHERITANCE_SCHEMAS.rules, 'processes')}.list`,
-          data: { },
-          branchContext
-        }),
-        
-        // Direct nodeProcesses junctions
-        actionClient.executeAction({
-          action: `${getJunctionTableName(INHERITANCE_SCHEMAS.processes, 'nodes')}.list`,
-          data: { },
-          branchContext
-        }),
-        // Direct processRules junctions
-        actionClient.executeAction({
-          action: `${getJunctionTableName(INHERITANCE_SCHEMAS.rules, 'processes')}.list`,
-          data: { },
-          branchContext
-        }),
-        // Direct ruleIgnores junctions (from Rule schema)
-        actionClient.executeAction({
-          action: `ruleIgnores.list`,
-          data: { },
+          action: 'ruleIgnores.list',
+          data: {},
           branchContext
         })
       ])
+
+      console.log('📊 [InheritanceService] Raw fetch results:', {
+        nodeSuccess: nodeDetails.success,
+        processesCount: processesData.success ? processesData.data?.length : 0,
+        rulesCount: rulesData.success ? rulesData.data?.length : 0,
+        nodeProcessesCount: nodeProcessesList.success ? (nodeProcessesList as any).data?.length : 0,
+        processRulesCount: processRulesList.success ? (processRulesList as any).data?.length : 0,
+        ruleIgnoresCount: ruleIgnoresList.success ? (ruleIgnoresList as any).data?.length : 0
+      })
 
       // ActionClient returns data directly (no need to parse JSON)
 

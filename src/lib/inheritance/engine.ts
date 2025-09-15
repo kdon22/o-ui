@@ -78,7 +78,8 @@ export class NodeInheritanceEngine {
       rawData.rules,
       rawData.processRules,
       rawData.ruleIgnores,
-      nodeId
+      nodeId,
+      rawData.nodes
     )
     console.log('📊 [InheritanceEngine] Available rules:', availableRules.length)
 
@@ -284,7 +285,8 @@ export class NodeInheritanceEngine {
     rules: RuleEntity[],
     processRules: ProcessRuleJunction[],
     ruleIgnores: RuleIgnoreJunction[],
-    currentNodeId: string
+    currentNodeId: string,
+    nodes: NodeEntity[]
   ): InheritedRule[] {
     const inheritedRules: InheritedRule[] = []
     const ignoredRuleIds = new Set(
@@ -304,7 +306,8 @@ export class NodeInheritanceEngine {
         processId: p.processId,
         processName: p.processName,
         isInherited: p.isInherited,
-        sourceNodeId: p.sourceNodeId
+        sourceNodeId: p.sourceNodeId,
+        inheritanceLevel: p.inheritanceLevel
       })),
       rulesPreview: rules.slice(0, 5).map(r => ({
         id: r.id,
@@ -312,7 +315,6 @@ export class NodeInheritanceEngine {
         branchId: r.branchId || 'no-branch'
       })),
       processRulesPreview: processRules.slice(0, 5).map(pr => ({
-        id: pr.id,
         processId: pr.processId,
         ruleId: pr.ruleId,
         branchId: pr.branchId || 'no-branch'
@@ -327,7 +329,39 @@ export class NodeInheritanceEngine {
         inheritedProcess.processId,
         ...(inheritedProcess.relatedProcessIds || [])
       ])
-      const processRuleConnections = processRules.filter(pr => identitySet.has(pr.processId))
+      
+      // 🎯 ENTERPRISE FIX: Filter ProcessRule junctions by hierarchy scope
+      // Only include rules that should be visible from current node context
+      let processRuleConnections = processRules.filter(pr => identitySet.has(pr.processId))
+      
+      // 🎯 CRITICAL FIX: Filter out rules that shouldn't appear on current node
+      // Problem: Rules connected by descendant nodes appear on parent nodes
+      // Solution: Only include rules that are appropriate for current node context
+      
+      // Build ancestor chain for current node to determine hierarchy context
+      const currentNodeAncestors = this.getNodeAncestors(currentNodeId, nodes)
+      
+      processRuleConnections = processRuleConnections.filter(connection => {
+        const rule = rules.find(r => this.entityIdMatchesBaseOrSelf(r, connection.ruleId))
+        if (!rule) return false
+        
+        // 🔑 KEY LOGIC: Rule should only appear if:
+        // 1. Process is direct to current node (inheritanceLevel = 0), OR  
+        // 2. Process is inherited AND rule was connected at current/ancestor level
+        
+        if (inheritedProcess.inheritanceLevel === 0) {
+          // Process is direct to current node - include all its rules
+          return true
+        } else {
+          // Process is inherited - be more selective about which rules to include
+          // For now, we'll use a heuristic: don't show rules on parent nodes
+          // if the process owner is higher in hierarchy than current node
+          const processOwnerLevel = currentNodeAncestors.indexOf(inheritedProcess.sourceNodeId)
+          
+          // If process owner is not in our ancestor chain, exclude its rules  
+          return processOwnerLevel === -1 || processOwnerLevel > 0
+        }
+      })
 
       // 🚨 DEBUG: Log what we find for each process
       console.log(`🔍 [InheritanceEngine] Processing rules for process: ${inheritedProcess.processName}`, {
@@ -335,8 +369,8 @@ export class NodeInheritanceEngine {
         identitySet: Array.from(identitySet),
         foundConnections: processRuleConnections.length,
         connectionsPreview: processRuleConnections.map(pr => ({
-          id: pr.id,
           ruleId: pr.ruleId,
+          processId: pr.processId,
           branchId: pr.branchId || 'no-branch'
         }))
       });
@@ -355,6 +389,7 @@ export class NodeInheritanceEngine {
         if (rule) {
           const ruleBaseId = this.getCanonicalBaseId(rule)
           const isIgnored = ignoredRuleIds.has(ruleBaseId)
+          const ruleIsInherited = this.isRuleInherited(rule, inheritedProcess, currentNodeId)
 
           inheritedRules.push({
             ruleId: rule.id,
@@ -363,14 +398,14 @@ export class NodeInheritanceEngine {
             processId: inheritedProcess.processId,
             processName: inheritedProcess.processName,
             processType: inheritedProcess.processType,
-            sourceNodeId: inheritedProcess.sourceNodeId,
-            sourceNodeName: inheritedProcess.sourceNodeName,
-            inheritanceLevel: inheritedProcess.inheritanceLevel,
-            isInherited: inheritedProcess.isInherited,
+            sourceNodeId: this.getRuleOriginalNodeId(rule, inheritedProcess, currentNodeId),
+            sourceNodeName: this.getRuleOriginalNodeName(rule, inheritedProcess, nodes, currentNodeId),
+            inheritanceLevel: this.getRuleInheritanceLevel(rule, inheritedProcess, currentNodeId),
+            isInherited: ruleIsInherited,
             isIgnored,
             order: connection.order,
-            displayClass: isIgnored ? 'ignored' : (inheritedProcess.isInherited ? 'inherited' : 'direct'),
-            textColor: isIgnored ? 'red' : (inheritedProcess.isInherited ? 'blue' : undefined)
+            displayClass: isIgnored ? 'ignored' : (ruleIsInherited ? 'inherited' : 'direct'),
+            textColor: isIgnored ? 'red' : (ruleIsInherited ? 'blue' : undefined)
           })
         }
       })
@@ -384,6 +419,22 @@ export class NodeInheritanceEngine {
     if (typeof (entity as any).originalId === 'string') return (entity as any).originalId
     const originalKey = Object.keys(entity).find(k => k.startsWith('original') && k.endsWith('Id') && typeof (entity as any)[k] === 'string')
     return originalKey ? (entity as any)[originalKey] : undefined
+  }
+
+  /**
+   * Get ancestor chain for a node (including the node itself)
+   */
+  private getNodeAncestors(nodeId: string, nodes: NodeEntity[]): string[] {
+    const ancestors: string[] = []
+    let currentId = nodeId
+    
+    while (currentId) {
+      ancestors.push(currentId)
+      const currentNode = nodes.find(n => n.id === currentId)
+      currentId = currentNode?.parentId || ''
+    }
+    
+    return ancestors
   }
 
   private getCanonicalBaseId(entity: { id: string; [key: string]: any }): string {
@@ -468,6 +519,53 @@ export class NodeInheritanceEngine {
     ].join('-')
 
     return btoa(hash).slice(0, 16)
+  }
+
+  // ============================================================================
+  // RULE INHERITANCE LOGIC
+  // ============================================================================
+
+  /**
+   * Get the original node ID where the rule was created
+   * Rules should track their creation node, not the process inheritance
+   */
+  private getRuleOriginalNodeId(rule: RuleEntity, inheritedProcess: InheritedProcess, currentNodeId: string): string {
+    // 🎯 ENTERPRISE FIX: Need to determine if this rule should appear on current node
+    console.log(`🔍 [getRuleOriginalNodeId] Rule: ${rule.name}`, {
+      ruleId: rule.id,
+      processName: inheritedProcess.processName,
+      processSourceNodeId: inheritedProcess.sourceNodeId,
+      processInheritanceLevel: inheritedProcess.inheritanceLevel,
+      processIsInherited: inheritedProcess.isInherited,
+      currentNodeId
+    });
+    
+    return inheritedProcess.sourceNodeId || currentNodeId;
+  }
+
+  /**
+   * Get the original node name where the rule was created
+   */
+  private getRuleOriginalNodeName(rule: RuleEntity, inheritedProcess: InheritedProcess, nodes: NodeEntity[], currentNodeId: string): string {
+    const sourceNodeId = this.getRuleOriginalNodeId(rule, inheritedProcess, currentNodeId);
+    const sourceNode = nodes.find(n => n.id === sourceNodeId);
+    return sourceNode?.name || 'Unknown Node';
+  }
+
+  /**
+   * Get the rule's inheritance level relative to current node
+   */
+  private getRuleInheritanceLevel(rule: RuleEntity, inheritedProcess: InheritedProcess, currentNodeId: string): number {
+    const ruleSourceNodeId = this.getRuleOriginalNodeId(rule, inheritedProcess, currentNodeId);
+    return ruleSourceNodeId === currentNodeId ? 0 : inheritedProcess.inheritanceLevel;
+  }
+
+  /**
+   * Determine if a rule is inherited relative to the current node
+   */
+  private isRuleInherited(rule: RuleEntity, inheritedProcess: InheritedProcess, currentNodeId: string): boolean {
+    const ruleSourceNodeId = this.getRuleOriginalNodeId(rule, inheritedProcess, currentNodeId);
+    return ruleSourceNodeId !== currentNodeId; // Rule is inherited if it came from a different node
   }
 
   /**
