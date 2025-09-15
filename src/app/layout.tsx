@@ -2,6 +2,7 @@ import './globals.css'
 import { Inter, JetBrains_Mono, Source_Code_Pro, Fira_Code } from 'next/font/google'
 import { cn } from '@/lib/utils/generalUtils'
 import { AppProviders } from '@/components/providers/app-providers'
+import { headers } from 'next/headers'
 
 const fontSans = Inter({ 
   subsets: ['latin'],
@@ -33,6 +34,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Keep as server component; AppProviders is client-only
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(

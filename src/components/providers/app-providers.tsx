@@ -18,17 +18,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { CacheProvider } from './cache-provider';
-import { NodeDataProvider } from './node-data-provider';
+import dynamic from 'next/dynamic';
 import { BranchProvider } from '@/lib/branching/branch-provider';
 import { BranchContextProvider } from '@/lib/context/branch-context';
-import { NavigationContextProvider } from '@/lib/context/navigation-context';
-import { TagProvider } from './tag-provider';
-import { UniversalSearchProvider } from '@/components/search';
-import { GlobalTagModalRenderer } from '@/components/ui/global-tag-modal-renderer';
 import type { BranchContext } from '@/lib/resource-system/schemas';
-// ✅ GOLD STANDARD: Unified Data Provider
-import { UnifiedDataProvider } from './unified-data-provider';
+// ✅ GOLD STANDARD: Unified Data Provider (lazy)
+const UnifiedDataProviderDynamic = dynamic(() => import('./unified-data-provider').then(m => m.UnifiedDataProvider), { ssr: false });
+const NodeDataProviderDynamic = dynamic(() => import('./node-data-provider').then(m => m.NodeDataProvider), { ssr: false });
+const NavigationContextProviderDynamic = dynamic(() => import('@/lib/context/navigation-context').then(m => m.NavigationContextProvider), { ssr: false });
+const TagProviderDynamic = dynamic(() => import('./tag-provider').then(m => m.TagProvider), { ssr: false });
+const UniversalSearchProviderDynamic = dynamic(() => import('@/components/search').then(m => m.UniversalSearchProvider), { ssr: false });
+const GlobalTagModalRendererDynamic = dynamic(() => import('@/components/ui/global-tag-modal-renderer').then(m => m.GlobalTagModalRenderer), { ssr: false });
 
 // Create optimized Query Client
 const queryClient = new QueryClient({
@@ -136,43 +136,46 @@ function SessionWrapper({ children }: { children: React.ReactNode }) {
     return (
       <BranchContextProvider>
         <BranchProvider>
-          <UnifiedDataProvider>
-            <NodeDataProvider>
-              <NavigationContextProvider>
-                <TagProvider>
-                  <UniversalSearchProvider>
+          <UnifiedDataProviderDynamic>
+            <NodeDataProviderDynamic>
+              <NavigationContextProviderDynamic>
+                <TagProviderDynamic>
+                  <UniversalSearchProviderDynamic>
                     {children}
-                    <GlobalTagModalRenderer />
-                  </UniversalSearchProvider>
-                </TagProvider>
-              </NavigationContextProvider>
-            </NodeDataProvider>
-          </UnifiedDataProvider>
+                    <GlobalTagModalRendererDynamic />
+                  </UniversalSearchProviderDynamic>
+                </TagProviderDynamic>
+              </NavigationContextProviderDynamic>
+            </NodeDataProviderDynamic>
+          </UnifiedDataProviderDynamic>
         </BranchProvider>
       </BranchContextProvider>
     );
   }
 
+  // Lazy-load heavy cache provider to prevent module side-effects on auth routes
+  const CacheProviderDynamic = dynamic(() => import('./cache-provider').then(m => m.CacheProvider), { ssr: false });
+
   return (
     <BranchContextProvider>
       <BranchProvider>
-        <CacheProvider 
+        <CacheProviderDynamic
           tenantId={session.user.tenantId || ''}
           forceFreshBootstrap={isFreshLogin}
         >
-          <UnifiedDataProvider>
-            <NodeDataProvider>
-              <NavigationContextProvider>
-                <TagProvider>
-                  <UniversalSearchProvider>
-                  {children}
-                  <GlobalTagModalRenderer />
-                </UniversalSearchProvider>
-              </TagProvider>
-              </NavigationContextProvider>
-            </NodeDataProvider>
-          </UnifiedDataProvider>
-        </CacheProvider>
+          <UnifiedDataProviderDynamic>
+            <NodeDataProviderDynamic>
+              <NavigationContextProviderDynamic>
+                <TagProviderDynamic>
+                  <UniversalSearchProviderDynamic>
+                    {children}
+                    <GlobalTagModalRendererDynamic />
+                  </UniversalSearchProviderDynamic>
+                </TagProviderDynamic>
+              </NavigationContextProviderDynamic>
+            </NodeDataProviderDynamic>
+          </UnifiedDataProviderDynamic>
+        </CacheProviderDynamic>
       </BranchProvider>
     </BranchContextProvider>
   );

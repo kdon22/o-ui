@@ -5,6 +5,8 @@
  * import { MainHeader, HeaderBreadcrumb } from '@/components/header'
  */
 
+'use client'
+
 export { MainHeader } from './main-header'
 export { HeaderBreadcrumb } from './header-breadcrumb'
 export { HeaderSearch } from './header-search'

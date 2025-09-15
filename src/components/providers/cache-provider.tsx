@@ -284,3 +284,8 @@ export function useCacheContext() {
   }
   return context;
 }
+
+// Optional variant: returns null instead of throwing when provider is absent
+export function useOptionalCacheContext() {
+  return useContext(CacheContext);
+}

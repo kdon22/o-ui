@@ -8,7 +8,7 @@ import { useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-
 import { useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ActionRequest, ActionResponse } from '@/lib/resource-system/schemas';
 import { getActionClient } from '@/lib/action-client';
-import { useCacheContext } from '@/components/providers/cache-provider';
+import { useOptionalCacheContext } from '@/components/providers/cache-provider';
 import { useEnterpriseSession } from '../use-enterprise-action-api';
 import { queryKeys } from './query-keys';
 
@@ -42,13 +42,7 @@ export function useActionQuery<TData = any>(
   const { session, branchContext } = useEnterpriseSession();
   
   // Gracefully handle CacheProvider not being available yet
-  let cacheContext = null;
-  try {
-    cacheContext = useCacheContext();
-  } catch (error) {
-    // CacheProvider not available yet - this is normal during app initialization
-    cacheContext = null;
-  }
+  const cacheContext = useOptionalCacheContext();
   
   const queryKey = useMemo(() => {
     const branchId = branchContext?.currentBranchId || undefined;
