@@ -481,17 +481,14 @@ export const NODE_PROCESS_SCHEMA = {
   // JUNCTION AUTO-CREATION CONFIGURATION
   // ============================================================================
   junctionConfig: {
-    // When creating a process OR rule, check if we should auto-create NodeProcess junction
+    // ONLY auto-create NodeProcess junctions when processes are created
+    // NOT when rules are created (rules should use existing node-process relationships)
     autoCreateOnParentCreate: true,
     
     // Navigation context detection - if these fields are present, auto-create junction
     navigationContext: {
-      // Auto-create when creating a Process with a nodeId context
-      // OR when creating a Rule with both nodeId and processId context
+      // Auto-create when creating a Process with a nodeId context (process attached to node)
       nodeId: 'string'
-      // NOTE: processId is handled by the parent action detection, not navigation context
-      // When a rule is created with processId, the system should auto-create NodeProcess
-      // by looking up which node contains that process
     },
     
     // Default values for junction creation (none – keep payload Prisma-valid)

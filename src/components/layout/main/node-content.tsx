@@ -87,6 +87,25 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
   
   const inheritanceResult = useNodeInheritance(nodeId, branchContext)
   
+  // 🎭 FLASH PREVENTION: Track navigation state to prevent data flashing during transitions
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [lastStableNodeId, setLastStableNodeId] = useState(nodeId)
+  
+  // 🎭 NAVIGATION GUARD: Clear data flash when nodeId changes
+  useEffect(() => {
+    if (lastStableNodeId !== nodeId) {
+      setIsNavigating(true)
+      
+      // Brief buffer to allow inheritance computation + prevent flash
+      const transitionTimer = setTimeout(() => {
+        setLastStableNodeId(nodeId)
+        setIsNavigating(false)
+      }, 100) // 100ms buffer - just enough to prevent flash
+      
+      return () => clearTimeout(transitionTimer)
+    }
+  }, [nodeId, lastStableNodeId])
+  
   // Adapt the hook result to match the component's expected interface
   const ruleHierarchy = {
     processNames: inheritanceResult.data?.processNames || [],
@@ -104,6 +123,14 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     processNamesCount: ruleHierarchy.processNames.length,
     rulesCount: ruleHierarchy.rules.length,
     processTypesCount: ruleHierarchy.processTypes.length,
+    rulesSample: ruleHierarchy.rules.slice(0, 3).map((rule: any) => ({
+      ruleId: rule.ruleId?.slice(-8),
+      ruleName: rule.ruleName,
+      processId: rule.processId?.slice(-8),
+      processName: rule.processName,
+      isInherited: rule.isInherited,
+      displayClass: rule.displayClass
+    })),
     timestamp: new Date().toISOString()
   })
 
@@ -242,6 +269,16 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
   hookDebug('useMemo-enhancedData')
   // Get enhanced data based on current configuration
   const enhancedData = useMemo(() => {
+    // 🎭 FLASH PREVENTION: Return empty array during navigation to prevent rule flashing
+    if (isNavigating) {
+      console.log('🎭 [NodeContent] Navigation in progress - suppressing enhanced data to prevent flash', {
+        activeTopLevelTab,
+        nodeId: nodeId.slice(-8),
+        timestamp: new Date().toISOString()
+      });
+      return [];
+    }
+    
     console.log('🔍 [NodeContent] Enhanced data decision:', {
       activeTopLevelTab,
       hasEnhancedDataProvider: !!currentConfig.enhancedDataProvider,
@@ -254,6 +291,14 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
       console.log('✅ [NodeContent] Using enhanced data:', {
         activeTopLevelTab,
         enhancedDataLength: enhanced?.length || 0,
+        enhancedDataSample: enhanced?.slice(0, 3).map((item: any) => ({
+          ruleId: item.ruleId?.slice(-8),
+          ruleName: item.ruleName,
+          processId: item.processId?.slice(-8),
+          processName: item.processName,
+          isInherited: item.isInherited,
+          displayClass: item.displayClass
+        })),
         timestamp: new Date().toISOString()
       });
       return enhanced;
@@ -264,7 +309,7 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
       timestamp: new Date().toISOString()
     });
     return undefined;
-  }, [currentConfig, ruleHierarchy.rules, activeTopLevelTab])
+  }, [currentConfig, ruleHierarchy.rules, activeTopLevelTab, isNavigating])
 
   hookDebug('useMemo-standardData')
   // Get standard data for non-enhanced tabs

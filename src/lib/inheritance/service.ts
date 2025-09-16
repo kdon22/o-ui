@@ -131,8 +131,17 @@ export function useNodeInheritance(nodeId: string, branchContext: BranchContext 
   // ✅ SCOPED: Only fetch processes used by ancestor nodes  
   const ancestorProcessIds = useMemo(() => {
     if (!nodeProcessesQuery.data?.data) return []
-    return [...new Set(nodeProcessesQuery.data.data.map((np: any) => np.processId))]
-  }, [nodeProcessesQuery.data?.data])
+    const processIds = [...new Set(nodeProcessesQuery.data.data.map((np: any) => np.processId))]
+    
+    // 🐛 INHERITANCE DEBUG: Log process IDs for rule queries
+    console.log('🎯 [Inheritance] Ancestor Process IDs for rules:', {
+      nodeId: nodeId.slice(-8),
+      processIds: processIds.map(id => id?.slice(-8)),
+      nodeProcessesCount: nodeProcessesQuery.data.data.length
+    })
+    
+    return processIds
+  }, [nodeId, nodeProcessesQuery.data?.data])
   
   const processesQuery = useActionQuery('process.list', { 
     ids: ancestorProcessIds  // Only processes used in ancestor chain
@@ -153,11 +162,35 @@ export function useNodeInheritance(nodeId: string, branchContext: BranchContext 
     placeholderData: { success: true, data: [], timestamp: Date.now(), action: 'placeholder' }  // ✅ BRANCH OVERLAY: Prevent UI flicker
   })
   
+  // 🐛 INHERITANCE DEBUG: Log processRules query parameters
+  console.log('🔍 [Inheritance] processRules query params:', {
+    nodeId: nodeId.slice(-8),
+    queryEnabled: !!(ancestorProcessIds.length > 0 && branchContext),
+    ancestorProcessIds: ancestorProcessIds.map(id => id?.slice(-8)),
+    queryData: processRulesQuery.data,
+    queryLoading: processRulesQuery.isLoading,
+    queryError: processRulesQuery.error
+  })
+  
   // ✅ SCOPED: Only fetch rules used by relevant processes
   const relevantRuleIds = useMemo(() => {
     if (!processRulesQuery.data?.data) return []
-    return [...new Set(processRulesQuery.data.data.map((pr: any) => pr.ruleId))]
-  }, [processRulesQuery.data?.data])
+    const ruleIds = [...new Set(processRulesQuery.data.data.map((pr: any) => pr.ruleId))]
+    
+    // 🐛 INHERITANCE DEBUG: Log rule IDs from processRules
+    console.log('🎯 [Inheritance] Process Rules data for rule queries:', {
+      nodeId: nodeId.slice(-8),
+      processRulesCount: processRulesQuery.data.data.length,
+      processRulesSample: processRulesQuery.data.data.slice(0, 3).map((pr: any) => ({
+        processId: pr.processId?.slice(-8),
+        ruleId: pr.ruleId?.slice(-8),
+        nodeId: pr.nodeId?.slice(-8)
+      })),
+      ruleIds: ruleIds.map(id => id?.slice(-8))
+    })
+    
+    return ruleIds
+  }, [nodeId, processRulesQuery.data?.data])
   
   const rulesQuery = useActionQuery('rule.list', {
     ids: relevantRuleIds  // Only rules used by ancestor processes
@@ -166,6 +199,16 @@ export function useNodeInheritance(nodeId: string, branchContext: BranchContext 
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     placeholderData: { success: true, data: [], timestamp: Date.now(), action: 'placeholder' }  // ✅ BRANCH OVERLAY: Prevent UI flicker
+  })
+  
+  // 🐛 INHERITANCE DEBUG: Log rules query parameters
+  console.log('🔍 [Inheritance] rules query params:', {
+    nodeId: nodeId.slice(-8),
+    queryEnabled: !!(relevantRuleIds.length > 0 && branchContext),
+    relevantRuleIds: relevantRuleIds.map(id => id?.slice(-8)),
+    queryData: rulesQuery.data,
+    queryLoading: rulesQuery.isLoading,
+    queryError: rulesQuery.error
   })
   
   // ✅ SCOPED: Only fetch rule ignores for ancestor chain
@@ -273,6 +316,21 @@ function computeInheritanceFromServerData(nodeId: string, serverData: any): Node
       processRules: processRules.length,
       rules: rules.length
     }
+  })
+  
+  // 🔍 NAVIGATION DEBUG: Track which nodes are being considered for inheritance
+  console.log('🔍 [Inheritance] Inheritance scope:', {
+    currentNode: nodeId.slice(-8),
+    ancestorChain: ancestorChain.map((id: string) => id.slice(-8)),
+    nodeProcessesAvailable: nodeProcesses.map((np: any) => ({
+      nodeId: np.nodeId?.slice(-8),
+      processId: np.processId?.slice(-8)
+    })),
+    processRulesAvailable: processRules.map((pr: any) => ({
+      processId: pr.processId?.slice(-8), 
+      ruleId: pr.ruleId?.slice(-8),
+      nodeId: pr.nodeId?.slice(-8)
+    }))
   })
 
   // Build available processes with inheritance info
@@ -442,9 +500,37 @@ function buildAvailableRules(
       .map(ri => ri.ruleId)
   )
 
+  // 🐛 INHERITANCE DEBUG: Log input data to buildAvailableRules
+  console.log('🎯 [Inheritance] buildAvailableRules input data:', {
+    currentNodeId: currentNodeId.slice(-8),
+    availableProcessesCount: availableProcesses.length,
+    rulesCount: rules.length,
+    processRulesCount: processRules.length,
+    ruleIgnoresCount: ruleIgnores.length,
+    ignoredRuleIdsCount: ignoredRuleIds.size,
+    availableProcessesSample: availableProcesses.slice(0, 3).map(p => ({
+      processId: p.processId?.slice(-8),
+      processName: p.processName,
+      inheritanceLevel: p.inheritanceLevel
+    })),
+    processRulesSample: processRules.slice(0, 3).map((pr: any) => ({
+      processId: pr.processId?.slice(-8),
+      ruleId: pr.ruleId?.slice(-8),
+      nodeId: pr.nodeId?.slice(-8)
+    }))
+  })
+
+  // Check if we have data to work with
+  if (availableProcesses.length === 0) {
+    console.log('🚨 [Inheritance] No available processes - returning empty rules')
+    return [] // No processes = no rules
+  }
+
+  // ProcessRules should now have correct nodeId from junction schema fix (rules.schema.ts)
+
   availableProcesses.forEach((process, processIndex) => {
-    // ✅ INHERITANCE DIRECTION: Nearest-wins lookup for node-scoped rule attachments
-    // Search ancestor chain from current node up to root, take first match
+    // 🔧 INHERITANCE FIX: Collect rules from ALL levels in ancestor chain  
+    // Search ancestor chain from current node up to root, collect ALL matches
     let processRuleConnections: any[] = []
     
     for (let i = 0; i < ancestorChain.length; i++) {
@@ -453,10 +539,8 @@ function buildAvailableRules(
         pr.processId === process.processId && pr.nodeId === nodeIdAtLevel
       )
       
-      if (matchesAtLevel.length > 0) {
-        processRuleConnections = matchesAtLevel
-        break
-      }
+      // Add all matches from this level (don't break - collect from all levels)
+      processRuleConnections.push(...matchesAtLevel)
     }
     
     if (processRuleConnections.length === 0) {
@@ -473,7 +557,13 @@ function buildAvailableRules(
       const ruleIsInherited = connection.nodeId !== currentNodeId
       const ruleInheritanceLevel = ancestorChain.indexOf(connection.nodeId)
       
-      inheritedRules.push({
+      const displayClass: 'direct' | 'inherited' | 'ignored' = isIgnored ? 'ignored' : (ruleIsInherited ? 'inherited' : 'direct')
+      
+      const inheritedRule: InheritedRule = {
+        // ✅ CRITICAL: Copy ALL original rule fields for AutoTable compatibility
+        ...rule,  // Spreads id, name, type, branchId, tenantId, isActive, etc.
+        
+        // ✅ INHERITANCE: Override with enhanced fields for inheritance display
         ruleId: rule.id,
         ruleName: rule.name,
         ruleType: rule.type,
@@ -486,12 +576,30 @@ function buildAvailableRules(
         isInherited: ruleIsInherited,
         isIgnored,
         order: connection.order || 0,
-        displayClass: isIgnored ? 'ignored' : (ruleIsInherited ? 'inherited' : 'direct'),
+        displayClass,
         textColor: isIgnored ? 'red' : (ruleIsInherited ? 'blue' : undefined)
-      })
+      }
+      
+      inheritedRules.push(inheritedRule)
     })
   })
 
+  // 🐛 INHERITANCE DEBUG: Log final rules result
+  console.log('🎯 [Inheritance] buildAvailableRules result:', {
+    currentNodeId: currentNodeId.slice(-8),
+    inheritedRulesCount: inheritedRules.length,
+    inheritedRulesSample: inheritedRules.slice(0, 5).map(rule => ({
+      ruleId: rule.ruleId?.slice(-8),
+      ruleName: rule.ruleName,
+      processId: rule.processId?.slice(-8),
+      processName: rule.processName,
+      isInherited: rule.isInherited,
+      inheritanceLevel: rule.inheritanceLevel,
+      displayClass: rule.displayClass
+    }))
+  })
+
+  // Return assembled rules to UI
   return inheritedRules
 }
 

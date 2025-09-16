@@ -900,7 +900,8 @@ export const PROCESS_RULE_SCHEMA = {
     
     // Navigation context detection - if these fields are present, auto-create junction
     navigationContext: {
-      processId: 'string' // If processId is provided in rule creation, create ProcessRule
+      nodeId: 'string',   // ✅ FIXED: ProcessRule requires nodeId (node-scoped attachment)
+      processId: 'string' // If nodeId + processId are provided in rule creation, create ProcessRule
     },
     
     // Default values for junction creation
@@ -966,12 +967,12 @@ export const RULE_IGNORE_SCHEMA = {
   // ============================================================================
   junctionConfig: {
     // When creating a rule, check if we should auto-create RuleIgnore junction
-    autoCreateOnParentCreate: true,
+    autoCreateOnParentCreate: false, // ✅ FIXED: Don't auto-create ignore records - only created explicitly
     
     // Navigation context detection - if these fields are present, auto-create junction
     navigationContext: {
-      nodeId: 'string', // If nodeId is provided in rule creation, create RuleIgnore
-      ignoredAt: 'string' // When the rule was ignored
+      nodeId: 'string',    // If nodeId is provided in rule creation
+      ignoreRule: 'boolean' // ✅ FIXED: Only create if explicitly ignoring the rule
     },
     
     // Default values for junction creation

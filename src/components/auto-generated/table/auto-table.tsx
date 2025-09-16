@@ -133,6 +133,12 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     hasEnhancedData: !!enhancedData && enhancedData.length > 0,
     dataResultLength: dataResult?.data?.length || 0,
     enhancedDataLength: enhancedData?.length || 0,
+    enhancedDataIsArray: Array.isArray(enhancedData),
+    dataSelectionLogic: {
+      enhancedDataCondition: Array.isArray(enhancedData) && enhancedData.length > 0,
+      usingEnhancedData: (Array.isArray(enhancedData) && enhancedData.length > 0),
+      fallbackToApiData: !(Array.isArray(enhancedData) && enhancedData.length > 0)
+    },
     queryState: {
       isLoading,
       isFetching: dataResult ? 'unknown' : 'no-dataResult',
@@ -145,16 +151,22 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     },
     // 🚨 SHOW ACTUAL DATA TO SEE WHAT'S HAPPENING
     actualDataPreview: data.slice(0, 3).map(item => ({
-      id: item?.id,
-      name: item?.name,
+      id: item?.id || item?.ruleId,
+      name: item?.name || item?.ruleName,
       branchId: item?.branchId,
-      type: item?.type
+      type: item?.type,
+      processName: item?.processName,
+      displayClass: item?.displayClass,
+      isInherited: item?.isInherited
     })),
     enhancedDataPreview: enhancedData?.slice(0, 3).map(item => ({
-      id: item?.id,
-      name: item?.name,
+      id: item?.id || item?.ruleId,
+      name: item?.name || item?.ruleName,
       branchId: item?.branchId,
-      type: item?.type
+      type: item?.type,
+      processName: item?.processName,
+      displayClass: item?.displayClass,
+      isInherited: item?.isInherited
     })),
     timestamp: new Date().toISOString()
   });
