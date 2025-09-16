@@ -103,14 +103,14 @@ export function useNodeInheritance(nodeId: string, branchContext: BranchContext 
       chain = [currentNode.id]
     }
     
-    // ✅ REDUCED LOGGING: Only log significant ancestor chains
-    if (chain.length > 2) {
-      console.log('🪜 [useNodeInheritance] Deep inheritance chain:', {
-        nodeId,
-        chainLength: chain.length,
-        hasAncestors: ancestorIdsFromNode.length
-      })
-    }
+    // 🐛 INHERITANCE DEBUG: Log ancestor chain for debugging inheritance issues
+    console.log('🪜 [Inheritance] Building ancestor chain:', {
+      nodeId: nodeId.slice(-8),
+      nodeData: currentNode,
+      ancestorIdsFromNode,
+      finalChain: chain,
+      chainLength: chain.length
+    })
     
     return chain
   }, [nodeId, nodeQuery.data?.data])
@@ -182,7 +182,6 @@ export function useNodeInheritance(nodeId: string, branchContext: BranchContext 
   const inheritanceData = useMemo(() => {
     // Wait for essential queries to complete (empty arrays are OK for scoped queries)
     if (!nodeQuery.data?.data || !ancestorChain.length) {
-      console.log('⏳ [useNodeInheritance] Waiting for node data and ancestor chain')
       return null
     }
     
@@ -192,17 +191,6 @@ export function useNodeInheritance(nodeId: string, branchContext: BranchContext 
     const nodeProcessesData = nodeProcessesQuery.data?.data || []
     const processRulesData = processRulesQuery.data?.data || []
     const ruleIgnoresData = ruleIgnoresQuery.data?.data || []
-    
-    // ✅ SUMMARY LOGGING: Only log final results, not every step
-    const totalRecords = processesData.length + rulesData.length + nodeProcessesData.length + processRulesData.length
-    if (totalRecords > 0) {
-      console.log('📊 [useNodeInheritance] Inheritance computed:', {
-        nodeId: nodeId.slice(-8), // Short ID for readability
-        ancestorChain: ancestorChain.length,
-        totalRecords,
-        performance: `${totalRecords} records vs 2500+ before`
-      })
-    }
     
     const serverData = {
       node: nodeQuery.data.data,
@@ -276,13 +264,15 @@ function computeInheritanceFromServerData(nodeId: string, serverData: any): Node
     ruleIgnores = []
   } = serverData
 
-  console.log('🧮 [computeInheritance] Computing with server data:', {
-    nodeId,
-    ancestorChainLength: ancestorChain.length,
-    processesCount: processes.length,
-    rulesCount: rules.length,
-    nodeProcessesCount: nodeProcesses.length,
-    processRulesCount: processRules.length
+  // 🐛 INHERITANCE DEBUG: Log data for debugging inheritance issues
+  console.log('🧮 [Inheritance] Computing for node:', nodeId.slice(-8), {
+    ancestorChain: ancestorChain.map((id: string) => id.slice(-8)),
+    dataAvailable: {
+      processes: processes.length,
+      nodeProcesses: nodeProcesses.length,
+      processRules: processRules.length,
+      rules: rules.length
+    }
   })
 
   // Build available processes with inheritance info
@@ -368,9 +358,18 @@ function buildAvailableProcesses(
 ): InheritedProcess[] {
   const inheritedProcesses = new Map<string, InheritedProcess>()
 
-  // ✅ REDUCED LOGGING: Only log when significant data found
+  // 🐛 INHERITANCE DEBUG: Log nodeProcesses data structure
+  console.log('🔍 [Inheritance] buildAvailableProcesses:', {
+    ancestorChain: ancestorChain.map((id: string) => id.slice(-8)),
+    nodeProcessesCount: nodeProcesses.length,
+    nodeProcessesSample: nodeProcesses.slice(0, 3).map(np => ({
+      nodeId: np.nodeId?.slice(-8),
+      processId: np.processId?.slice(-8)
+    })),
+    processCount: processes.length
+  })
 
-  // 🚀 PHASE 2 FIX: Process each level of hierarchy (closest first wins)
+  // Process each level of hierarchy (closest first wins)
   // ancestorChain[0] = current node (level 0)
   // ancestorChain[1+] = ancestor nodes (level 1+)
   ancestorChain.forEach((nodeId, inheritanceLevel) => {
@@ -378,18 +377,19 @@ function buildAvailableProcesses(
       .filter(np => np.nodeId === nodeId)
       .map(np => np.processId)
 
+    // 🐛 INHERITANCE DEBUG: Log each level's processes
+    console.log(`📋 [Inheritance] Level ${inheritanceLevel} (${nodeId.slice(-8)}):`, {
+      foundProcesses: directProcesses.length,
+      processIds: directProcesses.map((id: string) => id?.slice(-8))
+    })
+
     directProcesses.forEach(processId => {
-      // ✅ INHERITANCE DIRECTION FIX: Always include processes (current + ancestors)
-      // The key insight: we're already ONLY fetching nodeProcesses for ancestorChain,
-      // so we don't get descendant processes in the first place!
-      // This is a MUCH cleaner fix than complex filtering
-      
       if (!inheritedProcesses.has(processId)) {
         const processEntity = processes.find(p => p.id === processId)
         if (processEntity) {
           const ruleCount = processRules.filter(pr => pr.processId === processId).length
           
-          inheritedProcesses.set(processId, {
+          const inheritedProcess = {
             processId,
             processName: processEntity.name,
             processType: processEntity.type,
@@ -398,13 +398,33 @@ function buildAvailableProcesses(
             inheritanceLevel,
             isInherited: inheritanceLevel > 0, // 0 = current, 1+ = inherited
             ruleCount
-          })
+          }
+          
+          inheritedProcesses.set(processId, inheritedProcess)
+          
+          // 🐛 INHERITANCE DEBUG: Log process addition
+          if (inheritanceLevel > 0) {
+            console.log(`✅ [Inheritance] Added inherited process:`, {
+              processName: processEntity.name,
+              fromLevel: inheritanceLevel,
+              sourceNode: nodeId.slice(-8)
+            })
+          }
         }
       }
     })
   })
 
-  return Array.from(inheritedProcesses.values())
+  const result = Array.from(inheritedProcesses.values())
+  
+  // 🐛 INHERITANCE DEBUG: Log final result
+  console.log('📊 [Inheritance] Final available processes:', {
+    totalProcesses: result.length,
+    inheritedCount: result.filter(p => p.isInherited).length,
+    directCount: result.filter(p => !p.isInherited).length
+  })
+
+  return result
 }
 
 function buildAvailableRules(
@@ -422,7 +442,6 @@ function buildAvailableRules(
       .map(ri => ri.ruleId)
   )
 
-  // ✅ REDUCED LOGGING: Process inheritance computation
   availableProcesses.forEach((process, processIndex) => {
     // ✅ INHERITANCE DIRECTION: Nearest-wins lookup for node-scoped rule attachments
     // Search ancestor chain from current node up to root, take first match
