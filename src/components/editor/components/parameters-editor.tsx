@@ -31,6 +31,7 @@ interface ParametersEditorProps {
   isActive?: boolean
   isDirty?: boolean // Whether the source code has unsaved changes
   currentSourceCode?: string // Current editor content (may differ from saved rule.sourceCode)
+  readOnly?: boolean // 🔍 INHERITANCE: Make editor read-only for inherited rules
 }
 
 
@@ -47,7 +48,8 @@ export function ParametersEditor({
   // 🔍 TAB ACTIVATION: Detect when parameters tab becomes active
   isActive = false,
   isDirty = false,
-  currentSourceCode
+  currentSourceCode,
+  readOnly = false // 🔍 INHERITANCE: Make editor read-only for inherited rules
 }: ParametersEditorProps) {
   
   // 🔍 DEBUG: Component mount detection
@@ -547,7 +549,7 @@ export function ParametersEditor({
                           size="sm"
                           variant="ghost"
                           onClick={() => moveParameter(param.id, 'up')}
-                          disabled={index === 0}
+                          disabled={readOnly || index === 0} // 🔍 INHERITANCE: Disable when read-only
                           className="h-5 w-5 p-0"
                         >
                           <ArrowUp className="h-3 w-3" />
@@ -559,7 +561,7 @@ export function ParametersEditor({
                           size="sm"
                           variant="ghost"
                           onClick={() => moveParameter(param.id, 'down')}
-                          disabled={index === displayParameters.length - 1}
+                          disabled={readOnly || index === displayParameters.length - 1} // 🔍 INHERITANCE: Disable when read-only
                           className="h-5 w-5 p-0"
                         >
                           <ArrowDown className="h-3 w-3" />
@@ -578,6 +580,7 @@ export function ParametersEditor({
                               onChange={(e) => updateParameter(param.id, { name: e.target.value })}
                               placeholder="parameterName"
                               className="font-mono text-sm h-8"
+                              disabled={readOnly} // 🔍 INHERITANCE: Disable when read-only
                             />
                           </div>
                           <div>
@@ -592,6 +595,7 @@ export function ParametersEditor({
                                 variant="outline"
                                 size="sm"
                                 className="w-full justify-between h-8 text-sm"
+                                disabled={readOnly} // 🔍 INHERITANCE: Disable when read-only
                               >
                                 <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
                                   {param.className || param.type}
@@ -618,6 +622,7 @@ export function ParametersEditor({
                             rows={2}
                             className="text-sm resize-none overflow-hidden"
                             style={{ minHeight: '64px' }}
+                            disabled={readOnly} // 🔍 INHERITANCE: Disable when read-only
                           />
                         </div>
 
@@ -628,6 +633,7 @@ export function ParametersEditor({
                               id={`required-${param.id}`}
                               checked={param.required}
                               onCheckedChange={(checked) => updateParameter(param.id, { required: checked })}
+                              disabled={readOnly} // 🔍 INHERITANCE: Disable when read-only
                             />
                             <Label htmlFor={`required-${param.id}`} className="text-xs text-gray-600">
                               Required
@@ -639,6 +645,7 @@ export function ParametersEditor({
                             variant="ghost"
                             onClick={() => removeParameter(param.id)}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
+                            disabled={readOnly} // 🔍 INHERITANCE: Disable when read-only
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -656,6 +663,7 @@ export function ParametersEditor({
                   size="sm"
                   variant="outline"
                   className="border-dashed border-2 hover:border-solid hover:bg-blue-50 hover:border-blue-300 transition-all"
+                  disabled={readOnly} // 🔍 INHERITANCE: Disable when read-only
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Parameter

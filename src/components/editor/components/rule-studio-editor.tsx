@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw, Lock } from 'lucide-react'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
 import { useRuleEditor } from '@/hooks/use-rule-editor'
 import { RuleCodeEditor } from './rule-code-editor'
@@ -25,6 +25,8 @@ import { ParametersEditor } from './parameters-editor'
 import { DebugTabClient } from '../rule-tester/components/debug-tab-client'
 import { useSession } from 'next-auth/react'
 import { EditorContextService } from '../language/editor-context'
+import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context'
+import { useNodeRuleHierarchy } from '@/hooks/node-rule-hierarchy/use-node-rule-hierarchy'
 
 export interface RuleStudioEditorProps {
   ruleId: string
@@ -57,6 +59,41 @@ export function RuleStudioEditor({
   // Extract rule from action system response
   const rule = ruleResponse?.data
   
+  // 🔍 INHERITANCE: Get navigation context to determine if rule is inherited
+  const navigationContext = useAutoNavigationContext()
+  
+  // 🔍 INHERITANCE: Use node rule hierarchy to check if this rule is inherited in current context
+  const { data: inheritanceData, isLoading: loadingInheritance } = useNodeRuleHierarchy(
+    navigationContext?.nodeId || '', // Only check inheritance if we have a node context
+    {
+      enabled: !!(navigationContext?.nodeId && rule?.id),
+      staleTime: 5 * 60 * 1000 // 5 minutes cache
+    }
+  )
+  
+  // 🔍 INHERITANCE: Determine if this specific rule is inherited in current context
+  const isRuleInherited = useMemo(() => {
+    if (!rule?.id || !navigationContext?.nodeId || !inheritanceData) return false
+    
+    // Find this rule in the inheritance data
+    const inheritedRule = inheritanceData.rules?.find(r => r.ruleId === rule.id)
+    const isInherited = inheritedRule?.isInherited || false
+    
+    console.log('🔍 [RuleStudioEditor] Inheritance check:', {
+      ruleId: rule.id,
+      ruleName: rule.name,
+      nodeId: navigationContext.nodeId,
+      processId: navigationContext.processId,
+      foundInHierarchy: !!inheritedRule,
+      isInherited,
+      inheritanceLevel: inheritedRule?.inheritanceLevel,
+      sourceNodeName: inheritedRule?.sourceNodeName,
+      displayClass: inheritedRule?.displayClass
+    })
+    
+    return isInherited
+  }, [rule?.id, navigationContext?.nodeId, inheritanceData])
+  
   // 🔍 DEBUG: Log rule data loading for parameters
   useEffect(() => {
     if (rule) {
@@ -69,10 +106,12 @@ export function RuleStudioEditor({
           (typeof (rule as any).schema === 'string' ? 
             (rule as any).schema.substring(0, 100) + '...' : 
             'Object') : 
-          null
+          null,
+        isInherited: isRuleInherited,
+        nodeContext: navigationContext?.nodeId
       })
     }
-  }, [rule])
+  }, [rule, isRuleInherited, navigationContext?.nodeId])
   
   // Action system mutations for parameters (clean & fast)
   const updateRuleMutation = useActionMutation('rule.update')
@@ -90,7 +129,7 @@ export function RuleStudioEditor({
   } = useRuleEditor(ruleId)
   
   // Combine states for UI
-  const loading = loadingRule
+  const loading = loadingRule || loadingInheritance
   const saving = savingSourceCode || updateRuleMutation.isPending
   const error = ruleError || sourceCodeError
   const isReady = !loading && !!rule
@@ -448,6 +487,16 @@ export function RuleStudioEditor({
           {/* 🏆 CONDITIONAL RENDERING: Actually unmount/remount Monaco editors for proper disposal */}
           {activeTab === "business-rules" && (
             <div className="h-full">
+              {/* 🔍 INHERITANCE: Show read-only indicator if rule is inherited */}
+              {isRuleInherited && (
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2 text-blue-700 text-sm">
+                  <Lock className="w-4 h-4" />
+                  <span>
+                    This rule is inherited from an ancestor node and cannot be edited here. 
+                    To modify this rule, edit it at its source or create a copy for this node.
+                  </span>
+                </div>
+              )}
               <RuleCodeEditor
                 key="business-rules-editor" // Static key - should unmount naturally
                 value={sourceCode}
@@ -456,6 +505,7 @@ export function RuleStudioEditor({
                 onSave={handleSave}
                 height="100%"
                 ruleType={ruleType}
+                readOnly={isRuleInherited} // 🔍 INHERITANCE: Make read-only if inherited
               />
             </div>
           )}
@@ -463,6 +513,16 @@ export function RuleStudioEditor({
           {/* Parameters Tab - Only for UTILITY type rules */}
           {enableParameters && ruleType === 'UTILITY' && activeTab === "parameters" && (
             <div className="h-full">
+              {/* 🔍 INHERITANCE: Show read-only indicator for parameters if rule is inherited */}
+              {isRuleInherited && (
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2 text-blue-700 text-sm">
+                  <Lock className="w-4 h-4" />
+                  <span>
+                    Parameters for this inherited rule cannot be modified here. 
+                    Edit at the source node to make changes.
+                  </span>
+                </div>
+              )}
               <ParametersEditor
                 key="parameters-editor" // Static key - should unmount naturally
                 rule={rule as any}
@@ -477,6 +537,7 @@ export function RuleStudioEditor({
                 isActive={activeTab === 'parameters'}
                 isDirty={isDirty}
                 currentSourceCode={sourceCode}
+                readOnly={isRuleInherited} // 🔍 INHERITANCE: Make read-only if inherited
               />
             </div>
           )}
