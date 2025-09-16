@@ -3,7 +3,7 @@
 import React, { useCallback, useState, useEffect } from 'react'
 import { MainHeader } from '@/components/header/main-header'
 // import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
-import { useUnifiedApp } from '@/components/providers/app-providers-unified'
+import { useUnifiedApp } from '@/components/providers/conditional-providers'
 import type { BranchInfo } from '@/lib/utils/branch-utils'
 import { TreeNavigation } from './tree-navigation'
 import { NodeContent } from './node-content'

@@ -144,13 +144,21 @@ export function cleanData(
       }
     });
 
-    // Computed fields: remove only if empty (preserve client-computed values)
+    // Computed fields: Handle Node hierarchy fields specially
     computedKeys.forEach((k) => {
       if (k in cleaned) {
         const value = cleaned[k];
-        // Only remove if the field is null, undefined, or empty string
-        // Preserve fields that have been computed by client-side autoValue system
-        if (value === null || value === undefined || value === '') {
+        
+        // 🎯 SPECIAL CASE: Always remove Node hierarchy fields so server can calculate them
+        const isNodeHierarchyField = schema.modelName === 'Node' && 
+          ['level', 'sortOrder', 'childCount', 'path', 'ancestorIds', 'isLeaf'].includes(k);
+        
+        if (isNodeHierarchyField) {
+          console.log(`🔥 [DataCleaner] Removing Node hierarchy field for server calculation: ${k}=${JSON.stringify(value)}`);
+          removedFields.push(k);
+          delete cleaned[k];
+        } else if (value === null || value === undefined || value === '') {
+          // Regular computed fields: remove only if empty
           removedFields.push(k);
           delete cleaned[k];
         } else {

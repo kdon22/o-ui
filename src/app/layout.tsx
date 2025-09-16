@@ -1,8 +1,7 @@
 import './globals.css'
 import { Inter, JetBrains_Mono, Source_Code_Pro, Fira_Code } from 'next/font/google'
 import { cn } from '@/lib/utils/generalUtils'
-// import { AppProviders } from '@/components/providers/app-providers'
-import { UnifiedAppProviders, AppLoadingBoundary } from '@/components/providers/app-providers-unified'
+import { ConditionalProviders } from '@/components/providers/conditional-providers'
 import { headers } from 'next/headers'
 
 const fontSans = Inter({ 
@@ -35,7 +34,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Keep as server component; AppProviders is client-only
+  // Keep as server component; ConditionalProviders handles client-only logic
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(
@@ -45,11 +44,9 @@ export default function RootLayout({
         fontSourceCode.variable,
         fontFiraCode.variable
       )}>
-        <UnifiedAppProviders>
-          <AppLoadingBoundary>
-            {children}
-          </AppLoadingBoundary>
-        </UnifiedAppProviders>
+        <ConditionalProviders>
+          {children}
+        </ConditionalProviders>
       </body>
     </html>
   )
