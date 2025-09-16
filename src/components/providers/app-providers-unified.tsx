@@ -21,6 +21,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession } from 'next-auth/react';
 import { BranchProvider } from '@/lib/branching/branch-provider';
 import { BranchContextProvider } from '@/lib/context/branch-context';
+import { NavigationContextProvider } from '@/lib/context/navigation-context';
+import { NodeDataProvider } from './node-data-provider';
+import { UniversalSearchProvider } from '@/components/search/universal-search-provider';
+import { TagProvider } from './tag-provider';
+import { GlobalTagModalRenderer } from '@/components/ui/global-tag-modal-renderer';
 import type { BranchContext } from '@/lib/resource-system/schemas';
 
 // ============================================================================
@@ -237,7 +242,16 @@ const UnifiedAppProviderCore = React.memo(function UnifiedAppProviderCore({
   
   return (
     <UnifiedAppContext.Provider value={contextValue}>
-      {children}
+      <NavigationContextProvider>
+        <NodeDataProvider>
+          <TagProvider>
+            <UniversalSearchProvider>
+              {children}
+              <GlobalTagModalRenderer />
+            </UniversalSearchProvider>
+          </TagProvider>
+        </NodeDataProvider>
+      </NavigationContextProvider>
     </UnifiedAppContext.Provider>
   );
 });
@@ -251,7 +265,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 10, // 10 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (renamed from cacheTime in v4)
       refetchOnWindowFocus: false,
       retry: 1,
     },

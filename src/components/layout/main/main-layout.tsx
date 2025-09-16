@@ -2,7 +2,9 @@
 
 import React, { useCallback, useState, useEffect } from 'react'
 import { MainHeader } from '@/components/header/main-header'
-import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
+// import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
+import { useUnifiedApp } from '@/components/providers/app-providers-unified'
+import type { BranchInfo } from '@/lib/utils/branch-utils'
 import { TreeNavigation } from './tree-navigation'
 import { NodeContent } from './node-content'
 import { EmptyState } from './empty-state'
@@ -26,8 +28,26 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
     console.log(`🪝 [MainLayout] Hook #${hookCount}: ${name}`, { initialSelectedNodeId })
   }
   
-  hookDebug('useEnterpriseSession')
-  const { session, isAuthenticated, isLoading: sessionLoading, branchContext, tenantId } = useEnterpriseSession()
+  hookDebug('useUnifiedApp')
+  const { 
+    session, 
+    isAuthenticated, 
+    branchContext, 
+    tenantId,
+    isCacheReady,
+    nodes: nodesFromProvider,
+    refetchNodes 
+  } = useUnifiedApp()
+  
+  const sessionLoading = !isAuthenticated
+  
+  // Create BranchInfo objects from unified provider data
+  const currentBranch: BranchInfo | null = branchContext?.currentBranchId ? {
+    id: branchContext.currentBranchId,
+    name: branchContext.currentBranchId === 'main' ? 'Main' : branchContext.currentBranchId,
+    isDefault: branchContext.currentBranchId === branchContext.defaultBranchId,
+    lastModified: new Date().toISOString()
+  } : null;
   
   hookDebug('useState-selectedNodeId')
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialSelectedNodeId || null)
@@ -36,7 +56,8 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
   const [topLevelTab, setTopLevelTab] = useState<string>('processes')
   
   hookDebug('useState-nodesData')
-  const [nodesData, setNodesData] = useState<any[]>([]) // ✅ NEW: Store nodes data
+  // Use nodes from unified provider instead of local state
+  const nodesData = nodesFromProvider
   
   hookDebug('useState-hasInitiallyLoaded')
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
@@ -135,11 +156,7 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
     
   }, [])
 
-  hookDebug('useCallback-handleNodesDataChange')
-  // ✅ NEW: Handler to receive nodes data from AutoTree
-  const handleNodesDataChange = useCallback((data: any[]) => {
-    setNodesData(data)
-  }, [])
+  // ✅ SIMPLIFIED: No longer need handleNodesDataChange - using unified provider
 
   console.log(`🪝 [MainLayout] TOTAL HOOK COUNT: ${hookCount}`, { initialSelectedNodeId })
 
@@ -154,13 +171,12 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
         {topLevelTab !== 'tables' && topLevelTab !== 'marketplace' && (
           <TreeNavigation
             userRootNodeId={userRootNodeId}
-            currentBranch={branchContext?.currentBranch}
-            availableBranches={branchContext?.availableBranches}
+            currentBranch={currentBranch || undefined}
+            availableBranches={[]} // TODO: Get available branches from unified provider
             selectedNodeId={selectedNodeId}
             onNodeSelect={handleNodeSelect}
             onBranchSwitch={handleBranchSwitch}
             nodesData={nodesData}
-            onNodesDataChange={handleNodesDataChange}
           />
         )}
         
@@ -170,7 +186,7 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
           <MainHeader 
             selectedNodeId={selectedNodeId} 
             currentTenant={currentTenant}
-            currentBranch={branchContext?.currentBranch}
+            currentBranch={currentBranch || undefined}
             onSearch={handleHeaderSearch}
             onTenantSwitch={handleTenantSwitch}
             showTopLevelTabs={true}
@@ -190,7 +206,7 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
             ) : selectedNodeId ? (
               <NodeContent 
                 nodeId={selectedNodeId} 
-                currentBranch={branchContext?.currentBranch?.id || 'main'}
+                currentBranch={branchContext?.currentBranchId || 'main'}
                 activeTopLevelTab={topLevelTab}
               />
             ) : (

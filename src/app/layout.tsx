@@ -1,7 +1,8 @@
 import './globals.css'
 import { Inter, JetBrains_Mono, Source_Code_Pro, Fira_Code } from 'next/font/google'
 import { cn } from '@/lib/utils/generalUtils'
-import { AppProviders } from '@/components/providers/app-providers'
+// import { AppProviders } from '@/components/providers/app-providers'
+import { UnifiedAppProviders, AppLoadingBoundary } from '@/components/providers/app-providers-unified'
 import { headers } from 'next/headers'
 
 const fontSans = Inter({ 
@@ -44,9 +45,11 @@ export default function RootLayout({
         fontSourceCode.variable,
         fontFiraCode.variable
       )}>
-        <AppProviders>
-          {children}
-        </AppProviders>
+        <UnifiedAppProviders>
+          <AppLoadingBoundary>
+            {children}
+          </AppLoadingBoundary>
+        </UnifiedAppProviders>
       </body>
     </html>
   )
