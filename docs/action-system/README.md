@@ -49,19 +49,27 @@ const { mutate: createUser } = useActionMutation('user.create');
 ## 📚 Documentation Guide
 
 ### **Core Concepts** (Start Here)
-1. **[System Overview](./01-system-overview.md)** - Architecture and key concepts
-2. **[ActionClient Core](./02-action-client-core.md)** - The heart of the system
+0. **[Complete System Overview](./00-system-overview.md)** - High-level architecture overview
+1. **[Detailed System Overview](./01-system-overview.md)** - Architecture and key concepts
+2. **[ActionClient Core](./02-action-client-core.md)** - The heart of the system (updated)
 3. **[Resource Schemas](./03-resource-schemas.md)** - Single Source of Truth design
 
-### **Development**
-4. **[Hooks & Data Fetching](./04-hooks-and-data-fetching.md)** - React integration patterns
+### **Frontend Development**
+4. **[Hooks & Data Fetching](./04-hooks-and-data-fetching.md)** - Modular hook system patterns
 5. **[Auto-Generated Components](./05-auto-generated-components.md)** - UI components from schemas
-6. **[Creating New Resources](./06-creating-new-resources.md)** - Step-by-step guide
+6. **[Creating New Resources](./06-creating-new-resources.md)** - Complete step-by-step guide
 
 ### **Backend & Advanced**
-7. **[Server Integration](./07-server-integration.md)** - API endpoints and handlers
+7. **[Server Integration](./07-server-integration.md)** - API endpoints, handlers, and Prisma service
 8. **[Best Practices](./08-best-practices.md)** - Development guidelines and patterns
 9. **[Troubleshooting Guide](./09-troubleshooting-guide.md)** - 🚨 Common issues and solutions
+10. **[Cache Invalidation](./10-cache-invalidation.md)** - Schema-driven cache invalidation system
+
+### **Component Documentation**
+1. **[Frontend Components](./01-frontend-components.md)** - UI layer integration
+2. **[Backend Components](./02-backend-components.md)** - Server architecture details
+4. **[Data Flow](./04-data-flow.md)** - Complete request/response cycle
+5. **[Developer Examples](./05-developer-examples.md)** - Practical usage patterns
 
 ## 🎯 Key Benefits
 
@@ -261,22 +269,38 @@ const EXAMPLE_SCHEMA: ResourceSchema = {
 ## 🔧 Key Files in Codebase
 
 ### **Core System**
-- `lib/action-client/` - ActionClient implementation
+- `lib/action-client/` - ActionClient implementation (unified architecture)
 - `lib/resource-system/schemas.ts` - All resource schemas (SSOT)
-- `lib/resource-system/resource-registry.ts` - Schema registration
-- `hooks/use-action-api.ts` - React hooks for data operations
-- `hooks/query/` - Modular hook system (new architecture)
+- `lib/resource-system/resource-registry.ts` - Schema registration and auto-discovery
+- `lib/resource-system/unified-resource-registry.ts` - Unified resource management
+- `hooks/use-action-api.ts` - React hooks for data operations (simplified entry point)
+- `hooks/query/` - Modular hook system with focused components
+
+### **ActionClient Architecture**
+- `lib/action-client/action-client-core.ts` - Core orchestrator (462 lines)
+- `lib/action-client/unified-action-client.ts` - Next-gen client wrapper
+- `lib/action-client/operations/` - Read/write operation handlers
+- `lib/action-client/core/` - Cache, sync, and IndexedDB managers
+- `lib/action-client/helpers/` - Junction auto-creator and change tracking
+- `lib/action-client/api/` - Server communication layer
 
 ### **Auto-Generated Components**
 - `components/auto-generated/table/` - AutoTable system
-- `components/auto-generated/form/` - AutoForm system
+- `components/auto-generated/form/` - AutoForm system with junction support
 - `components/auto-generated/modal/` - AutoModal system
 - `components/auto-generated/tree/` - AutoTree system
 
 ### **Server Integration**
-- `app/api/workspaces/current/actions/route.ts` - Single API endpoint
-- `lib/server/action-system/` - Backend routing and handlers
-- `lib/server/action-system/prisma-service.ts` - Database operations
+- `app/api/workspaces/current/actions/route.ts` - Single API endpoint (300+ lines)
+- `lib/server/action-system/core/action-router-core.ts` - Action routing core
+- `lib/server/action-system/handlers/` - CRUD operation handlers
+- `lib/server/prisma/prisma-service.ts` - Database operations (700+ lines)
+- `lib/server/action-system/utils/` - Action parsing and metadata
+
+### **Specialized Services**
+- `lib/server/action-system/services/` - Rollback and changelog services
+- `lib/server/prisma/` - Data cleaning, query building, relationship processing
+- `lib/resource-system/auto-value-service.ts` - Auto-value generation
 
 ## 🎓 Advanced Topics
 

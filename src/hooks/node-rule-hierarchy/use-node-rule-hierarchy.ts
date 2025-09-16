@@ -8,7 +8,8 @@
 import { useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useReadyBranchContext } from '@/lib/context/branch-context'
-import { useNodeInheritance, type BranchContext } from '@/lib/inheritance'
+import { useNodeInheritance } from '@/lib/inheritance'
+import type { BranchContext } from '@/lib/action-client/types'
 
 // ============================================================================
 // HOOK OPTIONS AND RETURN TYPES

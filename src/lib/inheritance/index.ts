@@ -1,50 +1,18 @@
 /**
- * Hybrid Inheritance System - Main Exports
+ * Simple Inheritance System - Main Exports
  * 
- * Clean, ground-up hierarchical process inheritance system.
- * Provides extreme performance with bulletproof reliability.
+ * Clean, simplified hierarchical process inheritance system.
+ * Uses action-system patterns with no complex caching.
  */
 
-// Core engine and cache manager
-export { NodeInheritanceEngine } from './engine'
-export { HybridCacheManager } from './cache-manager'
-
-// High-level service interface
+// Main hook and utility functions
 export { 
   useNodeInheritance,
-  nodeInheritanceService,
   createProcessChangeEvent,
   createRuleChangeEvent,
   createNodeStructureChangeEvent
 } from './service'
 
-// Type definitions
-export type {
-  // Core data structures
-  NodeInheritanceData,
-  InheritedProcess,
-  InheritedRule,
-  ProcessName,
-  ProcessType,
-  
-  // Raw data interfaces
-  NodeEntity,
-  ProcessEntity,
-  RuleEntity,
-  NodeProcessJunction,
-  ProcessRuleJunction,
-  RuleIgnoreJunction,
-  
-  // Cache interfaces
-  CacheEntry,
-  CacheStats,
-  
-  // Service interfaces
-  InheritanceEngineOptions,
-  BranchContext,
-  InvalidationEvent
-} from './types'
-
 // Version info for debugging
-export const INHERITANCE_SYSTEM_VERSION = '1.0.0-hybrid'
+export const INHERITANCE_SYSTEM_VERSION = '2.0.0-simplified'
 export const INHERITANCE_SYSTEM_BUILD = Date.now()

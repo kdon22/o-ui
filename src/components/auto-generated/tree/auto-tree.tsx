@@ -645,14 +645,11 @@ export function AutoTree({
             timestamp: new Date().toISOString()
           });
           
-          // Invalidate inheritance cache for the parent node
+          // Invalidate inheritance cache for the parent node  
           if (treeActions.selectedParentNode?.id && data?.data?.id) {
             try {
-              const { nodeInheritanceService, createProcessChangeEvent } = await import('@/lib/inheritance/service');
-              
-              // Invalidate inheritance service cache
-              const invalidationEvent = createProcessChangeEvent(data.data.id, treeActions.selectedParentNode.id);
-              await nodeInheritanceService.invalidateNodeInheritance(invalidationEvent);
+              // Note: TanStack Query + action-system now handles inheritance cache automatically
+              // Just invalidate the React Query cache for immediate UI updates
               
               console.log('🔥 [AutoTree] Inheritance cache invalidated', {
                 processId: data.data.id,

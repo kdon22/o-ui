@@ -1,22 +1,22 @@
-# Resource Schemas - The Foundation
+# Resource Schemas - ACTUAL Implementation Guide
 
 ## Table of Contents
 1. [Schema Overview](#schema-overview)
-2. [Schema Structure](#schema-structure)
-3. [Field Configuration](#field-configuration)
-4. [Display Configuration](#display-configuration)
-5. [Action Configuration](#action-configuration)
-6. [Relationships](#relationships)
-7. [Validation Rules](#validation-rules)
-8. [Real Schema Examples](#real-schema-examples)
-9. [Schema Registration](#schema-registration)
-10. [Best Practices](#best-practices)
+2. [Actual Schema Structure](#actual-schema-structure)
+3. [Real Schema Examples](#real-schema-examples)
+4. [Field Configuration](#field-configuration)
+5. [Auto-Value System](#auto-value-system)
+6. [Relationship System](#relationship-system)
+7. [Schema Registration](#schema-registration)
+8. [Junction Tables](#junction-tables)
+9. [Best Practices](#best-practices)
+10. [File Reference](#file-reference)
 
 ---
 
 ## Schema Overview
 
-**ResourceSchemas** are the single source of truth that drive every aspect of the system. One schema definition generates:
+**ResourceSchemas** are the single source of truth that drive every aspect of the system. Based on the actual implementation, one schema definition generates:
 
 - **API endpoints** and server handlers
 - **IndexedDB** stores and indexes  
@@ -24,73 +24,116 @@
 - **TypeScript types** and validation
 - **Hook interfaces** and cache keys
 - **Junction relationships** and queries
+- **Auto-value processing** and context integration
 
-### **Philosophy: Define Once, Generate Everything**
+### **Current Architecture**
 
 ```
-ResourceSchema
+ResourceSchema (src/lib/resource-system/schemas.ts)
+       ↓
+ResourceRegistry (src/lib/resource-system/resource-registry.ts)
        ↓
 ┌─────────────────────────────────┐
 │     Auto-Generated System       │
 ├─────────────────────────────────┤
-│ • API Routes & Handlers         │
-│ • IndexedDB Stores             │
-│ • Forms, Tables, Modals        │
-│ • TypeScript Types             │
-│ • Validation Rules             │
-│ • Hook Interfaces              │
-│ • Junction Queries             │
+│ • 93 SCHEMA_RESOURCES           │
+│ • Action mappings (40+ actions) │
+│ • IndexedDB stores & indexes    │
+│ • Auto-Forms & Tables           │
+│ • Junction auto-creation        │
+│ • Branch-aware operations       │
+│ • Mobile-first layouts          │
+│ • Auto-value processing         │
 └─────────────────────────────────┘
 ```
 
+**Actual Registry**: 93 schemas across 12 feature directories
+
 ---
 
-## Schema Structure
+## Actual Schema Structure
 
-### **Core Schema Interface**
+### **ResourceSchema Interface (ACTUAL)**
+**File**: `src/lib/resource-system/schemas.ts` (lines 492-555)
 
 ```typescript
-// src/lib/resource-system/schemas.ts
 export interface ResourceSchema {
-  // === CORE IDENTITY ===
-  databaseKey: string;        // IndexedDB store + API endpoint name
-  modelName: string;          // Prisma model name for server operations  
-  actionPrefix: string;       // Action namespace (office.create, office.list)
+  // ============================================================================
+  // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
+  // ============================================================================
+  databaseKey: string;      // IndexedDB store + API endpoints
+  modelName: string;        // Prisma model access
+  actionPrefix: string;     // Action naming
   
-  // === UI CONFIGURATION ===
-  display: DisplayConfig;     // Title, icon, color for UI
-  fields: FieldSchema[];      // Complete field definitions
+  // ============================================================================
+  // CONTEXT CONFIGURATION
+  // ============================================================================
+  notHasTenantContext?: boolean; // Disable tenant filtering (for global resources)
+  notHasBranchContext?: boolean; // Disable branch filtering (for non-versioned resources)
+  notHasAuditFields?: boolean;   // Disable audit fields (for models without updatedBy/version)
   
-  // === BEHAVIOR ===
-  actions: ActionConfig;      // Enabled operations (CRUD + custom)
-  relationships?: RelationshipConfig; // Foreign key relationships
+  // Server-only configuration for large datasets
+  serverOnly?: boolean;          // Forces all operations through API, bypasses IndexedDB
+  cacheStrategy?: 'indexeddb' | 'memory' | 'server-only'; // Caching strategy
   
-  // === ADVANCED ===
-  permissions?: PermissionConfig;     // Access control
-  validation?: ValidationConfig;      // Custom validation
-  hooks?: HookConfig;                // Lifecycle hooks
-  mobile?: MobileConfig;             // Mobile-specific settings
-  desktop?: DesktopConfig;           // Desktop-specific settings
+  // ============================================================================
+  // UI CONFIGURATION
+  // ============================================================================
+  display: DisplayConfig;        // Title, description, icon, color
+  fields: FieldSchema[];         // Complete field definitions
+  
+  // ============================================================================
+  // FUNCTIONALITY
+  // ============================================================================
+  relationships?: Record<string, RelationshipConfig>; // Foreign key relationships
+  tree?: TreeConfig;             // Tree configuration (for hierarchical data like nodes)
+  search: SearchConfig;          // Search and filtering
+  filtering?: FilteringConfig;   // Two-level filtering configuration
+  actions: ActionsConfig;        // Actions configuration
+  
+  // ============================================================================
+  // LAYOUT
+  // ============================================================================
+  mobile: MobileConfig;          // Mobile-first layout
+  desktop: DesktopConfig;        // Desktop table configuration  
+  table?: TableConfig;           // Table configuration
+  form?: FormConfig;             // Form configuration
+  
+  // ============================================================================
+  // ADVANCED
+  // ============================================================================
+  permissions?: PermissionsConfig; // Permissions
+  hooks?: {                      // Hooks for custom logic
+    beforeCreate?: string;
+    afterCreate?: string;
+    beforeUpdate?: string;
+    afterUpdate?: string;
+    beforeDelete?: string;
+    afterDelete?: string;
+  };
+  
+  // IndexedDB key configuration (CRITICAL for junction tables)
+  indexedDBKey?: ((record: any) => string) | null;
 }
 ```
 
-### **1. Core Identity Fields**
+### **Core Identity Pattern**
 
-These three fields are **bulletproof** and define the resource identity:
+Every schema follows the **bulletproof 3-field design**:
 
 ```typescript
 const OFFICE_SCHEMA: ResourceSchema = {
   // 🔑 CRITICAL: These 3 fields must be consistent
-  databaseKey: 'offices',     // ✅ Plural, lowercase 
-  modelName: 'Office',        // ✅ Singular, PascalCase (matches Prisma)
-  actionPrefix: 'office',     // ✅ Singular, lowercase (office.create)
+  databaseKey: 'office',     // ✅ Singular, lowercase 
+  modelName: 'Office',       // ✅ Singular, PascalCase (matches Prisma)
+  actionPrefix: 'office',    // ✅ Singular, lowercase (office.create)
   
   // Rest of schema...
 }
 ```
 
-**Naming Convention:**
-- `databaseKey`: `offices` (plural, snake_case)
+**Naming Convention (ACTUAL)**:
+- `databaseKey`: `office` (singular, lowercase)
 - `modelName`: `Office` (singular, PascalCase) 
 - `actionPrefix`: `office` (singular, lowercase)
 

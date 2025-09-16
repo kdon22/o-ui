@@ -9,7 +9,6 @@
 
 import { useActionMutation } from '@/hooks/use-action-api';
 import { useQueryClient } from '@tanstack/react-query';
-import { nodeInheritanceService, createProcessChangeEvent } from '@/lib/inheritance/service';
 
 interface UseTableMutationsProps {
   resourceKey: string;
@@ -66,11 +65,8 @@ export const useTableMutations = ({
         });
         
         try {
-          // Use the inheritance service's safe invalidation method
-          const invalidationEvent = createProcessChangeEvent(data.data.id, nodeId);
-          await nodeInheritanceService.invalidateNodeInheritance(invalidationEvent);
-          
-          // Also invalidate React Query cache for immediate UI updates
+          // Invalidate React Query cache for immediate UI updates
+          // Note: TanStack Query + action-system now handles inheritance cache automatically
           queryClient.invalidateQueries({
             queryKey: ['nodeInheritance', nodeId],
             exact: false

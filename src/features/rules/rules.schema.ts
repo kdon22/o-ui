@@ -841,6 +841,8 @@ export interface RuleListQuery extends RuleQuery {
  */
 export const ProcessRuleSchema = z.object({
   id: z.string(),
+  // Node-scoped attachment: rule can only exist on a process within a node
+  nodeId: z.string(),
   ruleId: z.string(),
   processId: z.string(),
   tenantId: z.string(),
@@ -869,10 +871,11 @@ export const PROCESS_RULE_SCHEMA = {
   // No exception flags needed - has both tenant context and audit fields
   
   // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: ProcessRule) => `${record.processId}:${record.ruleId}`,
+  indexedDBKey: (record: ProcessRule) => `${record.nodeId}:${record.processId}:${record.ruleId}`,
   
   // GOLD STANDARD: Junction field mapping configuration
   fieldMappings: {
+    nodeId: { type: 'relation', target: 'node', targetField: 'id' },
     ruleId: { type: 'relation', target: 'rule', targetField: 'id' },
     processId: { type: 'relation', target: 'process', targetField: 'id' },
     branchId: { type: 'relation', target: 'branch', targetField: 'id' },
