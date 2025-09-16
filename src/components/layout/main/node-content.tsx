@@ -9,7 +9,7 @@ import { AutoTable } from '@/components/auto-generated/table/auto-table'
 import { createAutoTableHeaderActions } from '@/components/auto-generated/table/header-actions'
 import { useNodeTabs } from '@/hooks/layout'
 import { useActionQuery } from '@/hooks/use-action-api'
-// import { useNodeRuleHierarchy } from '@/hooks/node-rule-hierarchy' // DISABLED - causing React hook errors
+import { useNodeInheritance } from '@/lib/inheritance/service' // ✅ FIXED - using performance-optimized inheritance service
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { PROCESS_TYPE_LABELS, PROCESS_TYPE_OPTIONS } from '@/features/processes/constants'
@@ -81,25 +81,31 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     })
   }
 
-  // 🚨 COMPLETE HOOK REMOVAL: Inheritance system disabled to fix React hook errors
-  // The useNodeRuleHierarchy hook was calling conditional hooks internally causing 
-  // "Rendered more hooks than during the previous render" errors
-  // TODO: Re-enable with proper filtering after tree is working and ancestorIds are fixed
+  // 🚀 PERFORMANCE-OPTIMIZED: Using fixed inheritance service with scoped queries
+  // This replaces the problematic useNodeRuleHierarchy that was downloading entire database
+  console.log('🔥 [NodeContent] Initializing inheritance hook for nodeId:', nodeId, 'branchContext:', branchContext)
+  
+  const inheritanceResult = useNodeInheritance(nodeId, branchContext)
+  
+  // Adapt the hook result to match the component's expected interface
   const ruleHierarchy = {
-    processNames: [],
-    rules: [],
-    processTypes: [],
-    isLoading: false,
-    error: null
+    processNames: inheritanceResult.data?.processNames || [],
+    rules: inheritanceResult.data?.availableRules || [],
+    processTypes: inheritanceResult.data?.processTypes || [],
+    isLoading: inheritanceResult.isLoading,
+    error: inheritanceResult.error
   }
   
-  // 🚫 COMPLETELY DISABLED: This hook and all its internal hooks are causing React errors
-  // const ruleHierarchy = useNodeRuleHierarchy({
-  //   nodeId,
-  //   branchId: branchContext.currentBranchId,
-  //   includeInherited: true,
-  //   includeIgnored: false
-  // })
+  console.log('🎯 [NodeContent] Inheritance hook result:', {
+    nodeId,
+    hasData: !!inheritanceResult.data,
+    isLoading: inheritanceResult.isLoading,
+    error: inheritanceResult.error,
+    processNamesCount: ruleHierarchy.processNames.length,
+    rulesCount: ruleHierarchy.rules.length,
+    processTypesCount: ruleHierarchy.processTypes.length,
+    timestamp: new Date().toISOString()
+  })
 
   // ============================================================================
   // TAB CONFIGURATIONS - DEFINE ALL TAB BEHAVIOR
