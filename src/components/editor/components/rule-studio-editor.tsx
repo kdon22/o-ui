@@ -18,7 +18,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, RefreshCw, Lock } from 'lucide-react'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
-import { useRuleEditor } from '@/hooks/use-rule-editor'
+import { useRuleEditor } from '@/lib/editor/hooks'
+import { useRuleSourceCode } from '../services/source-code-state-manager'
+import { useRuleSaveCoordinator } from '../services/rule-save-coordinator'
+import { testUnifiedState } from '../services/test-unified-state'
 import { RuleCodeEditor } from './rule-code-editor'
 import { RulePythonViewer } from './rule-python-viewer'
 import { ParametersEditor } from './parameters-editor'
@@ -63,20 +66,21 @@ export function RuleStudioEditor({
   const navigationContext = useAutoNavigationContext()
   
   // 🔍 INHERITANCE: Use node rule hierarchy to check if this rule is inherited in current context
-  const { data: inheritanceData, isLoading: loadingInheritance } = useNodeRuleHierarchy(
-    navigationContext?.nodeId || '', // Only check inheritance if we have a node context
-    {
-      enabled: !!(navigationContext?.nodeId && rule?.id),
-      staleTime: 5 * 60 * 1000 // 5 minutes cache
-    }
+  const inheritanceResult = useNodeRuleHierarchy(
+    navigationContext?.nodeId || '' // Only check inheritance if we have a node context
   )
+  const inheritanceData = (inheritanceResult as any)?.data
+  const loadingInheritance = (inheritanceResult as any)?.isLoading || false
   
   // 🔍 INHERITANCE: Determine if this specific rule is inherited in current context
   const isRuleInherited = useMemo(() => {
     if (!rule?.id || !navigationContext?.nodeId || !inheritanceData) return false
     
     // Find this rule in the inheritance data
-    const inheritedRule = inheritanceData.rules?.find(r => r.ruleId === rule.id)
+    const inheritedRule = inheritanceData.rules?.find((r: any) => r.ruleId === rule.id)
+    
+    // 🚀 CRITICAL FIX: A rule is only read-only if it's inherited from a PARENT node
+    // If the rule belongs to the current node (isInherited = false), it should be editable
     const isInherited = inheritedRule?.isInherited || false
     
     console.log('🔍 [RuleStudioEditor] Inheritance check:', {
@@ -86,11 +90,22 @@ export function RuleStudioEditor({
       processId: navigationContext.processId,
       foundInHierarchy: !!inheritedRule,
       isInherited,
+      shouldBeReadOnly: isInherited, // Only inherited rules should be read-only
       inheritanceLevel: inheritedRule?.inheritanceLevel,
       sourceNodeName: inheritedRule?.sourceNodeName,
-      displayClass: inheritedRule?.displayClass
+      displayClass: inheritedRule?.displayClass,
+      // 🚀 DEBUG: Additional context
+      currentNodeId: navigationContext.nodeId,
+      ruleData: inheritedRule ? {
+        ruleId: inheritedRule.ruleId,
+        isInherited: inheritedRule.isInherited,
+        sourceNodeId: inheritedRule.sourceNodeId,
+        sourceNodeName: inheritedRule.sourceNodeName
+      } : null
     })
     
+    // 🚀 ENTERPRISE FIX: Only return true if the rule is actually inherited from a parent
+    // If isInherited is false, the rule belongs to this node and should be editable
     return isInherited
   }, [rule?.id, navigationContext?.nodeId, inheritanceData])
   
@@ -116,20 +131,25 @@ export function RuleStudioEditor({
   // Action system mutations for parameters (clean & fast)
   const updateRuleMutation = useActionMutation('rule.update')
   
-  // Still use useRuleEditor for complex business rule editing (Python generation, etc.)
+  // 🏆 SSOT: Use the proper architecture we built - useRuleEditor is THE interface
   const {
     sourceCode,
-    generatedCode, 
+    pythonCode: generatedCode,
+    hasUnsavedChanges,
+    loading: isLoadingEditor,
+    error: sourceCodeError,
+    isReady: isSourceCodeReady,
     onSourceCodeChange,
     saveRule: saveSourceCode,
     saving: savingSourceCode,
-    error: sourceCodeError,
-    isReady: isSourceCodeReady,
-    isDirtySinceServer
+    isDirtySinceServer,
+    rule: serverRule
   } = useRuleEditor(ruleId)
   
-  // Combine states for UI
-  const loading = loadingRule || loadingInheritance
+  // 🏆 SSOT: No need for custom initialization - useRuleEditor handles everything
+  
+  // 🏆 SSOT: Combine states for UI using proper SSOT values
+  const loading = loadingRule || loadingInheritance || isLoadingEditor
   const saving = savingSourceCode || updateRuleMutation.isPending
   const error = ruleError || sourceCodeError
   const isReady = !loading && !!rule
@@ -146,10 +166,7 @@ export function RuleStudioEditor({
           tenantId,
           branchContext: {
             currentBranchId,
-            defaultBranchId,
-            tenantId,
-            userId,
-            isReady: true
+            defaultBranchId
           }
         })
       }
@@ -179,10 +196,8 @@ export function RuleStudioEditor({
     return ruleType === 'UTILITY'
   }, [ruleType])
 
-  // Derived state
-  const isDirty = useMemo(() => {
-    return sourceCode !== lastSourceCode && sourceCode.trim() !== ''
-  }, [sourceCode, lastSourceCode])
+  // 🏆 SSOT: Use proper SSOT for dirty state
+  const isDirty = hasUnsavedChanges
 
   // 🔍 DEBUG: Log current state for debugging (AFTER derived state is calculated)
   useEffect(() => {
@@ -282,20 +297,25 @@ export function RuleStudioEditor({
 
   /**
    * Handle rule save (for business rules/source code)
+   * 🚀 ENTERPRISE: Now uses unified save coordinator
    */
+  // 🏆 SSOT: Use proper save handler from useRuleEditor
   const handleSave = useCallback(async () => {
-    if (!sourceCode) return
-    await saveSourceCode({ sourceCode })
-  }, [saveSourceCode, sourceCode])
+    console.log('💾 [RuleStudioEditor] Manual save initiated via SSOT')
+    const success = await saveSourceCode()
+    if (success) {
+      console.log('✅ [RuleStudioEditor] Manual save successful')
+    }
+  }, [saveSourceCode])
 
-  // Provide a global "save on close" hook for the header X button
+  // 🏆 SSOT: Provide a global "save on close" hook for the header X button
   useEffect(() => {
     ;(window as any).__orpoc_saveOnClose = async () => {
       try {
-        // Only save if dirty compared to last server write
-        if (isDirtySinceServer && sourceCode && sourceCode.trim()) {
-          // Save both sourceCode and the currently displayed/generated python code
-          await saveSourceCode({ sourceCode, pythonCode: localPythonCode || generatedCode })
+        // 🏆 SSOT: Use proper save handler for close saves
+        if (hasUnsavedChanges) {
+          console.log('🔄 [RuleStudioEditor] Saving on close via SSOT')
+          await saveSourceCode()
         }
         // If parameters pending, persist schema via action system
         if (hasUnsavedParameters && pendingSchema && rule?.id) {
@@ -310,7 +330,7 @@ export function RuleStudioEditor({
         delete (window as any).__orpoc_saveOnClose
       }
     }
-  }, [isDirtySinceServer, sourceCode, lastSourceCode, hasUnsavedParameters, pendingSchema, rule?.id, saveSourceCode, updateRuleMutation])
+  }, [hasUnsavedChanges, hasUnsavedParameters, pendingSchema, rule?.id, saveSourceCode, updateRuleMutation])
 
   /**
    * Handle parameters change tracking for auto-save

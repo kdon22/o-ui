@@ -7,11 +7,11 @@
  * - Manual saves
  * - Background saves
  *
- * Eliminates competing save systems and provides unified UX.
+ * Uses proper action-system hooks for cache invalidation and error handling.
  */
 
-import { getActionClient } from '@/lib/action-client'
-import type { ActionRequest } from '@/lib/resource-system/schemas'
+import { useActionMutation } from '@/hooks/use-action-api'
+import { useSourceCodeState } from './source-code-state-manager'
 
 // Types for different save contexts
 export type SaveContext = 'tab-switch' | 'close' | 'refresh' | 'manual' | 'auto'
@@ -38,280 +38,257 @@ export interface RuleState {
 }
 
 /**
- * 🚀 RULE SAVE COORDINATOR
+ * 🚀 RULE SAVE COORDINATOR - Hook-Based Implementation
  *
- * SSOT for all rule saving - coordinates between all tabs and contexts
+ * SSOT for all rule saving using proper action-system patterns
  */
-export class RuleSaveCoordinator {
-  private static instance: RuleSaveCoordinator
-  private actionClient: any
-  private lastSavedStates = new Map<string, RuleState>()
-  private pendingSaves = new Map<string, Promise<any>>()
 
-  constructor(tenantId: string) {
-    this.actionClient = getActionClient(tenantId)
-  }
+// Global state for tracking saves across components
+const lastSavedStates = new Map<string, RuleState>()
+const pendingSaves = new Map<string, Promise<any>>()
 
-  static getInstance(tenantId: string): RuleSaveCoordinator {
-    if (!RuleSaveCoordinator.instance) {
-      RuleSaveCoordinator.instance = new RuleSaveCoordinator(tenantId)
-    }
-    return RuleSaveCoordinator.instance
-  }
+/**
+ * Helper functions for rule save operations
+ */
 
-  /**
-   * 🚀 MAIN SAVE METHOD - SSOT Entry Point
-   *
-   * All rule saving goes through here
-   */
-  async saveRule(
-    ruleId: string,
-    ruleState: Partial<RuleState>,
-    options: SaveOptions = { context: 'manual' }
-  ): Promise<boolean> {
-    try {
-      // Prevent concurrent saves for the same rule
-      const saveKey = `${ruleId}-${options.context}`
-      if (this.pendingSaves.has(saveKey)) {
-        console.log(`⏳ [RuleSaveCoordinator] Save already in progress for ${saveKey}`)
-        return true // Consider it successful since a save is already running
-      }
+/**
+ * Check if rule state has changes compared to last saved
+ */
+function hasChanges(ruleId: string, currentState: Partial<RuleState>): boolean {
+  const lastSaved = lastSavedStates.get(ruleId)
+  if (!lastSaved) return true // No previous save, so there are changes
 
-      // Skip if no changes and not forced
-      if (options.skipIfClean && !this.hasChanges(ruleId, ruleState)) {
-        console.log(`⏭️ [RuleSaveCoordinator] No changes detected, skipping save`)
-        return true
-      }
+  // Compare key fields
+  const fieldsToCheck: (keyof RuleState)[] = [
+    'sourceCode', 'name', 'description', 'type', 'isActive',
+    'documentation', 'examples', 'notes', 'schema'
+  ]
 
-      // Create save promise
-      const savePromise = this.performSave(ruleId, ruleState, options)
-      this.pendingSaves.set(saveKey, savePromise)
+  return fieldsToCheck.some(field => {
+    const current = currentState[field]
+    const saved = lastSaved[field]
 
-      // Execute save
-      const result = await savePromise
+    // Handle undefined/null comparisons
+    if (current == null && saved == null) return false
+    if (current == null || saved == null) return true
 
-      // Update last saved state
-      if (result) {
-        this.lastSavedStates.set(ruleId, { ...ruleState, id: ruleId })
-      }
+    return current !== saved
+  })
+}
 
-      // Clean up
-      this.pendingSaves.delete(saveKey)
+/**
+ * Build safe update payload (exclude relations, only scalar fields)
+ */
+function buildSafeUpdatePayload(ruleState: Partial<RuleState>): any {
+  const safe: any = {}
 
-      console.log(`✅ [RuleSaveCoordinator] Save successful: ${saveKey}`)
-      return result
+  // Core rule fields
+  if (ruleState.id) safe.id = ruleState.id
+  if (ruleState.name !== undefined) safe.name = ruleState.name
+  if (ruleState.sourceCode !== undefined) safe.sourceCode = ruleState.sourceCode
+  if (ruleState.pythonCode !== undefined) safe.pythonCode = ruleState.pythonCode
+  if (ruleState.description !== undefined) safe.description = ruleState.description
+  if (ruleState.type !== undefined) safe.type = ruleState.type
+  if (ruleState.isActive !== undefined) safe.isActive = ruleState.isActive
 
-    } catch (error) {
-      console.error(`❌ [RuleSaveCoordinator] Save failed:`, error)
+  // Documentation fields
+  if (ruleState.documentation !== undefined) safe.documentation = ruleState.documentation
+  if (ruleState.examples !== undefined) safe.examples = ruleState.examples
+  if (ruleState.notes !== undefined) safe.notes = ruleState.notes
+  if (ruleState.changelog !== undefined) safe.changelog = ruleState.changelog
 
-      // Clean up on error
-      this.pendingSaves.delete(`${ruleId}-${options.context}`)
+  // Schema for utility rules
+  if (ruleState.schema !== undefined) safe.schema = ruleState.schema
 
-      return false
-    }
-  }
+  console.log('🔍 [RuleSaveCoordinator] Building save payload:', {
+    inputRuleState: ruleState,
+    outputSafe: safe,
+    hasSourceCode: safe.sourceCode !== undefined,
+    sourceCodeValue: safe.sourceCode,
+    sourceCodeLength: safe.sourceCode?.length || 0
+  })
 
-  /**
-   * 🚀 TAB SWITCH SAVE - Called when switching tabs
-   */
-  async saveOnTabSwitch(ruleId: string, ruleState: RuleState): Promise<boolean> {
-    return this.saveRule(ruleId, ruleState, {
-      context: 'tab-switch',
-      skipIfClean: true
-    })
-  }
+  return safe
+}
 
-  /**
-   * 🚀 CLOSE/REFRESH SAVE - Uses sendBeacon for reliability
-   */
-  async saveOnClose(ruleId: string, ruleState: RuleState): Promise<void> {
-    try {
-      const payload: ActionRequest = {
-        action: 'rule.update',
-        data: {
-          id: ruleId,
-          ...this.buildSafeUpdatePayload(ruleState)
-        }
-      }
-
-      const body = JSON.stringify(payload)
-      const endpoint = '/api/workspaces/current/actions'
-
-      // Use sendBeacon for reliable delivery during page unload
-      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-        const blob = new Blob([body], { type: 'application/json' })
-        const sent = navigator.sendBeacon(endpoint, blob)
-        if (sent) {
-          console.log('📡 [RuleSaveCoordinator] SendBeacon save initiated for close')
-        }
-      }
-
-      // Fallback to fetch with keepalive
-      if (typeof fetch !== 'undefined') {
-        fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body,
-          keepalive: true,
-          credentials: 'include'
-        }).catch(() => {}) // Fire-and-forget
-      }
-
-    } catch (error) {
-      console.error('❌ [RuleSaveCoordinator] Close save failed:', error)
-    }
-  }
-
-  /**
-   * 🚀 AUTO SAVE - Background periodic saves
-   */
-  async autoSave(ruleId: string, ruleState: RuleState): Promise<boolean> {
-    return this.saveRule(ruleId, ruleState, {
-      context: 'auto',
-      skipIfClean: true
-    })
-  }
-
-  /**
-   * Check if rule state has changes compared to last saved
-   */
-  private hasChanges(ruleId: string, currentState: Partial<RuleState>): boolean {
-    const lastSaved = this.lastSavedStates.get(ruleId)
-    if (!lastSaved) return true // No previous save, so there are changes
-
-    // Compare key fields
-    const fieldsToCheck: (keyof RuleState)[] = [
-      'sourceCode', 'name', 'description', 'type', 'isActive',
-      'documentation', 'examples', 'notes', 'schema'
-    ]
-
-    return fieldsToCheck.some(field => {
-      const current = currentState[field]
-      const saved = lastSaved[field]
-
-      // Handle undefined/null comparisons
-      if (current == null && saved == null) return false
-      if (current == null || saved == null) return true
-
-      return current !== saved
-    })
-  }
-
-  /**
-   * Perform the actual save operation
-   */
-  private async performSave(
-    ruleId: string,
-    ruleState: Partial<RuleState>,
-    options: SaveOptions
-  ): Promise<boolean> {
+/**
+ * Close/refresh save using sendBeacon for reliability
+ */
+async function saveOnClose(ruleId: string, ruleState: RuleState): Promise<void> {
+  try {
     const payload = {
-      id: ruleId,
-      ...this.buildSafeUpdatePayload(ruleState)
-    }
-
-    const request: ActionRequest = {
       action: 'rule.update',
-      data: payload
+      data: {
+        id: ruleId,
+        ...buildSafeUpdatePayload(ruleState)
+      }
     }
 
-    const result = await this.actionClient.executeAction(request)
-    return result.success === true
-  }
+    const body = JSON.stringify(payload)
+    const endpoint = '/api/workspaces/current/actions'
 
-  /**
-   * Build safe update payload (exclude relations, only scalar fields)
-   */
-  private buildSafeUpdatePayload(ruleState: Partial<RuleState>): any {
-    const safe: any = {}
+    // Use sendBeacon for reliable delivery during page unload
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([body], { type: 'application/json' })
+      const sent = navigator.sendBeacon(endpoint, blob)
+      if (sent) {
+        console.log('📡 [RuleSaveCoordinator] SendBeacon save initiated for close')
+      }
+    }
 
-    // Core rule fields
-    if (ruleState.id) safe.id = ruleState.id
-    if (ruleState.name !== undefined) safe.name = ruleState.name
-    if (ruleState.sourceCode !== undefined) safe.sourceCode = ruleState.sourceCode
-    if (ruleState.pythonCode !== undefined) safe.pythonCode = ruleState.pythonCode
-    if (ruleState.description !== undefined) safe.description = ruleState.description
-    if (ruleState.type !== undefined) safe.type = ruleState.type
-    if (ruleState.isActive !== undefined) safe.isActive = ruleState.isActive
+    // Fallback to fetch with keepalive
+    if (typeof fetch !== 'undefined') {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+        credentials: 'include'
+      }).catch(() => {}) // Fire-and-forget
+    }
 
-    // Documentation fields
-    if (ruleState.documentation !== undefined) safe.documentation = ruleState.documentation
-    if (ruleState.examples !== undefined) safe.examples = ruleState.examples
-    if (ruleState.notes !== undefined) safe.notes = ruleState.notes
-    if (ruleState.changelog !== undefined) safe.changelog = ruleState.changelog
-
-    // Schema for utility rules
-    if (ruleState.schema !== undefined) safe.schema = ruleState.schema
-
-    return safe
-  }
-
-  /**
-   * Update last saved state (call after successful save)
-   */
-  updateLastSavedState(ruleId: string, state: RuleState): void {
-    this.lastSavedStates.set(ruleId, { ...state })
-  }
-
-  /**
-   * Get last saved state for comparison
-   */
-  getLastSavedState(ruleId: string): RuleState | undefined {
-    return this.lastSavedStates.get(ruleId)
-  }
-
-  /**
-   * Clear saved state (e.g., when rule is deleted)
-   */
-  clearSavedState(ruleId: string): void {
-    this.lastSavedStates.delete(ruleId)
+  } catch (error) {
+    console.error('❌ [RuleSaveCoordinator] Close save failed:', error)
   }
 }
 
 /**
  * 🚀 HOOK: Use Rule Save Coordinator
  *
- * Provides unified save interface for React components
+ * Provides unified save interface using proper action-system patterns
  */
 import { useCallback } from 'react'
-import { useSession } from 'next-auth/react'
 
 export function useRuleSaveCoordinator() {
-  const { data: session } = useSession()
-  const tenantId = session?.user?.tenantId || 'default'
-
-  const coordinator = RuleSaveCoordinator.getInstance(tenantId)
+  // 🚀 FIXED: Use proper action-system hook with automatic cache invalidation
+  const updateRuleMutation = useActionMutation('rule.update')
+  
+  // 🚀 ENTERPRISE FIX: Get access to source code state properly
+  const getSourceCode = useSourceCodeState((state) => state.getSourceCode)
+  const getPythonCode = useSourceCodeState((state) => state.getPythonCode)
+  const markAsSaved = useSourceCodeState((state) => state.markAsSaved)
 
   const saveRule = useCallback(async (
     ruleId: string,
     ruleState: Partial<RuleState>,
     options?: Partial<SaveOptions>
-  ) => {
-    return coordinator.saveRule(ruleId, ruleState, {
-      context: 'manual',
-      skipIfClean: false,
-      ...options
+  ): Promise<boolean> => {
+    try {
+      console.log('🔍 [useRuleSaveCoordinator] Save request with unified state:', {
+        ruleId,
+        context: options?.context || 'manual',
+        hasSourceCode: ruleState.sourceCode !== undefined,
+        sourceCodeValue: ruleState.sourceCode,
+        sourceCodeLength: ruleState.sourceCode?.length || 0,
+        skipIfClean: options?.skipIfClean,
+        timestamp: new Date().toISOString()
+      })
+
+      // 🚀 ENTERPRISE FIX: Get the LATEST source code from unified state
+      const latestSourceCode = getSourceCode(ruleId)
+      const latestPythonCode = getPythonCode(ruleId)
+      
+      // 🚀 CRITICAL: Use the latest source code from the state manager, not the passed state
+      const enhancedRuleState = {
+        ...ruleState,
+        ...(latestSourceCode ? { sourceCode: latestSourceCode } : {}),
+        ...(latestPythonCode ? { pythonCode: latestPythonCode } : {})
+      }
+
+      // Prevent concurrent saves for the same rule
+      const saveKey = `${ruleId}-${options?.context || 'manual'}`
+      if (pendingSaves.has(saveKey)) {
+        console.log(`⏳ [RuleSaveCoordinator] Save already in progress for ${saveKey}`)
+        return true // Consider it successful since a save is already running
+      }
+
+      // Skip if no changes and not forced
+      if (options?.skipIfClean && !hasChanges(ruleId, enhancedRuleState)) {
+        console.log(`⏭️ [RuleSaveCoordinator] No changes detected, skipping save`)
+        return true
+      }
+
+      // Build payload
+      const payload = {
+        id: ruleId,
+        ...buildSafeUpdatePayload(enhancedRuleState)
+      }
+
+      console.log('🔍 [RuleSaveCoordinator] Executing action request:', {
+        action: 'rule.update',
+        payload,
+        ruleId,
+        context: options?.context || 'manual'
+      })
+
+      // Create save promise using proper action-system hook
+      const savePromise = updateRuleMutation.mutateAsync(payload)
+      pendingSaves.set(saveKey, savePromise)
+
+      // Execute save - this will automatically handle cache invalidation
+      const result = await savePromise
+
+      console.log('🔍 [RuleSaveCoordinator] Action result:', {
+        success: result.success,
+        hasData: !!result.data,
+        resultKeys: result.data ? Object.keys(result.data) : [],
+        ruleId,
+        savedSourceCode: result.data?.sourceCode,
+        savedSourceCodeLength: result.data?.sourceCode?.length || 0,
+        originalPayloadSourceCode: payload.sourceCode,
+        sourceCodeMatches: result.data?.sourceCode === payload.sourceCode
+      })
+
+      // Update last saved state
+      if (result.success) {
+        // 🚀 ENTERPRISE: Mark as saved in unified state
+        if (enhancedRuleState.sourceCode) {
+          markAsSaved(ruleId, enhancedRuleState.sourceCode)
+        }
+        
+        lastSavedStates.set(ruleId, { ...enhancedRuleState, id: ruleId })
+      }
+
+      // Clean up
+      pendingSaves.delete(saveKey)
+
+      console.log(`✅ [RuleSaveCoordinator] Save successful: ${saveKey}`)
+      return result.success === true
+
+    } catch (error) {
+      console.error(`❌ [RuleSaveCoordinator] Save failed:`, error)
+
+      // Clean up on error
+      pendingSaves.delete(`${ruleId}-${options?.context || 'manual'}`)
+
+      return false
+    }
+  }, [updateRuleMutation, getSourceCode, getPythonCode, markAsSaved])
+
+  const saveOnTabSwitch = useCallback(async (ruleId: string, ruleState: RuleState): Promise<boolean> => {
+    return saveRule(ruleId, ruleState, {
+      context: 'tab-switch',
+      skipIfClean: true
     })
-  }, [coordinator])
+  }, [saveRule])
 
-  const saveOnTabSwitch = useCallback(async (ruleId: string, ruleState: RuleState) => {
-    return coordinator.saveOnTabSwitch(ruleId, ruleState)
-  }, [coordinator])
+  const saveOnCloseCallback = useCallback(async (ruleId: string, ruleState: RuleState): Promise<void> => {
+    return saveOnClose(ruleId, ruleState)
+  }, [])
 
-  const saveOnClose = useCallback(async (ruleId: string, ruleState: RuleState) => {
-    return coordinator.saveOnClose(ruleId, ruleState)
-  }, [coordinator])
-
-  const autoSave = useCallback(async (ruleId: string, ruleState: RuleState) => {
-    return coordinator.autoSave(ruleId, ruleState)
-  }, [coordinator])
+  const autoSave = useCallback(async (ruleId: string, ruleState: RuleState): Promise<boolean> => {
+    return saveRule(ruleId, ruleState, {
+      context: 'auto',
+      skipIfClean: true
+    })
+  }, [saveRule])
 
   return {
     saveRule,
     saveOnTabSwitch,
-    saveOnClose,
+    saveOnClose: saveOnCloseCallback,
     autoSave,
-    getLastSavedState: (ruleId: string) => coordinator.getLastSavedState(ruleId),
-    updateLastSavedState: (ruleId: string, state: RuleState) => coordinator.updateLastSavedState(ruleId, state)
+    getLastSavedState: (ruleId: string) => lastSavedStates.get(ruleId),
+    updateLastSavedState: (ruleId: string, state: RuleState) => lastSavedStates.set(ruleId, { ...state })
   }
 }

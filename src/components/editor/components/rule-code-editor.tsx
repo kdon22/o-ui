@@ -245,10 +245,31 @@ export function RuleCodeEditor({
 
   /**
    * Handle value changes with Python generation
+   * 🚀 ENTERPRISE: Now handles async onChange for unified state management
    */
-  const handleChange = useCallback((newValue: string | undefined) => {
+  const handleChange = useCallback(async (newValue: string | undefined) => {
     const actualValue = newValue || ''
-    onChange?.(actualValue)
+    
+    console.log('🔧 [RuleCodeEditor] Value changed:', {
+      newLength: actualValue.length,
+      hasOnChange: !!onChange,
+      readOnly,
+      timestamp: new Date().toISOString(),
+      preview: actualValue.substring(0, 50) + (actualValue.length > 50 ? '...' : '')
+    })
+    
+    // 🚀 ENTERPRISE: Handle onChange for unified state management
+    try {
+      if (onChange) {
+        // Call onChange (sync or async)
+        const result = onChange(actualValue)
+        if (result && typeof result.then === 'function') {
+          await result
+        }
+      }
+    } catch (error) {
+      console.error('❌ [RuleCodeEditor] onChange failed:', error)
+    }
     
     // 🚀 FIXED: Real-time Python generation (ALWAYS generate, even for empty content)
     if (onPythonGenerated) {

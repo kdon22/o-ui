@@ -13,8 +13,8 @@ export { VariableTypeDetector } from './type-detection/variable-type-detector'
 export { ClassMemberExtractor, type ClassMember } from './type-detection/class-member-extractor'
 export { TypeInferenceUtils } from './type-detection/type-inference-utils'
 
-// Code Sync Services (still in use)
-export { RuleCodeSyncService, type RuleData } from './rule-code-sync-service'
+// Save Coordination Services
+export { useRuleSaveCoordinator, type RuleState, type SaveContext } from './rule-save-coordinator'
 
 // Content Generation
 export { HoverContentGenerator } from './content-generators/hover-content-generator' 

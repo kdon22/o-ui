@@ -24,8 +24,9 @@ import { Rule } from '@/features/rules/types'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
-import { useRuleEditor } from '@/hooks/use-rule-editor'
+import { useRuleEditor } from '@/lib/editor/hooks'
 import { ExtendedRule, ExtendedClass } from './types'
+import { useRuleSourceCode } from '@/components/editor/services/source-code-state-manager'
 // 🚀 **PERFORMANCE**: Lazy load Python generation only when needed
 const translateBusinessRulesToPython = async (code: string) => {
   const { translateBusinessRulesToPython: translate } = await import('@/lib/editor/python-generation')
@@ -139,13 +140,18 @@ const RuleCodeTab = ({ rule, onUpdate, onSave, hasUnsavedChanges }: {
   onUpdate?: (updates: Partial<ExtendedRule>) => void;
   onSave: () => void;
   hasUnsavedChanges: boolean;
-}) => (
-  <div className="h-full">
-    <RuleEditor 
-      ruleId={rule.id}
-    />
-  </div>
-)
+}) => {
+  // 🚀 REMOVED: Cleanup function that was causing infinite save loops
+  // Tab switching auto-save is now handled by EditorLayout's handleTabChange
+
+  return (
+    <div className="h-full">
+      <RuleEditor 
+        ruleId={rule.id}
+      />
+    </div>
+  )
+}
 
 const ClassCodeTab = ({ classEntity, onUpdate, onSave, hasUnsavedChanges }: { 
   classEntity: ExtendedClass;
@@ -268,16 +274,32 @@ const TestTabContent = ({ isCreateMode, rule, onRuleUpdate }: TestTabContentProp
     return null
   }, [isCreateMode, rule?.sourceMap])
   
-  // 🔄 **SYNC**: Update rule editor when debug tab changes code
-  const handleCodeChange = useCallback((newCode: string) => {
+  // 🚀 ENTERPRISE: Import unified source code state
+  const sourceCodeState = useRuleSourceCode(rule?.id || '')
+  
+  // 🔄 **SYNC**: Update unified state when debug tab changes code
+  const handleCodeChange = useCallback(async (newCode: string) => {
+    console.log('📝 [TestTabContent] Code changed in debug tab:', {
+      ruleId: rule?.id,
+      newLength: newCode.length,
+      timestamp: new Date().toISOString()
+    })
+    
+    // 🚀 ENTERPRISE: Update unified source code state with automatic Python generation
+    if (rule?.id) {
+      await sourceCodeState.updateSourceCode(newCode, 'debug-tab')
+    }
+    
+    // Also update rule editor for compatibility
     if (ruleEditor?.onSourceCodeChange) {
       ruleEditor.onSourceCodeChange(newCode)
     }
+    
     // Also sync to parent component
     if (onRuleUpdate) {
       onRuleUpdate({ sourceCode: newCode })
     }
-  }, [ruleEditor?.onSourceCodeChange, onRuleUpdate])
+  }, [rule?.id, sourceCodeState, ruleEditor?.onSourceCodeChange, onRuleUpdate])
 
   if (!isCreateMode && rule) {
     // 🚨 **SAFETY**: Don't render until rule editor is ready

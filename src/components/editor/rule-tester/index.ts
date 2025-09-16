@@ -7,7 +7,7 @@ export { VariableInspector } from './components/variable-inspector'
 export { DebugTabClient } from './components/debug-tab-client'
 
 // 🚀 **DEBUG SYSTEM** - Smart stepping with Python execution
-export { useSmartStepping } from '@/hooks/editor/use-smart-stepping'
+export { useSmartStepping } from '@/lib/editor/hooks/use-smart-stepping'
 export { SimpleDebugger } from './services/simple-debugger'
 export { PythonExecutor } from './services/python-executor'
 

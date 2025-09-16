@@ -13,7 +13,7 @@ import type { PrismaServiceContext } from '../core/types';
 import { resolveBranchContext } from '../core/branch-resolver';
 import { cleanData, prepareUpdateData, prepareCoWData } from '../core/data-cleaner';
 import { getModelName } from '../core/model-utils';
-import { buildBranchWhere } from '../core/query-builder';
+import { buildBranchWhere, buildInclude } from '../core/query-builder';
 import { processRelationships } from '../relationship-processor';
 
 // Type-only import for now - will be injected
@@ -149,10 +149,11 @@ export class UpdateOperationsService {
     // Process any relationships
     const processedData = await processRelationships(updateData, schema);
     
-    // Execute the update
+    // 🚀 CRITICAL FIX: Execute the update with include clause to return full updated record
     return await model.update({
       where: { id },
-      data: processedData
+      data: processedData,
+      include: buildInclude(schema)
     });
   }
 
@@ -177,9 +178,10 @@ export class UpdateOperationsService {
     // Process any relationships for the new record
     const processedData = await processRelationships(cowData, schema);
 
-    // Create the new branch-specific record
+    // 🚀 CRITICAL FIX: Create the new branch-specific record with include clause
     return await model.create({
-      data: processedData
+      data: processedData,
+      include: buildInclude(schema)
     });
   }
 

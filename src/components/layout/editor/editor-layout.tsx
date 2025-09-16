@@ -3,6 +3,7 @@
 import { useCallback, useState, useEffect } from 'react'
 import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
 import { useRuleSaveCoordinator } from '@/components/editor/services/rule-save-coordinator'
+import { useRuleSourceCode } from '@/components/editor/services/source-code-state-manager'
 import { EditorHeader } from './editor-header'
 import { EditorTabs } from './editor-tabs'
 import { ExtendedRule, ExtendedClass } from './types'
@@ -123,6 +124,9 @@ export default function EditorLayout({
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
+  // 🚀 ENTERPRISE: Use unified source code state for rules (always call hook)
+  const ruleSourceCodeState = useRuleSourceCode(ruleId || 'dummy')
+
   // 🚀 **ENHANCED TAB CHANGE**: Auto-save current tab before switching
   const handleTabChange = useCallback(async (newTabKey: string) => {
     // Auto-save current tab if there are unsaved changes
@@ -130,13 +134,23 @@ export default function EditorLayout({
       console.log(`🔄 [EditorLayout] Switching from ${activeTab} to ${newTabKey} - auto-saving...`)
       const entityId = resourceType === 'rule' ? ruleId : classId
       if (entityId && entityId !== 'new') {
-        const currentEntity = resourceType === 'rule' ? currentRule : currentClass
-        await saveOnTabSwitch(entityId, currentEntity as any)
+        // 🚀 ENTERPRISE: For rules, get the latest source code from unified state
+        if (resourceType === 'rule' && ruleId && ruleId !== 'dummy') {
+          const { sourceCode, pythonCode } = ruleSourceCodeState.getRuleState()
+          await saveOnTabSwitch(entityId, {
+            ...currentRule,
+            sourceCode,
+            pythonCode
+          } as any)
+        } else {
+          const currentEntity = resourceType === 'rule' ? currentRule : currentClass
+          await saveOnTabSwitch(entityId, currentEntity as any)
+        }
       }
     }
 
     setActiveTab(newTabKey)
-  }, [activeTab, hasUnsavedChanges, saveOnTabSwitch, resourceType, ruleId, classId, currentRule, currentClass])
+  }, [activeTab, hasUnsavedChanges, saveOnTabSwitch, resourceType, ruleId, classId, currentRule, currentClass, ruleSourceCodeState])
 
   // Manual save function (for explicit saves if needed)
   const handleSaveRule = useCallback(async () => {

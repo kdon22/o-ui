@@ -6,7 +6,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
-import { useRuleSaveCoordinator } from '@/components/editor/services/rule-save-coordinator'
 import { PromptsPanel } from './prompts-panel'
 import { CanvasEditor } from './canvas-editor'
 import { PropertiesModal } from './properties-modal'
@@ -33,9 +32,6 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [lastSavedLayout, setLastSavedLayout] = useState<PromptLayout | null>(null)
 
-  // 🚀 SSOT SAVE COORDINATOR - Single source of truth for all rule saving
-  const { autoSave } = useRuleSaveCoordinator()
-
   // Data fetching with proper ruleId filtering
   const { data: promptsResponse, refetch } = useActionQuery(
     'prompt.list',
@@ -44,28 +40,36 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   )
 
   const prompts = (promptsResponse?.data || []) as PromptEntity[]
+  
+  // 🚀 CORRECT SAVE SYSTEM - Use prompt mutations for saving prompt layout
   const updatePromptMutation = useActionMutation('prompt.update')
 
-  // 🚀 SSOT AUTO-SAVE with debouncing (2 seconds after user stops making changes)
+  // 🚀 CORRECT AUTO-SAVE with debouncing (2 seconds after user stops making changes)
   const debouncedAutoSave = useDebouncedCallback(
     async (prompt: PromptEntity, layout: PromptLayout) => {
-      if (!prompt) return
+      if (!prompt || !prompt.id) return
 
       setIsSaving(true)
       try {
-        // 🚀 SSOT: Use unified auto-save coordinator
-        await autoSave(ruleId, {
-          id: ruleId,
-          // Save the layout data (this is specific to prompt editor)
-          // The SSOT coordinator will handle the rule-level saving
-        } as any)
+        console.log('💾 [PromptEditor] Auto-saving prompt:', prompt.id)
+        
+        // 🚀 CORRECT: Save prompt layout using prompt update mutation
+        await updatePromptMutation.mutateAsync({
+          id: prompt.id,
+          layout: layout,
+          // Only update layout, preserve other prompt fields
+          promptName: prompt.promptName,
+          content: prompt.content,
+          isPublic: prompt.isPublic,
+          executionMode: prompt.executionMode
+        })
 
         setLastSavedLayout(layout)
-        refetch()
+        console.log('✅ [PromptEditor] Auto-save successful')
         onSave?.()
 
       } catch (error) {
-        console.error('❌ Auto-save failed:', error)
+        console.error('❌ [PromptEditor] Auto-save failed:', error)
       } finally {
         setIsSaving(false)
       }
@@ -148,6 +152,9 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   // Check if there are unsaved changes
   const hasUnsavedChanges = selectedPrompt && lastSavedLayout && 
     JSON.stringify(selectedPrompt.layout) !== JSON.stringify(lastSavedLayout)
+    
+  // Combined saving state from both local state and mutation
+  const isCurrentlySaving = isSaving || updatePromptMutation.isPending
 
   return (
     <div className="h-full flex flex-col bg-gray-50">

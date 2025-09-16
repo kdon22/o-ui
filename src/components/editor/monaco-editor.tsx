@@ -37,6 +37,15 @@ export function MonacoEditor({
   className = ''
 }: MonacoEditorProps) {
   
+  console.log('🔧 [MonacoEditor] Component props:', {
+    hasValue: !!value,
+    valueLength: value.length,
+    hasOnChange: !!onChange,
+    readOnly,
+    language,
+    theme
+  })
+  
   return (
     <div className={`${className} h-full w-full`} style={{ height: typeof height === 'string' ? height : `${height}px` }}>
       <Editor

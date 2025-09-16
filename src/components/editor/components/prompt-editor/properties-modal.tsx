@@ -58,12 +58,13 @@ export function PropertiesModal({
 
       {/* Sliding Panel */}
       <div 
-        className={`fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-screen w-80 bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        style={{ height: '100vh' }}
       >
-        {/* Header */}
-        <div className="border-b border-gray-100 p-4">
+        {/* Header - Fixed Height */}
+        <div className="h-20 border-b border-gray-100 p-4 bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Component Properties</h2>
@@ -85,25 +86,36 @@ export function PropertiesModal({
           </p>
         </div>
 
-        {/* Properties Form - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 h-[calc(100vh-80px)]">
-          <BasicPropertiesSection
-            type={type}
-            config={localConfig}
-            onConfigChange={handleConfigChange}
-          />
+        {/* Properties Form - Calculated Height Scrollable Area */}
+        <div 
+          className="overflow-y-auto overflow-x-hidden"
+          style={{ 
+            height: 'calc(100vh - 80px)',
+            maxHeight: 'calc(100vh - 80px)'
+          }}
+        >
+          <div className="p-4 space-y-6">
+            <BasicPropertiesSection
+              type={type}
+              config={localConfig}
+              onConfigChange={handleConfigChange}
+            />
 
-          <StylingSection
-            type={type}
-            config={localConfig}
-            onConfigChange={handleConfigChange}
-          />
+            <StylingSection
+              type={type}
+              config={localConfig}
+              onConfigChange={handleConfigChange}
+            />
 
-          <OptionsSection
-            type={type}
-            config={localConfig}
-            onConfigChange={handleConfigChange}
-          />
+            <OptionsSection
+              type={type}
+              config={localConfig}
+              onConfigChange={handleConfigChange}
+            />
+            
+            {/* Extra bottom spacing to ensure last content is reachable */}
+            <div className="h-8"></div>
+          </div>
         </div>
       </div>
     </>
