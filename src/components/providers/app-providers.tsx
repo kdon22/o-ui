@@ -22,13 +22,13 @@ import dynamic from 'next/dynamic';
 import { BranchProvider } from '@/lib/branching/branch-provider';
 import { BranchContextProvider } from '@/lib/context/branch-context';
 import type { BranchContext } from '@/lib/resource-system/schemas';
-// ✅ GOLD STANDARD: Unified Data Provider (lazy)
-const UnifiedDataProviderDynamic = dynamic(() => import('./unified-data-provider').then(m => m.UnifiedDataProvider), { ssr: false });
-const NodeDataProviderDynamic = dynamic(() => import('./node-data-provider').then(m => m.NodeDataProvider), { ssr: false });
-const NavigationContextProviderDynamic = dynamic(() => import('@/lib/context/navigation-context').then(m => m.NavigationContextProvider), { ssr: false });
-const TagProviderDynamic = dynamic(() => import('./tag-provider').then(m => m.TagProvider), { ssr: false });
-const UniversalSearchProviderDynamic = dynamic(() => import('@/components/search').then(m => m.UniversalSearchProvider), { ssr: false });
-const GlobalTagModalRendererDynamic = dynamic(() => import('@/components/ui/global-tag-modal-renderer').then(m => m.GlobalTagModalRenderer), { ssr: false });
+// ✅ FIXED: Use static imports to prevent re-render loops
+import { UnifiedDataProvider } from './unified-data-provider';
+import { NodeDataProvider } from './node-data-provider';
+import { NavigationContextProvider } from '@/lib/context/navigation-context';
+import { TagProvider } from './tag-provider';
+import { UniversalSearchProvider } from '@/components/search';
+import { GlobalTagModalRenderer } from '@/components/ui/global-tag-modal-renderer';
 
 // Create optimized Query Client
 const queryClient = new QueryClient({
@@ -136,18 +136,18 @@ function SessionWrapper({ children }: { children: React.ReactNode }) {
     return (
       <BranchContextProvider>
         <BranchProvider>
-          <UnifiedDataProviderDynamic>
-            <NodeDataProviderDynamic>
-              <NavigationContextProviderDynamic>
-                <TagProviderDynamic>
-                  <UniversalSearchProviderDynamic>
+          <UnifiedDataProvider>
+            <NodeDataProvider>
+              <NavigationContextProvider>
+                <TagProvider>
+                  <UniversalSearchProvider>
                     {children}
-                    <GlobalTagModalRendererDynamic />
-                  </UniversalSearchProviderDynamic>
-                </TagProviderDynamic>
-              </NavigationContextProviderDynamic>
-            </NodeDataProviderDynamic>
-          </UnifiedDataProviderDynamic>
+                    <GlobalTagModalRenderer />
+                  </UniversalSearchProvider>
+                </TagProvider>
+              </NavigationContextProvider>
+            </NodeDataProvider>
+          </UnifiedDataProvider>
         </BranchProvider>
       </BranchContextProvider>
     );
@@ -163,18 +163,18 @@ function SessionWrapper({ children }: { children: React.ReactNode }) {
           tenantId={session.user.tenantId || ''}
           forceFreshBootstrap={isFreshLogin}
         >
-          <UnifiedDataProviderDynamic>
-            <NodeDataProviderDynamic>
-              <NavigationContextProviderDynamic>
-                <TagProviderDynamic>
-                  <UniversalSearchProviderDynamic>
+          <UnifiedDataProvider>
+            <NodeDataProvider>
+              <NavigationContextProvider>
+                <TagProvider>
+                  <UniversalSearchProvider>
                     {children}
-                    <GlobalTagModalRendererDynamic />
-                  </UniversalSearchProviderDynamic>
-                </TagProviderDynamic>
-              </NavigationContextProviderDynamic>
-            </NodeDataProviderDynamic>
-          </UnifiedDataProviderDynamic>
+                    <GlobalTagModalRenderer />
+                  </UniversalSearchProvider>
+                </TagProvider>
+              </NavigationContextProvider>
+            </NodeDataProvider>
+          </UnifiedDataProvider>
         </CacheProviderDynamic>
       </BranchProvider>
     </BranchContextProvider>

@@ -54,13 +54,29 @@ export function UniversalSearchProvider({
   children, 
   defaultOnRuleSelect 
 }: UniversalSearchProviderProps) {
+  console.log('🟠 [UniversalSearchProvider] COMPONENT RENDER START', { timestamp: new Date().toISOString() })
+  
+  // 🚨 DEBUG: Hook count tracking to find React hook ordering issue
+  let hookCount = 0
+  const hookDebug = (name: string) => {
+    hookCount++
+    console.log(`🪝 [UniversalSearchProvider] Hook #${hookCount}: ${name}`)
+  }
+  
   // ============================================================================
   // STATE
   // ============================================================================
   
+  hookDebug('useState-isOpen')
   const [isOpen, setIsOpen] = useState(false)
+  
+  hookDebug('useState-defaultTab')
   const [defaultTab, setDefaultTab] = useState<SearchEntityType>('all_rules')
+  
+  hookDebug('useState-placeholder')
   const [placeholder, setPlaceholder] = useState('Search rules...')
+  
+  hookDebug('useState-onRuleSelect')
   const [onRuleSelect, setOnRuleSelect] = useState<((rule: SearchResult) => void) | undefined>(
     () => defaultOnRuleSelect
   )
@@ -69,6 +85,7 @@ export function UniversalSearchProvider({
   // ACTIONS (DEFINED FIRST TO AVOID INITIALIZATION ERRORS)
   // ============================================================================
 
+  hookDebug('useCallback-openSearch')
   const openSearch = useCallback((options?: Partial<SearchState>) => {
     if (options?.defaultTab) {
       setDefaultTab(options.defaultTab)
@@ -79,6 +96,7 @@ export function UniversalSearchProvider({
     setIsOpen(true)
   }, [])
 
+  hookDebug('useCallback-closeSearch')
   const closeSearch = useCallback(() => {
     setIsOpen(false)
     setDefaultTab('all_rules')
@@ -86,6 +104,7 @@ export function UniversalSearchProvider({
   }, [])
 
   // Specialized search openers with predefined defaults
+  hookDebug('useCallback-openGlobalVarSearch')
   const openGlobalVarSearch = useCallback(() => {
     openSearch({
       defaultTab: 'global_var',
@@ -93,6 +112,7 @@ export function UniversalSearchProvider({
     })
   }, [openSearch])
 
+  hookDebug('useCallback-openUtilitySearch')
   const openUtilitySearch = useCallback(() => {
     openSearch({
       defaultTab: 'utility',
@@ -100,6 +120,7 @@ export function UniversalSearchProvider({
     })
   }, [openSearch])
 
+  hookDebug('useCallback-openClassSearch')
   const openClassSearch = useCallback(() => {
     openSearch({
       defaultTab: 'classes',
@@ -111,6 +132,7 @@ export function UniversalSearchProvider({
   // GLOBAL KEYBOARD SHORTCUTS
   // ============================================================================
   
+  hookDebug('useEffect-globalKeyboardShortcuts')
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       console.log('🔍 [UniversalSearch] Global keydown:', {
@@ -168,6 +190,7 @@ export function UniversalSearchProvider({
     return () => window.removeEventListener('universal-search-open', handleCustomSearch as EventListener)
   }, [isOpen, openSearch])
 
+  hookDebug('useCallback-handleSetOnRuleSelect')
   const handleSetOnRuleSelect = useCallback((handler: (rule: SearchResult) => void) => {
     setOnRuleSelect(() => handler)
   }, [])
@@ -200,6 +223,7 @@ export function UniversalSearchProvider({
   // DEFAULT RULE SELECTION HANDLER
   // ============================================================================
 
+  hookDebug('useCallback-handleRuleSelect')
   const handleRuleSelect = useCallback(async (result: SearchResult) => {
     // Determine if this is a rule or class result
     const isRule = 'type' in result
@@ -242,6 +266,8 @@ export function UniversalSearchProvider({
   // ============================================================================
   // RENDER
   // ============================================================================
+
+  console.log(`🪝 [UniversalSearchProvider] TOTAL HOOK COUNT: ${hookCount}`)
 
   return (
     <UniversalSearchContext.Provider value={contextValue}>

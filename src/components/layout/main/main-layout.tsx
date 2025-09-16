@@ -14,12 +14,34 @@ export interface MainLayoutProps {
 }
 
 export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
+  console.log('🔴 [MainLayout] COMPONENT RENDER START', { 
+    initialSelectedNodeId,
+    timestamp: new Date().toISOString()
+  })
+  
+  // 🚨 DEBUG: Hook count tracking to find React hook ordering issue
+  let hookCount = 0
+  const hookDebug = (name: string) => {
+    hookCount++
+    console.log(`🪝 [MainLayout] Hook #${hookCount}: ${name}`, { initialSelectedNodeId })
+  }
+  
+  hookDebug('useEnterpriseSession')
   const { session, isAuthenticated, isLoading: sessionLoading, branchContext, tenantId } = useEnterpriseSession()
+  
+  hookDebug('useState-selectedNodeId')
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialSelectedNodeId || null)
+  
+  hookDebug('useState-topLevelTab')
   const [topLevelTab, setTopLevelTab] = useState<string>('processes')
+  
+  hookDebug('useState-nodesData')
   const [nodesData, setNodesData] = useState<any[]>([]) // ✅ NEW: Store nodes data
+  
+  hookDebug('useState-hasInitiallyLoaded')
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
   
+  hookDebug('useEffect-componentMount')
   // ✅ DEBUG: Track MainLayout mount/unmount
   React.useEffect(() => {
     console.log('🔥 [MainLayout] COMPONENT MOUNTED');
@@ -28,6 +50,7 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
     };
   }, []);
   
+  hookDebug('useEffect-sessionState')
   // Track when we've initially loaded to prevent unmounting during branch operations
   React.useEffect(() => {
     console.log('🔍 [MainLayout] Session state changed:', { 
@@ -71,6 +94,7 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
   const userRootNodeId = session?.user?.rootNodeId || '1'
   const currentTenant = session?.user?.currentTenant
 
+  hookDebug('useEffect-initialNodeId')
   // Update selected node when initialSelectedNodeId changes
   useEffect(() => {
     if (initialSelectedNodeId !== undefined) {
@@ -81,35 +105,43 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
+  hookDebug('useCallback-handleNodeSelect')
   const handleNodeSelect = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId)
   }, [])
 
+  hookDebug('useCallback-handleBranchSwitch')
   const handleBranchSwitch = useCallback((branchId: string) => {
     // TODO: Implement branch switching via session update or API call
     
   }, [])
 
+  hookDebug('useCallback-handleHeaderSearch')
   const handleHeaderSearch = useCallback((query: string) => {
     // TODO: Implement universal search across all resources
     
   }, [])
 
+  hookDebug('useCallback-handleTenantSwitch')
   const handleTenantSwitch = useCallback((tenantId: string) => {
     // TODO: Implement tenant switching via session update or API call
     
   }, [])
 
+  hookDebug('useCallback-handleTopLevelTabChange')
   const handleTopLevelTabChange = useCallback((tabKey: string) => {
     setTopLevelTab(tabKey)
     // Handle navigation to different sections
     
   }, [])
 
+  hookDebug('useCallback-handleNodesDataChange')
   // ✅ NEW: Handler to receive nodes data from AutoTree
   const handleNodesDataChange = useCallback((data: any[]) => {
     setNodesData(data)
   }, [])
+
+  console.log(`🪝 [MainLayout] TOTAL HOOK COUNT: ${hookCount}`, { initialSelectedNodeId })
 
   // ============================================================================
   // RENDER

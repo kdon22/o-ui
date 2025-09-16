@@ -238,7 +238,8 @@ function computeInheritanceFromServerData(nodeId: string, serverData: any): Node
     rules,
     processRules,
     ruleIgnores,
-    nodeId
+    nodeId,
+    ancestorChain
   )
 
   // Build filter data structures
@@ -341,7 +342,8 @@ function buildAvailableRules(
   rules: any[],
   processRules: any[],
   ruleIgnores: any[],
-  currentNodeId: string
+  currentNodeId: string,
+  ancestorChain: string[]
 ): InheritedRule[] {
   const inheritedRules: InheritedRule[] = []
   const ignoredRuleIds = new Set(
@@ -351,13 +353,22 @@ function buildAvailableRules(
   )
 
   availableProcesses.forEach(process => {
-    const processRuleConnections = processRules.filter(pr => pr.processId === process.processId)
+    // Nearest-wins lookup for node-scoped rule attachments
+    let processRuleConnections: any[] = []
+    for (let i = 0; i < ancestorChain.length; i++) {
+      const nodeIdAtLevel = ancestorChain[i]
+      const matchesAtLevel = processRules.filter(pr => pr.processId === process.processId && pr.nodeId === nodeIdAtLevel)
+      if (matchesAtLevel.length > 0) {
+        processRuleConnections = matchesAtLevel
+        break
+      }
+    }
     
     processRuleConnections.forEach(connection => {
       const rule = rules.find(r => r.id === connection.ruleId)
       if (rule) {
         const isIgnored = ignoredRuleIds.has(rule.id)
-        const ruleIsInherited = process.isInherited
+        const ruleIsInherited = connection.nodeId !== currentNodeId
         
         inheritedRules.push({
           ruleId: rule.id,
@@ -366,7 +377,7 @@ function buildAvailableRules(
           processId: process.processId,
           processName: process.processName,
           processType: process.processType,
-          sourceNodeId: process.sourceNodeId,
+          sourceNodeId: connection.nodeId || process.sourceNodeId,
           sourceNodeName: process.sourceNodeName,
           inheritanceLevel: process.inheritanceLevel,
           isInherited: ruleIsInherited,

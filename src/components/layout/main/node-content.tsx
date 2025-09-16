@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 import { useReadyBranchContext } from '@/lib/context/branch-context'
 import { Zap, Users, FileText } from 'lucide-react'
 import { TabBar } from '@/components/ui/tab-bar'
@@ -9,7 +9,7 @@ import { AutoTable } from '@/components/auto-generated/table/auto-table'
 import { createAutoTableHeaderActions } from '@/components/auto-generated/table/header-actions'
 import { useNodeTabs } from '@/hooks/layout'
 import { useActionQuery } from '@/hooks/use-action-api'
-import { useNodeRuleHierarchy } from '@/hooks/node-rule-hierarchy'
+// import { useNodeRuleHierarchy } from '@/hooks/node-rule-hierarchy' // DISABLED - causing React hook errors
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { PROCESS_TYPE_LABELS, PROCESS_TYPE_OPTIONS } from '@/features/processes/constants'
@@ -36,10 +36,26 @@ interface TabConfig {
 }
 
 export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeContentProps) {
+  console.log('🔴 [NodeContent] COMPONENT RENDER START', { 
+    nodeId, 
+    currentBranch, 
+    activeTopLevelTab,
+    timestamp: new Date().toISOString()
+  })
+  
+  // 🚨 DEBUG: Hook count tracking to find React hook ordering issue
+  let hookCount = 0
+  const hookDebug = (name: string) => {
+    hookCount++
+    console.log(`🪝 [NodeContent] Hook #${hookCount}: ${name}`, { nodeId, activeTopLevelTab })
+  }
+  
+  hookDebug('useReadyBranchContext')
   // 🎯 SSOT: Get branch context from the single source of truth
   // This will throw an error if branch context is not ready - NO FALLBACKS!
   const branchContext = useReadyBranchContext()
   
+  hookDebug('useNodeTabs')
   const {
     activeTab,
     level1Filter,
@@ -65,17 +81,30 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     })
   }
 
-  // Use the rule hierarchy hook for the processes tab (which shows rules)
-  const ruleHierarchy = useNodeRuleHierarchy({
-    nodeId,
-    branchId: branchContext.currentBranchId, // ✅ GUARANTEED to be available
-    includeInherited: true,
-    includeIgnored: false
-  })
+  // 🚨 COMPLETE HOOK REMOVAL: Inheritance system disabled to fix React hook errors
+  // The useNodeRuleHierarchy hook was calling conditional hooks internally causing 
+  // "Rendered more hooks than during the previous render" errors
+  // TODO: Re-enable with proper filtering after tree is working and ancestorIds are fixed
+  const ruleHierarchy = {
+    processNames: [],
+    rules: [],
+    processTypes: [],
+    isLoading: false,
+    error: null
+  }
+  
+  // 🚫 COMPLETELY DISABLED: This hook and all its internal hooks are causing React errors
+  // const ruleHierarchy = useNodeRuleHierarchy({
+  //   nodeId,
+  //   branchId: branchContext.currentBranchId,
+  //   includeInherited: true,
+  //   includeIgnored: false
+  // })
 
   // ============================================================================
   // TAB CONFIGURATIONS - DEFINE ALL TAB BEHAVIOR
   // ============================================================================
+  hookDebug('useMemo-TAB_CONFIGURATIONS')
   const TAB_CONFIGURATIONS: Record<string, TabConfig> = useMemo(() => ({
     processes: {
       displayResource: 'rule',           // Show rules hierarchy in table
@@ -129,7 +158,7 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
       filteringConfig: null, // No process-specific filtering for workflows
       addButtonLabel: 'Add Workflow'
     }
-  }), [ruleHierarchy.rules, currentTabConfig.filteringConfig])
+  }), [ruleHierarchy.rules])
 
   // Get current tab configuration
   const currentConfig = TAB_CONFIGURATIONS[activeTopLevelTab] || TAB_CONFIGURATIONS.rules
@@ -147,33 +176,40 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     timestamp: new Date().toISOString()
   })
 
+  hookDebug('useActionQuery-processes')
   // ✅ FIXED: Call all hooks on every render to maintain consistent hook order
   // Only the `enabled` option controls whether data is fetched
   const { data: processesData } = useActionQuery('process.list', {}, {
     enabled: activeTopLevelTab === 'processes'
   })
   
+  hookDebug('useActionQuery-offices')
   const { data: officesData } = useActionQuery('office.list', {}, {
     enabled: activeTopLevelTab === 'offices'
   })
   
+  hookDebug('useActionQuery-workflows')
   const { data: workflowsData } = useActionQuery('workflow.list', {}, {
     enabled: activeTopLevelTab === 'workflows'
   })
 
+  hookDebug('useActionQuery-rules')
   // ✅ NEW: Add Rules and Classes data fetching (filtered by tenant/branch only, no nodeId)
   const { data: rulesData } = useActionQuery('rule.list', {}, {
     enabled: activeTopLevelTab === 'rules'
   })
   
+  hookDebug('useActionQuery-classes')
   const { data: classesData } = useActionQuery('class.list', {}, {
     enabled: activeTopLevelTab === 'classes'
   })
 
+  hookDebug('useCallback-handleRowClick')
   const handleRowClick = useCallback((entity: any) => {
     // Handle row click
   }, [])
 
+  hookDebug('useCallback-handleAttachClick')
   const handleAttachClick = useCallback(() => {
     // Handle attach click
   }, [])
@@ -197,6 +233,7 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     })
   }
 
+  hookDebug('useMemo-enhancedData')
   // Get enhanced data based on current configuration
   const enhancedData = useMemo(() => {
     console.log('🔍 [NodeContent] Enhanced data decision:', {
@@ -223,6 +260,7 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     return undefined;
   }, [currentConfig, ruleHierarchy.rules, activeTopLevelTab])
 
+  hookDebug('useMemo-standardData')
   // Get standard data for non-enhanced tabs
   const standardData = useMemo(() => {
     switch (activeTopLevelTab) {
@@ -238,6 +276,25 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
         return []
     }
   }, [activeTopLevelTab, rulesData?.data, classesData?.data, officesData?.data, workflowsData?.data])
+
+  hookDebug('useEffect-componentLifecycle')
+  useEffect(() => {
+    console.log('🟢 [NodeContent] COMPONENT MOUNTED', { 
+      nodeId, 
+      activeTopLevelTab, 
+      timestamp: new Date().toISOString() 
+    })
+    
+    return () => {
+      console.log('🔴 [NodeContent] COMPONENT UNMOUNTING', { 
+        nodeId, 
+        activeTopLevelTab, 
+        timestamp: new Date().toISOString() 
+      })
+    }
+  }, [nodeId, activeTopLevelTab])
+
+  console.log(`🪝 [NodeContent] TOTAL HOOK COUNT: ${hookCount}`, { nodeId, activeTopLevelTab })
 
   // Header actions are now handled by the AutoTable component
 

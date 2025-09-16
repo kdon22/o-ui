@@ -86,6 +86,16 @@ interface NodeDataProviderProps {
 }
 
 export function NodeDataProvider({ children }: NodeDataProviderProps) {
+  console.log('🔵 [NodeDataProvider] COMPONENT RENDER START', { timestamp: new Date().toISOString() })
+  
+  // 🚨 DEBUG: Hook count tracking to find React hook ordering issue
+  let hookCount = 0
+  const hookDebug = (name: string) => {
+    hookCount++
+    console.log(`🪝 [NodeDataProvider] Hook #${hookCount}: ${name}`)
+  }
+  
+  hookDebug('useSession')
   const { data: session, status } = useSession();
   
   // ============================================================================
@@ -98,12 +108,20 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
     session?.user?.branchContext?.currentBranchId
   );
   
-  // Debug logging removed to prevent infinite loops
+  console.log('🔵 [NodeDataProvider] Session check:', { 
+    status, 
+    sessionReady, 
+    hasSession: !!session,
+    hasTenantId: !!session?.user?.tenantId,
+    hasBranchContext: !!session?.user?.branchContext,
+    timestamp: new Date().toISOString()
+  })
   
   // ============================================================================
   // SIMPLE NODE QUERY - JUST USE WHAT WORKS
   // ============================================================================
   
+  hookDebug('useActionQuery-nodeList')
   const nodeQuery = useActionQuery(
     'node.list',
     {
@@ -125,6 +143,7 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
   // DATA PROCESSING & INDEXING
   // ============================================================================
   
+  hookDebug('useMemo-processedData')
   const processedData = useMemo(() => {
     const rawNodes = nodeQuery.data?.data || [];
     
@@ -236,6 +255,8 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
     invalidateNodes,
     refetchNodes
   };
+  
+  console.log(`🪝 [NodeDataProvider] TOTAL HOOK COUNT: ${hookCount}`)
   
   return (
     <NodeDataContext.Provider value={contextValue}>
