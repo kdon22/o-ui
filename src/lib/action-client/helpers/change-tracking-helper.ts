@@ -57,6 +57,10 @@ export class ChangeTrackingHelper {
         entityType: context.entityType,
         entityId: context.entityId,
         branchId: context.branchContext?.currentBranchId,
+        tenantId: context.branchContext?.tenantId,
+        userId: context.branchContext?.userId,
+        hasBranchContext: !!context.branchContext,
+        branchContextKeys: context.branchContext ? Object.keys(context.branchContext) : null,
         timestamp: new Date().toISOString()
       });
 
@@ -76,6 +80,23 @@ export class ChangeTrackingHelper {
         ? this.calculateFieldChanges(context.beforeData, context.afterData)
         : undefined;
 
+      // 🚀 SAFE FALLBACK: Extract context from entity data if branchContext is incomplete
+      const entityData = context.afterData || apiResult.data;
+      const safeBranchId = context.branchContext?.currentBranchId || entityData?.branchId || 'main';
+      const safeTenantId = context.branchContext?.tenantId || entityData?.tenantId || '1BD';
+      const safeUserId = context.branchContext?.userId || entityData?.updatedById || entityData?.createdById || 'system';
+
+      console.log('🔧 [ChangeTrackingHelper] Safe fallback values:', {
+        originalBranchId: context.branchContext?.currentBranchId,
+        originalTenantId: context.branchContext?.tenantId,
+        originalUserId: context.branchContext?.userId,
+        safeBranchId,
+        safeTenantId,
+        safeUserId,
+        entityDataKeys: entityData ? Object.keys(entityData) : null,
+        timestamp: new Date().toISOString()
+      });
+
       // Prepare tracking request
       const trackingRequest = {
         action: 'changeLog.create',
@@ -88,9 +109,9 @@ export class ChangeTrackingHelper {
           beforeData: context.beforeData,
           afterData: context.afterData || apiResult.data,
           fieldChanges,
-          branchId: context.branchContext?.currentBranchId,
-          tenantId: context.branchContext?.tenantId,
-          userId: context.branchContext?.userId || 'system',
+          branchId: safeBranchId,
+          tenantId: safeTenantId,
+          userId: safeUserId,
           sessionId: context.sessionId,
           requestId: context.requestId,
           batchId: context.batchId,
