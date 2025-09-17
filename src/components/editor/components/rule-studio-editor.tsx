@@ -30,6 +30,8 @@ import { useSession } from 'next-auth/react'
 import { EditorContextService } from '../language/editor-context'
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context'
 import { useNodeRuleHierarchy } from '@/hooks/node-rule-hierarchy/use-node-rule-hierarchy'
+import { useEditorTabSave } from './editor-tabs/save/use-editor-tab-save'
+import { ruleCodeAdapter } from './editor-tabs/save/adapters/rule-code.adapter'
 
 export interface RuleStudioEditorProps {
   ruleId: string
@@ -186,6 +188,19 @@ export function RuleStudioEditor({
   const [pendingReturnType, setPendingReturnType] = useState<string | undefined>(undefined) // Start undefined to avoid overriding
   const [pendingSchema, setPendingSchema] = useState<any>(null)
 
+  // Generic editor-tab save for Business Rules (rule code)
+  const { save: saveRuleTab, setLastSaved: setRuleTabLastSaved } = useEditorTabSave(
+    ruleCodeAdapter,
+    { id: ruleId, tab: 'rulecode' }
+  )
+
+  // Initialize last-saved snapshot once source code is available
+  useEffect(() => {
+    if (sourceCode) {
+      setRuleTabLastSaved({ sourceCode })
+    }
+  }, [sourceCode, setRuleTabLastSaved])
+
   // 🎯 DERIVED STATE: Calculate rule type and utility status BEFORE using in useEffect
   const ruleType = useMemo((): 'BUSINESS' | 'UTILITY' | 'GLOBAL_VAR' => {
     // Use the actual type field from the rule data
@@ -272,6 +287,14 @@ export function RuleStudioEditor({
       }
     }
     
+    // Save rule code (+ python) when leaving Business Rules tab
+    if (activeTab === 'business-rules' && sourceCode) {
+      try {
+        const pythonForSave = localPythonCode || generatedCode || ''
+        await saveRuleTab({ sourceCode, pythonCode: pythonForSave }, { context: 'tab-switch', skipIfClean: true })
+      } catch {}
+    }
+
     setActiveTab(newTab)
     console.log('✅ [RuleStudioEditor] Tab changed to:', newTab)
     

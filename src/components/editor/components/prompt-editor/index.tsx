@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
+import { useActionQuery } from '@/hooks/use-action-api'
 import { PromptsPanel } from './prompts-panel'
 import { CanvasEditor } from './canvas-editor'
 import { PropertiesModal } from './properties-modal'
@@ -16,6 +16,8 @@ import type {
   PromptLayout,
   FormState 
 } from './types'
+import { useEditorTabSave } from '@/components/editor/components/editor-tabs/save/use-editor-tab-save'
+import { promptAdapter } from '@/components/editor/components/editor-tabs/save/adapters/prompt.adapter'
 
 interface PromptEditorProps {
   ruleId: string
@@ -41,40 +43,27 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
 
   const prompts = (promptsResponse?.data || []) as PromptEntity[]
   
-  // 🚀 CORRECT SAVE SYSTEM - Use prompt mutations for saving prompt layout
-  const updatePromptMutation = useActionMutation('prompt.update')
+  // 🚀 Use generic save coordinator for prompt layout saves (per selected prompt)
+  const { save: savePromptTab, setLastSaved: setPromptLastSaved } = useEditorTabSave(
+    promptAdapter,
+    { id: selectedPrompt?.id || '', tab: 'prompt' }
+  )
 
   // 🚀 CORRECT AUTO-SAVE with debouncing (2 seconds after user stops making changes)
   const debouncedAutoSave = useDebouncedCallback(
     async (prompt: PromptEntity, layout: PromptLayout) => {
       if (!prompt || !prompt.id) return
-
       setIsSaving(true)
       try {
-        console.log('💾 [PromptEditor] Auto-saving prompt:', prompt.id)
-        
-        // 🚀 CORRECT: Save prompt layout using prompt update mutation
-        await updatePromptMutation.mutateAsync({
-          id: prompt.id,
-          layout: layout,
-          // Only update layout, preserve other prompt fields
-          promptName: prompt.promptName,
-          content: prompt.content,
-          isPublic: prompt.isPublic,
-          executionMode: prompt.executionMode
-        })
-
+        await savePromptTab({ layout, promptName: prompt.promptName, content: prompt.content, isPublic: prompt.isPublic, executionMode: prompt.executionMode }, { context: 'manual', skipIfClean: true })
         setLastSavedLayout(layout)
-        console.log('✅ [PromptEditor] Auto-save successful')
+        setPromptLastSaved({ layout })
         onSave?.()
-
-      } catch (error) {
-        console.error('❌ [PromptEditor] Auto-save failed:', error)
       } finally {
         setIsSaving(false)
       }
     },
-    2000 // 2 second delay
+    2000
   )
 
   // Handle prompt selection
@@ -83,6 +72,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
     setSelectedComponent(null) // Clear component selection when switching prompts
     setPreviewData({}) // Reset preview data
     setLastSavedLayout(prompt.layout) // Track initial layout
+    setPromptLastSaved({ layout: prompt.layout })
   }, [])
 
   // Handle component selection (single click - just highlight)
@@ -154,7 +144,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
     JSON.stringify(selectedPrompt.layout) !== JSON.stringify(lastSavedLayout)
     
   // Combined saving state from both local state and mutation
-  const isCurrentlySaving = isSaving || updatePromptMutation.isPending
+  const isCurrentlySaving = isSaving
 
   return (
     <div className="h-full flex flex-col bg-gray-50">

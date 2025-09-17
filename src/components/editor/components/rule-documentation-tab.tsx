@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Save, RefreshCw, FileText, BookOpen, Code } from 'lucide-react'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
-import { useRuleSaveCoordinator } from '@/components/editor/services/rule-save-coordinator'
+import { useEditorTabSave } from './editor-tabs/save/use-editor-tab-save'
+import { ruleDocumentationAdapter } from './editor-tabs/save/adapters/rule-documentation.adapter'
 
 interface RuleDocumentationTabProps {
   ruleId: string
@@ -29,8 +30,11 @@ export function RuleDocumentationTab({ ruleId, onSave }: RuleDocumentationTabPro
     changelog: ''
   })
 
-  // 🚀 SSOT SAVE COORDINATOR - Single source of truth for all rule saving
-  const { saveRule } = useRuleSaveCoordinator()
+  // 🚀 SSOT: Generic save coordinator for documentation tab
+  const { save: saveDocTab, setLastSaved: setDocLastSaved } = useEditorTabSave(
+    ruleDocumentationAdapter,
+    { id: ruleId, tab: 'rule-documentation' }
+  )
 
   // Use action system for data fetching
   const { data: ruleResponse, isLoading: loadingRule } = useActionQuery('rule.get', { id: ruleId })
@@ -39,7 +43,7 @@ export function RuleDocumentationTab({ ruleId, onSave }: RuleDocumentationTabPro
   // Extract rule data from response
   const rule = ruleResponse?.data
 
-  // Initialize local data when rule loads
+  // Initialize local data and last-saved snapshot when rule loads
   useEffect(() => {
     if (rule && !hasUnsavedChanges) {
       setLocalData({
@@ -48,6 +52,12 @@ export function RuleDocumentationTab({ ruleId, onSave }: RuleDocumentationTabPro
         notes: rule.notes || '',
         version: rule.version?.toString() || '1',
         author: rule.createdBy || 'Unknown',
+        changelog: rule.changelog || ''
+      })
+      setDocLastSaved({
+        documentation: rule.documentation || '',
+        examples: rule.examples || '',
+        notes: rule.notes || '',
         changelog: rule.changelog || ''
       })
     }
@@ -63,13 +73,12 @@ export function RuleDocumentationTab({ ruleId, onSave }: RuleDocumentationTabPro
 
     setIsSaving(true)
     try {
-      // 🚀 SSOT: Use unified save coordinator for documentation updates
-      await saveRule(ruleId, {
+      await saveDocTab({
         documentation: localData.documentation,
         examples: localData.examples,
         notes: localData.notes,
         changelog: localData.changelog
-      }, { context: 'manual' })
+      }, { context: 'manual', skipIfClean: true })
 
       setHasUnsavedChanges(false)
       onSave?.()

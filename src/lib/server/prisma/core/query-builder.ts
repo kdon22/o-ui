@@ -32,30 +32,6 @@ export function buildBaseWhere(
   // Merge resolved junction queries with base where clause
   Object.assign(where, resolvedWhere);
   
-  if (resolved.length > 0) {
-    console.log(`🔄 [QueryBuilder] Schema-driven junction resolution:`, {
-      modelName,
-      resolvedFilters: resolved,
-      originalFilters: filters,
-      resultingWhere: where,
-      timestamp: new Date().toISOString()
-    });
-  }
-  
-  // 🔥 [DEBUG] buildBaseWhere function result
-  console.log('🔍 [buildBaseWhere] Final result:', {
-    modelName,
-    inputFilters: filters,
-    hasTenantContext,
-    tenantId: context.tenantId,
-    finalWhere: where,
-    whereKeys: Object.keys(where || {}),
-    hasTenantIdInWhere: 'tenantId' in (where || {}),
-    resolvedJunctions: resolved,
-    whereString: JSON.stringify(where, null, 2),
-    timestamp: new Date().toISOString()
-  });
-  
   return where;
 }
 
@@ -91,7 +67,6 @@ export function buildInclude(schema: ResourceSchema | any): Record<string, any> 
     Object.entries(schema.relationships).forEach(([relationName, relationConfig]: [string, any]) => {
       // Skip relationships that should be excluded from Prisma includes
       if (relationConfig.excludeFromPrismaInclude) {
-        console.log(`🚫 [buildInclude] Excluding ${relationName} from Prisma include (scalar field or computed)`);
         return;
       }
       
@@ -105,7 +80,6 @@ export function buildInclude(schema: ResourceSchema | any): Record<string, any> 
         include[relationName] = true;
       }
       
-      console.log(`✅ [buildInclude] Added relationship: ${relationName}`);
     });
   }
 
@@ -168,16 +142,6 @@ export function buildBranchWhere(
     ...baseWhere,
     branchId
   } : baseWhere;
-  
-  console.log('🚨 [buildBranchWhere] CRITICAL DEBUG:', {
-    hasBranchContext,
-    inputBranchId: branchId,
-    baseWhere,
-    resultWhereClause: result,
-    hasBranchIdInResult: 'branchId' in result,
-    resultBranchIdValue: result.branchId,
-    timestamp: new Date().toISOString()
-  });
   
   return result;
 }

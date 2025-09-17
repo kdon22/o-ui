@@ -211,7 +211,21 @@ export function cleanData(
   Object.keys(cleaned).forEach(key => {
     // Convert undefined to null for all fields
     if (cleaned[key] === undefined) {
-      cleaned[key] = null;
+      // For updates, avoid converting undefined to null on relation foreign keys
+      // This prevents sending ruleId: null on resources like Prompt
+      const isRelationForeignKey = /Id$/.test(key)
+      if (operation === 'update' && isRelationForeignKey) {
+        delete cleaned[key];
+      } else {
+        cleaned[key] = null;
+      }
+    }
+    
+    // For updates, NEVER send null for relation foreign keys (e.g., ruleId)
+    // Prisma requires nested writes (rule: { disconnect: true }) rather than setting FK to null
+    // So if a payload accidentally includes ruleId: null (or any *Id: null), drop it.
+    if (operation === 'update' && cleaned[key] === null && /Id$/.test(key)) {
+      delete cleaned[key];
     }
     
     // Only convert empty strings to null for optional foreign key fields
