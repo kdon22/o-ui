@@ -581,6 +581,16 @@ function EditorTabsCore({
         value={activeTab}
         onValueChange={(value) => {
           console.log('🧭 [EditorTabsCore] Tabs.onValueChange', { from: activeTab, to: value })
+          // Trigger universal tab-switch save on any tab switch for rules
+          try {
+            if (resourceType === 'rule' && rule?.id && activeTab !== value) {
+              window.dispatchEvent(new CustomEvent('tab-switch-save', {
+                detail: { ruleId: rule.id, fromTab: activeTab, toTab: value }
+              }))
+            }
+          } catch (e) {
+            console.error('[EditorTabsCore] Failed to dispatch tab-switch-save event', e)
+          }
           onTabChange(value)
         }}
         className="h-full flex w-full"

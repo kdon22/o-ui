@@ -143,16 +143,15 @@ export function RuleStudioEditor({
     return success
   }
   
-  // 🚨 DEBUG: Add Ctrl+S handler to test save functionality
+  // Manual save remains available via Monaco and global keybinding (Ctrl/Cmd+S)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 's') {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey
+      if (isCmdOrCtrl && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
-        console.log('🚨🚨🚨 [RuleStudioEditor] CTRL+S PRESSED! Testing save system...')
         handleSave()
       }
     }
-    
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleSave])
@@ -177,23 +176,9 @@ export function RuleStudioEditor({
     return <ErrorDisplay error="Rule not found" ruleId={ruleId} context="rule" />
   }
   
-  // 🚨 DEBUG: Manual save button for testing
-  const debugSave = (
-    <div className="absolute top-2 right-2 z-50">
-      <button
-        onClick={handleSave}
-        className="px-3 py-1 bg-red-500 text-white text-xs rounded"
-        style={{ fontSize: '10px' }}
-      >
-        DEBUG SAVE
-      </button>
-    </div>
-  )
-  
   // 🏆 MAIN RENDER: Clean orchestration of all systems
   return (
     <div className="h-full relative">
-      {debugSave}
       <RuleStudioLayout
       activeTab={tabs.activeTab}
       onTabChange={tabs.switchTab}
