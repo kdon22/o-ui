@@ -250,12 +250,13 @@ export function RuleCodeEditor({
   const handleChange = useCallback(async (newValue: string | undefined) => {
     const actualValue = newValue || ''
     
-    console.log('🔧 [RuleCodeEditor] Value changed:', {
+    console.log('🚨🚨🚨 [RuleCodeEditor] VALUE CHANGE RECEIVED FROM MONACO!', {
       newLength: actualValue.length,
       hasOnChange: !!onChange,
       readOnly,
       timestamp: new Date().toISOString(),
-      preview: actualValue.substring(0, 50) + (actualValue.length > 50 ? '...' : '')
+      preview: actualValue.substring(0, 100) + (actualValue.length > 100 ? '...' : ''),
+      fullValue: actualValue.length < 200 ? actualValue : 'TOO_LONG_TO_DISPLAY'
     })
     
     // 🚀 ENTERPRISE: Handle onChange for unified state management
@@ -343,6 +344,18 @@ export function RuleCodeEditor({
       </div>
     )
   }
+
+  // 🚨 DEBUG: Log Monaco editor props before rendering
+  console.log('🚨🚨🚨 [RuleCodeEditor] RENDERING MONACO WITH PROPS:', {
+    value: value || 'EMPTY',
+    valueLength: (value || '').length,
+    readOnly,
+    hasOnChange: !!onChange,
+    height,
+    language: 'business-rules',
+    theme: safePreferences.theme || 'vs-dark',
+    timestamp: new Date().toISOString()
+  })
 
   return (
     <div className={`rule-code-editor ${className}`} style={{ height }}>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useMemo, useEffect, useCallback, Suspense } from 'react'
+import { useMemo, useEffect, useCallback, Suspense, useRef } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Settings, 
@@ -110,15 +110,19 @@ const SimpleEditor = ({ rule, onRuleUpdate }: any) => (
 const RuleEditor = dynamic(
   async () => {
     try {
-
+      console.log('🚨🚨🚨 [EditorTabs] ATTEMPTING TO LOAD NEW RULE STUDIO SYSTEM!')
       
       // Load RuleStudioEditor component with sophisticated Monaco system + Save Coordinator
-      const { RuleStudioEditor } = await import('../../editor/components/rule-studio-editor')
+      const { RuleStudioEditor } = await import('../../editor/rule-studio')
       
+      console.log('✅✅✅ [EditorTabs] NEW RULE STUDIO SYSTEM LOADED SUCCESSFULLY!', {
+        hasRuleStudioEditor: !!RuleStudioEditor,
+        timestamp: new Date().toISOString()
+      })
 
       return { default: RuleStudioEditor }
     } catch (err) {
-
+      console.error('❌❌❌ [EditorTabs] FAILED TO LOAD RULE STUDIO SYSTEM:', err)
       return { default: SimpleEditor };
     }
   }, 
@@ -135,33 +139,7 @@ const RuleEditor = dynamic(
   }
 )
 
-const RuleCodeTab = ({ rule, onUpdate, onSave, hasUnsavedChanges }: { 
-  rule: ExtendedRule;
-  onUpdate?: (updates: Partial<ExtendedRule>) => void;
-  onSave: () => void;
-  hasUnsavedChanges: boolean;
-}) => {
-  // 🚀 FIXED: Connect the callback chain to parent components
-  console.log('🔥🔥🔥 [RuleCodeTab] Rendering with callbacks:', {
-    ruleId: rule.id,
-    ruleName: rule.name,
-    hasOnUpdate: !!onUpdate,
-    hasOnSave: !!onSave,
-    hasUnsavedChanges,
-    timestamp: new Date().toISOString()
-  })
-
-  return (
-    <div className="h-full">
-      <RuleEditor 
-        ruleId={rule.id}
-        onRuleUpdate={onUpdate}
-        onSave={onSave}
-        hasUnsavedChanges={hasUnsavedChanges}
-      />
-    </div>
-  )
-}
+// ✅ REMOVED: Unnecessary RuleCodeTab wrapper - logic moved inline
 
 const ClassCodeTab = ({ classEntity, onUpdate, onSave, hasUnsavedChanges }: { 
   classEntity: ExtendedClass;
@@ -447,6 +425,25 @@ function EditorTabsCore({
   resourceType = 'rule'
 }: EditorTabsProps) {
   
+  console.log('🚨🚨🚨 [EditorTabsCore] Component is rendering!', {
+    resourceType,
+    hasRule: !!rule,
+    ruleId: rule?.id,
+    activeTab,
+    timestamp: new Date().toISOString()
+  })
+  // Track activeTab prop changes across renders
+  const prevActiveTabRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevActiveTabRef.current !== activeTab) {
+      console.log('🧭 [EditorTabsCore] activeTab prop changed', {
+        from: prevActiveTabRef.current,
+        to: activeTab
+      })
+      prevActiveTabRef.current = activeTab
+    }
+  }, [activeTab])
+  
   // 🔍 **DEBUG PARENT COMPONENT**: Log what rule data we receive
   console.log('🔍 [EditorTabsCore] PARENT DEBUG:', {
     resourceType,
@@ -466,8 +463,16 @@ function EditorTabsCore({
   const currentEntity = resourceType === 'rule' ? rule : classEntity
   const entityIdShort = resourceType === 'rule' ? ruleIdShort : classIdShort
   
-  // Determine if we're in create mode (no entityIdShort provided)
-  const isCreateMode = !entityIdShort || !currentEntity?.id
+  // Determine if we're in create mode
+  // Robust: require BOTH short id and db id to be missing, and make sticky false once entity exists
+  const everHadEntityRef = useRef(false)
+  useEffect(() => {
+    if (currentEntity?.id) {
+      everHadEntityRef.current = true
+    }
+  }, [currentEntity?.id])
+  const isCreateModeRaw = (!entityIdShort || entityIdShort === 'new') && !currentEntity?.id
+  const isCreateMode = everHadEntityRef.current ? false : isCreateModeRaw
   
   // Get branch from URL params (defaults to "main")
   const branchName = searchParams.get('branch') || 'main'
@@ -565,13 +570,21 @@ function EditorTabsCore({
   // If in create mode and not on details tab, redirect to details (after render)
   useEffect(() => {
     if (isCreateMode && activeTab !== 'details') {
+      console.log('🧭 [EditorTabsCore] Auto-redirect to details (create mode)')
       onTabChange('details')
     }
   }, [isCreateMode, activeTab, onTabChange])
 
   return (
     <div className="h-full flex bg-white">
-      <Tabs value={activeTab} onValueChange={onTabChange} className="h-full flex w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          console.log('🧭 [EditorTabsCore] Tabs.onValueChange', { from: activeTab, to: value })
+          onTabChange(value)
+        }}
+        className="h-full flex w-full"
+      >
         {/* Left Vertical Tab Navigation */}
         <div className="w-32 border-r border-gray-200 bg-gray-50">
           <TabsList className="h-full w-full p-1 bg-transparent flex flex-col justify-start">
@@ -617,8 +630,8 @@ function EditorTabsCore({
               <RuleDetailsTab 
                 ruleId={rule?.id || 'new'} // Pass 'new' for create mode
                 onSave={() => {
-                  onSave()
-                  // If this was a creation, the parent component should handle URL update
+                  onSave() // Keep for creation flow - parent handles URL updates
+                  // Note: Tab switching saves now handled automatically by useEditorSave universal system
                 }}
                 isCreateMode={isCreateMode}
                 onRuleCreated={handleEntityCreated}
@@ -627,8 +640,8 @@ function EditorTabsCore({
               <ClassDetailsTab 
                 classId={classEntity?.id || 'new'} // Pass 'new' for create mode
                 onSave={() => {
-                  onSave()
-                  // If this was a creation, the parent component should handle URL update
+                  onSave() // Keep for creation flow - parent handles URL updates
+                  // Note: Tab switching saves now handled automatically by useEditorSave universal system
                 }}
                 isCreateMode={isCreateMode}
                 onClassCreated={handleEntityCreated}
@@ -638,17 +651,27 @@ function EditorTabsCore({
 
           <TabsContent value="code" className="h-full mt-0">
             {!isCreateMode && rule && resourceType === 'rule' ? (
-              <RuleCodeTab 
-                rule={rule} 
-                onUpdate={onRuleUpdate}
-                onSave={onSave}
-                hasUnsavedChanges={hasUnsavedChanges}
-              />
+              <div className="h-full">
+                {(() => {
+                  console.log('🚨🚨🚨 [EditorTabsCore] ABOUT TO RENDER RULE EDITOR!', {
+                    ruleId: rule.id,
+                    isCreateMode,
+                    resourceType,
+                    hasRule: !!rule
+                  })
+                  return null
+                })()}
+                <RuleEditor 
+                  ruleId={rule.id}
+                  onRuleUpdate={onRuleUpdate}
+                  onSave={onSave} // Keep for manual saves - tab switching handled by useEditorSave universal system
+                />
+              </div>
             ) : !isCreateMode && classEntity && resourceType === 'class' ? (
               <ClassCodeTab 
                 classEntity={classEntity} 
                 onUpdate={onClassUpdate}
-                onSave={onSave}
+                onSave={onSave} // Keep for manual saves - tab switching handled by useEditorSave universal system  
                 hasUnsavedChanges={hasUnsavedChanges}
               />
             ) : (
@@ -669,7 +692,7 @@ function EditorTabsCore({
             {!isCreateMode && rule && resourceType === 'rule' ? (
               <PromptEditor 
                 ruleId={rule.id} 
-                onSave={onSave} 
+                onSave={onSave} // Keep for manual saves - tab switching handled by useEditorSave universal system
               />
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -685,7 +708,7 @@ function EditorTabsCore({
             {!isCreateMode && rule && resourceType === 'rule' ? (
               <RuleDocumentationTab 
                 ruleId={rule.id} 
-                onSave={onSave} 
+                onSave={onSave} // Keep for manual saves - tab switching handled by useEditorSave universal system
               />
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground">

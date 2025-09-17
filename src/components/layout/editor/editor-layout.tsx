@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState, useEffect } from 'react'
+import { create } from 'zustand'
 import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
 import { useRuleSourceCode } from '@/components/editor/services/source-code-state-manager'
 import { EditorHeader } from './editor-header'
@@ -23,6 +24,12 @@ export default function EditorLayout({
   ruleId, ruleIdShort, initialRule,
   classId, classIdShort, initialClass 
 }: EditorLayoutProps) {
+  // Hidden persistence for OUTER (sidebar) tabs per entity
+  const useOuterTabStore = create<{ byKey: Record<string, string>; set: (key: string, tab: string) => void; get: (key: string) => string | undefined }>((set, get) => ({
+    byKey: {},
+    set: (key, tab) => set((state) => ({ byKey: { ...state.byKey, [key]: tab } })),
+    get: (key) => get().byKey[key]
+  }))
   const { session, isAuthenticated, isLoading: sessionLoading, branchContext } = useEnterpriseSession()
   
   // ============================================================================
@@ -85,8 +92,15 @@ export default function EditorLayout({
   // State management for the current entity
   const [currentRule, setCurrentRule] = useState<ExtendedRule>(initialRule || createEmptyRule())
   const [currentClass, setCurrentClass] = useState<ExtendedClass>(initialClass || createEmptyClass())
-  // 🎯 Smart default tab: 'code' for existing entities, 'details' for new ones
-  const [activeTab, setActiveTab] = useState<string>(isCreateMode ? 'details' : 'code')
+  // 🎯 Smart default with hidden persistence
+  const tabKey = `outer:${resourceType}:${resourceType === 'rule' ? (ruleId || '') : (classId || '')}`
+  const persistedTab = useOuterTabStore.getState().get(tabKey)
+  const defaultTabForMode = isCreateMode ? 'details' : 'code'
+  const initialTab = persistedTab || defaultTabForMode
+  const [activeTab, setActiveTab] = useState<string>(initialTab)
+  useEffect(() => {
+    useOuterTabStore.getState().set(tabKey, initialTab)
+  }, [tabKey, initialTab])
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // Update entities when initial data changes
@@ -108,10 +122,14 @@ export default function EditorLayout({
 
   // 🎯 Update default tab when switching between create/edit modes
   useEffect(() => {
-    // Set appropriate default tab based on create/edit mode
-    const defaultTab = isCreateMode ? 'details' : 'code'
-    setActiveTab(defaultTab)
-  }, [isCreateMode]) // Only run when create mode changes
+    // Only set default if nothing persisted for this entity
+    const current = useOuterTabStore.getState().get(tabKey)
+    if (!current) {
+      const fallback = isCreateMode ? 'details' : 'code'
+      setActiveTab(fallback)
+      useOuterTabStore.getState().set(tabKey, fallback)
+    }
+  }, [isCreateMode, tabKey])
 
   // ============================================================================
   // 🚀 SSOT SAVE COORDINATOR - Single Source of Truth
@@ -125,10 +143,85 @@ export default function EditorLayout({
   // 🚀 ENTERPRISE: Use unified source code state for rules (always call hook)
   const ruleSourceCodeState = useRuleSourceCode(ruleId || 'dummy')
 
-  // 🚀 **ENHANCED TAB CHANGE**: Saves are handled inside tab components via editor-tabs/save
+  // 🚀 **ENHANCED TAB CHANGE**: Auto-save coordination for outer tabs
   const handleTabChange = useCallback(async (newTabKey: string) => {
+    console.log('🚨🚨🚨 [EditorLayout] MAIN TAB SWITCH DETECTED!', {
+      from: activeTab,
+      to: newTabKey,
+      resourceType
+    })
+    
+    // Define tabs that have save systems and need auto-save
+    // ✅ ALL tabs now use useEditorSave universal system
+    const TABS_WITH_SAVE_SYSTEMS = ['details', 'code', 'prompt', 'docs']
+    
+    // If switching away from a tab with a save system, attempt to trigger auto-save
+    if (TABS_WITH_SAVE_SYSTEMS.includes(activeTab) && activeTab !== newTabKey) {
+      console.log('🚨🚨🚨 [EditorLayout] ATTEMPTING MANUAL SAVE TRIGGER!', {
+        fromTab: activeTab,
+        toTab: newTabKey
+      })
+      
+      // Dispatch a custom event that tab components can listen to
+      const saveEvent = new CustomEvent('tab-switch-save', {
+        detail: { 
+          fromTab: activeTab, 
+          toTab: newTabKey,
+          ruleId: ruleId || '',
+          resourceType 
+        }
+      })
+      
+      console.log('🚨🚨🚨 [EditorLayout] DISPATCHING TAB-SWITCH-SAVE EVENT!', {
+        fromTab: activeTab,
+        toTab: newTabKey,
+        event: saveEvent
+      })
+      
+      window.dispatchEvent(saveEvent)
+      
+      // Give save operations a moment to complete
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    
     setActiveTab(newTabKey)
-  }, [])
+    useOuterTabStore.getState().set(tabKey, newTabKey)
+  }, [activeTab, resourceType, ruleId])
+
+  // 🚨🚨🚨 HANDLE BROWSER/TAB CLOSE - Dispatch save events for all tabs
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      console.log('🚨🚨🚨 [EditorLayout] BEFOREUNLOAD DETECTED! Dispatching save events...')
+      
+      // Dispatch save events for all tabs with save systems
+      const TABS_WITH_SAVE_SYSTEMS = ['details', 'prompt', 'docs', 'code']
+      
+      TABS_WITH_SAVE_SYSTEMS.forEach(tab => {
+        const saveEvent = new CustomEvent('tab-switch-save', {
+          detail: { 
+            fromTab: tab, 
+            toTab: 'closing',
+            ruleId: ruleId || '',
+            resourceType,
+            isClosing: true
+          }
+        })
+        
+        console.log('🚨 [EditorLayout] Dispatching beforeunload save for tab:', tab)
+        window.dispatchEvent(saveEvent)
+      })
+      
+      // Let tabs handle their saves via useEditorSave beforeunload handlers
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    console.log('✅ [EditorLayout] Beforeunload save dispatcher registered')
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      console.log('🗑️ [EditorLayout] Beforeunload save dispatcher removed')
+    }
+  }, [ruleId, resourceType])
 
   // Manual save function (for explicit saves if needed)
   const handleSaveRule = useCallback(async () => {

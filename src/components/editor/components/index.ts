@@ -1,7 +1,7 @@
 // 🏆 GOLD STANDARD EDITOR COMPONENTS
 
 // Core Rule Editing
-export { RuleStudioEditor } from './rule-studio-editor'
+export { RuleStudioEditor } from '../rule-studio'
 export { RuleCodeEditor } from './rule-code-editor'
 export { RulePythonViewer } from './rule-python-viewer'
 

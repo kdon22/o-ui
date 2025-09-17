@@ -6,7 +6,7 @@
  */
 
 // Export the gold standard implementation as the main RuleEditor
-export { RuleStudioEditor as RuleEditor } from './components/rule-studio-editor'
+export { RuleStudioEditor as RuleEditor } from './rule-studio'
 
 // Re-export other editor components for convenience
 export { RuleCodeEditor } from './components/rule-code-editor'
@@ -14,5 +14,5 @@ export { RulePythonViewer } from './components/rule-python-viewer'
 export { ParametersEditor } from './components/parameters-editor'
 
 // Export types
-export type { RuleStudioEditorProps } from './components/rule-studio-editor'
+export type { RuleStudioEditorProps } from './rule-studio'
 export type { RuleCodeEditorProps } from './components/rule-code-editor'

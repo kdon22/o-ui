@@ -32,8 +32,26 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
     adapter: TabSaveAdapter<TSnapshot>,
     params: { id: string; tab: string }
 ) {
-    const key = useMemo(() => adapter.getEntityKey(params), [adapter, params.id, params.tab])
+    const key = useMemo(() => adapter.getEntityKey(params), [adapter.actionName, params.id, params.tab])
     const mutation = useActionMutation(adapter.actionName)
+    // Stabilize mutate function identity via ref to prevent effect churn
+    const mutateRef = useRef(mutation.mutateAsync)
+    useEffect(() => {
+        mutateRef.current = mutation.mutateAsync
+    }, [mutation.mutateAsync])
+    
+    // 🚨 FIX: Only log once per key to avoid spam
+    const hasLoggedRef = useRef(new Set<string>())
+    if (!hasLoggedRef.current.has(key)) {
+        console.log('🚨🚨🚨 [EditorSave] Hook initialized!', {
+            adapterName: adapter.actionName,
+            id: params.id,
+            tab: params.tab,
+            key,
+            timestamp: new Date().toISOString()
+        })
+        hasLoggedRef.current.add(key)
+    }
     
     // Track dirty state for this specific tab
     const [isDirty, setIsDirty] = useState(false)
@@ -43,60 +61,7 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
     const lastActivityRef = useRef<number>(Date.now())
     const currentSnapshotRef = useRef<TSnapshot | null>(null)
 
-    // Auto-save callback for idle timer
-    const performIdleSave = useCallback(async () => {
-        if (currentSnapshotRef.current && isDirty) {
-            console.log(`⏰ [EditorSave] Idle save triggered for ${key}`)
-            await save(currentSnapshotRef.current, { context: 'auto-idle', skipIfClean: false })
-        }
-    }, [key, isDirty])
-
-    const resetIdleTimer = useCallback(() => {
-        lastActivityRef.current = Date.now()
-        if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
-        
-        idleTimerRef.current = setTimeout(performIdleSave, 15 * 60 * 1000) // 15 minutes
-    }, [performIdleSave])
-
-    // Activity detection for idle timer
-    useEffect(() => {
-        const onAnyActivity = () => resetIdleTimer()
-        window.addEventListener('mousemove', onAnyActivity, { passive: true })
-        window.addEventListener('keydown', onAnyActivity, { passive: true })
-        window.addEventListener('click', onAnyActivity, { passive: true })
-        resetIdleTimer()
-        
-        return () => {
-            window.removeEventListener('mousemove', onAnyActivity)
-            window.removeEventListener('keydown', onAnyActivity) 
-            window.removeEventListener('click', onAnyActivity)
-            if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
-        }
-    }, [resetIdleTimer])
-
-    // Global save-on-close handler
-    useEffect(() => {
-        const handler = async (e: BeforeUnloadEvent) => {
-            // If we have unsaved changes, attempt synchronous save
-            if (isDirty && currentSnapshotRef.current) {
-                // Modern browsers limit async here, so we just warn the user
-                e.preventDefault()
-                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
-                
-                // Attempt save anyway (may not complete before page closes)
-                try {
-                    await save(currentSnapshotRef.current, { context: 'close', skipIfClean: false })
-                } catch (error) {
-                    console.warn(`⚠️ [EditorSave] Close save failed for ${key}:`, error)
-                }
-            }
-        }
-        
-        window.addEventListener('beforeunload', handler)
-        return () => window.removeEventListener('beforeunload', handler)
-    }, [isDirty, key])
-
-    // Core save function - SSOT for all saves
+    // Core save function - MOVED UP to avoid temporal dead zone error
     const save = useCallback(async (
         snapshot: TSnapshot,
         options?: Partial<SaveOptions>
@@ -104,29 +69,31 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
         const context = options?.context || 'manual'
         const saveKey = `${key}:${context}`
 
-        console.log(`🔍 [EditorSave] Save request for ${key}`, {
+        console.log(`🚨🚨🚨 [EditorSave] SAVE REQUEST - CRITICAL DEBUG!`, {
+            key,
             context,
             hasSnapshot: !!snapshot,
-            isDirty,
-            skipIfClean: options?.skipIfClean
+            snapshotKeys: snapshot ? Object.keys(snapshot) : 'NO_SNAPSHOT',
+            sourceCodeLength: (snapshot as any)?.sourceCode?.length || 0,
+            timestamp: new Date().toISOString()
         })
 
-        // If we don't have a valid entity id yet, skip gracefully
-        if (!params.id || params.id === 'new') {
-            console.log(`⏭️ [EditorSave] Skipping save - no valid ID for ${key}`)
-            return true
+        // Skip if no changes detected
+        if (options?.skipIfClean !== false) {
+            const lastSaved = lastSavedStates.get(key)
+            if (!adapter.hasChanges(lastSaved, snapshot)) {
+                console.log(`🚫 [EditorSave] No changes detected for ${key}, skipping save`)
+                return true
+            }
         }
 
-        // Prevent concurrent saves for the same tab/context
-        if (pendingSaves.has(saveKey)) {
-            console.log(`⏳ [EditorSave] Save already in progress for ${saveKey}`)
-            return true
-        }
+        // Check for pending save
+        const existingSave = pendingSaves.get(saveKey)
+        if (existingSave) {
+            console.log(`⏳ [EditorSave] Save already in progress for ${saveKey}, waiting...`)
+            const result = await existingSave
+            console.log(`✅ [EditorSave] Existing save completed for ${saveKey}:`, result)
 
-        // Check for changes if requested
-        const prev = lastSavedStates.get(key) as TSnapshot | undefined
-        if (options?.skipIfClean && !adapter.hasChanges(prev, snapshot)) {
-            console.log(`⏭️ [EditorSave] No changes detected for ${key}, skipping`)
             return true
         }
 
@@ -141,44 +108,118 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
             })
 
             // Create and track save promise
-            const promise = mutation.mutateAsync(payload)
+            const promise = mutateRef.current(payload)
             pendingSaves.set(saveKey, promise)
 
             // Execute save
+            console.log('🚨🚨🚨 [EditorSave] ABOUT TO EXECUTE API CALL!')
             const result = await promise
+            console.log('🚨🚨🚨 [EditorSave] API CALL COMPLETED - RESULT:', {
+                result,
+                hasResult: !!result,
+                resultSuccess: result?.success,
+                resultData: result?.data,
+                resultKeys: result ? Object.keys(result) : 'NO_RESULT'
+            })
 
             if (result?.success) {
                 // Update last saved state
-                const persisted = adapter.selectPersisted
-                    ? adapter.selectPersisted(result.data, snapshot)
-                    : snapshot
+                lastSavedStates.set(key, snapshot)
+                console.log(`✅ [EditorSave] Save successful for ${key}`)
                 
-                lastSavedStates.set(key, persisted)
+                // Clear dirty state
                 dirtyStates.set(key, false)
                 setIsDirty(false)
                 
-                console.log(`✅ [EditorSave] Save successful for ${key}`)
                 return true
             } else {
-                console.error(`❌ [EditorSave] Save failed for ${key}:`, result?.error)
+                console.error(`❌ [EditorSave] Save failed for ${key}:`, result)
                 return false
             }
         } catch (error) {
             console.error(`❌ [EditorSave] Save error for ${key}:`, error)
             return false
         } finally {
+            // Clean up pending save
             pendingSaves.delete(saveKey)
         }
-    }, [adapter, key, mutation, params.id, isDirty])
+    }, [key, adapter, params.id])
+
+    // Auto-save callback for idle timer
+    // 🚨 CRITICAL FIX: Use ref to prevent circular dependencies
+    const performIdleRef = useRef<() => Promise<void>>()
+    
+    const performIdleSave = useCallback(async () => {
+        // 🔥 USE REFS TO AVOID DEPENDENCY ON isDirty STATE
+        const currentIsDirty = dirtyStates.get(key) || false
+        const currentSnapshot = currentSnapshotRef.current
+        
+        console.log(`🚨🚨🚨 [EditorSave] IDLE SAVE TIMER FIRED!`, {
+            key,
+            isDirty: currentIsDirty,
+            hasSnapshot: !!currentSnapshot,
+            timestamp: new Date().toISOString()
+        })
+        
+        if (currentSnapshot && currentIsDirty) {
+            console.log(`🚨🚨🚨 [EditorSave] EXECUTING IDLE SAVE for ${key}`)
+            await save(currentSnapshot, { context: 'auto-idle', skipIfClean: false })
+            console.log(`✅ [EditorSave] IDLE SAVE COMPLETED for ${key}`)
+        } else {
+            console.log(`⏭️ [EditorSave] IDLE SAVE SKIPPED for ${key} - isDirty:${currentIsDirty}, hasSnapshot:${!!currentSnapshot}`)
+        }
+    }, [key, save]) // ✅ REMOVED isDirty dependency, using refs instead
+    
+    // 🚨 CRITICAL: Assign ref to break circular dependencies
+    performIdleRef.current = performIdleSave
+
+    // 🚨 CRITICAL FIX: Use ref to prevent infinite re-render loop
+    const resetIdleTimerRef = useRef<() => void>()
+    
+    resetIdleTimerRef.current = () => {
+        console.log(`🚨🚨🚨 [EditorSave] RESET IDLE TIMER CALLED!`, {
+            key,
+            isDirty,
+            hasSnapshot: !!currentSnapshotRef.current,
+            currentTime: new Date().toISOString(),
+            willSetTimer: true
+        })
+        
+        lastActivityRef.current = Date.now()
+        if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current)
+            console.log(`🗑️ [EditorSave] Cleared existing idle timer for ${key}`)
+        }
+        
+        // 15-minute idle auto-save window
+        idleTimerRef.current = setTimeout(() => {
+            // Call performIdleSave directly to avoid circular dependencies
+            performIdleRef.current?.()
+        }, 15 * 60 * 1000)
+        console.log(`⏰ [EditorSave] NEW IDLE TIMER SET for ${key} - will fire in 15 minutes`)
+    }
+    
+    const resetIdleTimer = useCallback(() => {
+        resetIdleTimerRef.current?.()
+    }, []) // 🚨 NO DEPENDENCIES - prevents circular re-creation
+
+    // Removed global activity listeners: idle timer resets only on content change
+    useEffect(() => {
+        return () => {
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+        }
+    }, [])
+
 
     // Update current snapshot and dirty state
     const updateSnapshot = useCallback((snapshot: TSnapshot) => {
-        console.log('🔥🔥🔥 [EditorSave] updateSnapshot CALLED!', {
+        console.log('🚨🚨🚨 [EditorSave] updateSnapshot CALLED!', {
             key,
             snapshot,
             snapshotKeys: Object.keys(snapshot || {}),
             sourceCodeLength: (snapshot as any)?.sourceCode?.length || 0,
             pythonCodeLength: (snapshot as any)?.pythonCode?.length || 0,
+            sourceCodePreview: ((snapshot as any)?.sourceCode || '').substring(0, 100) + '...',
             callerStack: new Error().stack?.split('\n')[1]?.trim(),
             timestamp: new Date().toISOString()
         })
@@ -187,20 +228,26 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
         
         // Check if dirty
         const prev = lastSavedStates.get(key) as TSnapshot | undefined
-        console.log('🔄 [EditorSave] Checking for changes...', {
+        console.log('🚨🚨🚨 [EditorSave] CHECKING FOR CHANGES - CRITICAL DEBUG!', {
             key,
             hasPrev: !!prev,
             prevSourceLength: (prev as any)?.sourceCode?.length || 0,
             currSourceLength: (snapshot as any)?.sourceCode?.length || 0,
+            prevSourcePreview: ((prev as any)?.sourceCode || 'NONE').substring(0, 100) + '...',
+            currSourcePreview: ((snapshot as any)?.sourceCode || 'NONE').substring(0, 100) + '...',
+            prevSourceFull: (prev as any)?.sourceCode || 'NONE',
+            currSourceFull: (snapshot as any)?.sourceCode || 'NONE',
             currentIsDirty: isDirty
         })
         
+        console.log('🔥 [EditorSave] Calling adapter.hasChanges...')
         const hasChanges = adapter.hasChanges(prev, snapshot)
-        console.log('✅ [EditorSave] hasChanges result:', {
+        console.log('🚨🚨🚨 [EditorSave] ADAPTER hasChanges RESULT - CRITICAL!', {
             key,
             hasChanges,
             prevIsDirty: isDirty,
-            willUpdateDirty: hasChanges !== isDirty
+            willUpdateDirty: hasChanges !== isDirty,
+            stringComparison: (prev as any)?.sourceCode === (snapshot as any)?.sourceCode ? 'EQUAL' : 'DIFFERENT'
         })
         
         if (hasChanges !== isDirty) {
@@ -216,11 +263,125 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
         // Reset idle timer on change
         if (hasChanges) {
             console.log('⏰ [EditorSave] Resetting idle timer due to changes')
-            resetIdleTimer()
+            resetIdleTimerRef.current?.()
         }
         
         console.log('✅ [EditorSave] updateSnapshot complete!')
-    }, [adapter, key, isDirty, resetIdleTimer])
+    }, [adapter, key, isDirty]) // 🚨 REMOVED resetIdleTimer dependency to prevent circular re-renders
+
+    // Keep a stable reference to save
+    const saveRef = useRef(save)
+    useEffect(() => { saveRef.current = save }, [save])
+
+    // 🏆 UNIVERSAL TAB-SWITCH-SAVE HANDLER - SSOT for all tab switching saves
+    useEffect(() => {
+        const handleTabSwitchSave = async (event: CustomEvent) => {
+            console.log('🚨 [EditorSave] Universal tab-switch-save event received!', {
+                key,
+                eventRuleId: event.detail?.ruleId,
+                paramsId: params.id,
+                matches: event.detail?.ruleId === params.id,
+                isDirty: dirtyStates.get(key) || false,
+                hasSnapshot: !!currentSnapshotRef.current,
+                fromTab: event.detail?.fromTab,
+                toTab: event.detail?.toTab
+            })
+            
+            // Check if this event is for our entity and we have unsaved changes
+            const currentIsDirty = dirtyStates.get(key) || false
+            if (event.detail?.ruleId === params.id && currentIsDirty && currentSnapshotRef.current) {
+                console.log('🚨 [EditorSave] UNIVERSAL SAVE TRIGGERED!', {
+                    key,
+                    fromTab: event.detail.fromTab,
+                    toTab: event.detail.toTab,
+                    snapshotKeys: Object.keys(currentSnapshotRef.current || {}),
+                    timestamp: new Date().toISOString()
+                })
+                
+                try {
+                    const result = await saveRef.current(currentSnapshotRef.current, { 
+                        context: 'tab-switch', 
+                        skipIfClean: true 
+                    })
+                    console.log('✅ [EditorSave] Universal tab-switch save completed:', { key, result })
+                } catch (error) {
+                    console.error('❌ [EditorSave] Universal tab-switch save failed:', { key, error })
+                }
+            } else {
+                console.log('⏭️ [EditorSave] Universal save skipped:', {
+                    key,
+                    reason: !event.detail?.ruleId ? 'no-rule-id' :
+                            event.detail.ruleId !== params.id ? 'different-entity' :
+                            !(dirtyStates.get(key) || false) ? 'not-dirty' :
+                            !currentSnapshotRef.current ? 'no-snapshot' : 'unknown',
+                    eventRuleId: event.detail?.ruleId,
+                    paramsId: params.id,
+                    isDirty: dirtyStates.get(key) || false,
+                    hasSnapshot: !!currentSnapshotRef.current
+                })
+            }
+        }
+        
+        window.addEventListener('tab-switch-save', handleTabSwitchSave as EventListener)
+        console.log('🏆 [EditorSave] Universal tab-switch-save listener registered for:', key)
+        
+        return () => {
+            window.removeEventListener('tab-switch-save', handleTabSwitchSave as EventListener)
+            console.log('🗑️ [EditorSave] Universal tab-switch-save listener removed for:', key)
+        }
+    }, [params.id, key])
+
+    // Global save-on-close handler with debug logging (after save function is defined)
+    useEffect(() => {
+        console.log('🚨🚨🚨 [EditorSave] Setting up beforeunload handler for:', key)
+        
+        const handler = async (e: BeforeUnloadEvent) => {
+            console.log('🚨🚨🚨🚨🚨 [EditorSave] BEFOREUNLOAD EVENT FIRED!!! BROWSER CLOSING!', {
+                key,
+                isDirty: dirtyStates.get(key) || false,
+                hasSnapshot: !!currentSnapshotRef.current,
+                snapshotSourceLength: (currentSnapshotRef.current as any)?.sourceCode?.length || 0,
+                snapshotPreview: ((currentSnapshotRef.current as any)?.sourceCode || 'NONE').substring(0, 100) + '...',
+                eventType: e.type,
+                timestamp: new Date().toISOString()
+            })
+            
+            // If we have unsaved changes, attempt synchronous save
+            if ((dirtyStates.get(key) || false) && currentSnapshotRef.current) {
+                console.log('🚨🚨🚨🚨🚨 [EditorSave] BEFOREUNLOAD SAVE ATTEMPT! CRITICAL SAVE!', key)
+                
+                // Modern browsers limit async here, so we just warn the user
+                e.preventDefault()
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+                
+                // Attempt save anyway (may not complete before page closes)
+                try {
+                    console.log('🚨🚨🚨 [EditorSave] EXECUTING CRITICAL BEFOREUNLOAD SAVE for:', key)
+                    const savePromise = saveRef.current(currentSnapshotRef.current, { context: 'close', skipIfClean: false })
+                    console.log('🚨🚨🚨 [EditorSave] BEFOREUNLOAD SAVE PROMISE CREATED, awaiting...:', key)
+                    const result = await savePromise
+                    console.log('✅✅✅ [EditorSave] BEFOREUNLOAD SAVE COMPLETED!', { key, result })
+                } catch (error) {
+                    console.error(`❌❌❌ [EditorSave] BEFOREUNLOAD SAVE FAILED:`, { key, error })
+                }
+            } else {
+                console.log('⏭️ [EditorSave] Beforeunload - no save needed:', {
+                    key,
+                    isDirty: dirtyStates.get(key) || false,
+                    hasSnapshot: !!currentSnapshotRef.current
+                })
+            }
+        }
+        
+        window.addEventListener('beforeunload', handler)
+        console.log('✅ [EditorSave] Beforeunload handler registered for:', key)
+        
+        return () => {
+            window.removeEventListener('beforeunload', handler)
+            console.log('🗑️ [EditorSave] Beforeunload handler removed for:', key)
+        }
+    }, [key])
+    
 
     // Set initial snapshot without marking as dirty
     const setLastSaved = useCallback((snapshot: TSnapshot) => {
@@ -237,25 +398,29 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
 
     // Save on tab switch - to be called by parent components
     const saveOnTabSwitch = useCallback(async (): Promise<boolean> => {
-        console.log('🔄🔥 [EditorSave] saveOnTabSwitch CALLED!', {
+        console.log('🚨🚨🚨 [EditorSave] saveOnTabSwitch CALLED!', {
             key,
-            isDirty,
+            isDirty: dirtyStates.get(key) || false,
             hasSnapshot: !!currentSnapshotRef.current,
             snapshotData: currentSnapshotRef.current ? {
                 sourceCodeLength: (currentSnapshotRef.current as any)?.sourceCode?.length || 0,
                 pythonCodeLength: (currentSnapshotRef.current as any)?.pythonCode?.length || 0
             } : null,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            caller: new Error().stack?.split('\n')[2]?.trim()
         })
         
-        if (currentSnapshotRef.current && isDirty) {
-            console.log(`💾 [EditorSave] Executing tab switch save for ${key}`)
-            return await save(currentSnapshotRef.current, { context: 'tab-switch', skipIfClean: true })
+        const currentIsDirty = dirtyStates.get(key) || false
+        if (currentSnapshotRef.current && currentIsDirty) {
+            console.log('🚨🚨🚨 [EditorSave] EXECUTING TAB SWITCH SAVE for:', key)
+            const result = await saveRef.current(currentSnapshotRef.current, { context: 'tab-switch', skipIfClean: true })
+            console.log('🚨🚨🚨 [EditorSave] TAB SWITCH SAVE RESULT:', { key, result })
+            return result
         }
         
-        console.log(`⏭️ [EditorSave] Skipping tab switch save for ${key} - no changes or no snapshot`)
+        console.log('⏭️ [EditorSave] Skipping tab switch save for:', key, '- isDirty:', currentIsDirty, 'hasSnapshot:', !!currentSnapshotRef.current)
         return true
-    }, [save, key, isDirty])
+    }, [key])
 
     return {
         // Core save functionality
@@ -267,9 +432,12 @@ export function useEditorSave<TSnapshot extends TabSnapshot = TabSnapshot>(
         setLastSaved,
         getLastSaved,
         
-        // State information
+        // State information (compatible with old interface)
         isDirty,
         isPending: pendingSaves.has(key),
+        saving: pendingSaves.has(key),  // Alias for compatibility
+        loading: mutation.isPending,    // From mutation state
+        error: mutation.error,          // From mutation state
         
         // Utils
         resetIdleTimer

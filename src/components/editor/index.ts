@@ -1,7 +1,7 @@
 // Main Monaco Business Rules Editor Exports
 
 // Main editor component (GOLD STANDARD - RuleStudioEditor)
-export { RuleStudioEditor } from './components/rule-studio-editor'
+export { RuleStudioEditor } from './rule-studio'
 
 // Monaco editor components  
 export { MonacoEditor } from './components/monaco-editor'  

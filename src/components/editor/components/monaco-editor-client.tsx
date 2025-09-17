@@ -114,7 +114,22 @@ const MonacoEditorClient = ({
   }, [userVariables, onMount, preferences, debugMode, onBreakpointToggle, breakpoints])
 
   const handleChange = useCallback((value: string | undefined) => {
-    onChange?.(value || '')
+    const actualValue = value || ''
+    console.log('🚨🚨🚨 [MonacoEditorClient] MONACO CHANGE DETECTED!', {
+      value: actualValue,
+      valueLength: actualValue.length,
+      hasOnChange: !!onChange,
+      preview: actualValue.substring(0, 100) + (actualValue.length > 100 ? '...' : ''),
+      timestamp: new Date().toISOString()
+    })
+    
+    if (onChange) {
+      console.log('🔥 [MonacoEditorClient] Calling parent onChange...')
+      onChange(actualValue)
+      console.log('✅ [MonacoEditorClient] Parent onChange called successfully')
+    } else {
+      console.log('⚠️ [MonacoEditorClient] No onChange handler provided!')
+    }
   }, [onChange])
   
   // 🏆 **MONACO NATIVE DISPOSAL**: Use Monaco's built-in dispose() method

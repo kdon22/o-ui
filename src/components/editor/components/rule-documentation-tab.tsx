@@ -47,6 +47,9 @@ export function RuleDocumentationTab({ ruleId, onSave }: RuleDocumentationTabPro
   // Extract rule data from response
   const rule = ruleResponse?.data
 
+  // ✅ REMOVED: Manual tab-switch-save listener - now handled automatically by useEditorSave universal system  
+  // The useEditorSave hook (used by saveDocTab) now automatically handles all tab-switch-save events
+
   // Initialize local data and last-saved snapshot when rule loads
   useEffect(() => {
     if (rule && !hasUnsavedChanges) {

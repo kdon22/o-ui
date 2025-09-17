@@ -70,6 +70,9 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
     2000
   )
 
+  // ✅ REMOVED: Manual tab-switch-save listener - now handled automatically by useEditorSave universal system
+  // The useEditorSave hook (used by savePromptTab) now automatically handles all tab-switch-save events
+
   // Handle prompt selection
   const handlePromptSelect = useCallback((prompt: PromptEntity) => {
     setSelectedPrompt(prompt)
