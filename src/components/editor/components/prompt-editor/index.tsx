@@ -30,8 +30,6 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   const [previewData, setPreviewData] = useState<FormState>({})
   const [isDragging, setIsDragging] = useState(false)
   const [showPropertiesModal, setShowPropertiesModal] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [lastSavedLayout, setLastSavedLayout] = useState<PromptLayout | null>(null)
 
   // Data fetching with proper ruleId filtering
   const { data: promptsResponse, refetch } = useActionQuery(
@@ -47,7 +45,8 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
     save: savePromptTab, 
     setLastSaved: setPromptLastSaved,
     isDirty: promptIsDirty,
-    updateSnapshot: updatePromptSnapshot
+    updateSnapshot: updatePromptSnapshot,
+    saveOnTabSwitch: savePromptOnTabSwitch
   } = useEditorSave(
     promptAdapter,
     { id: selectedPrompt?.id || '', tab: 'prompt' }
@@ -57,14 +56,12 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   const debouncedAutoSave = useDebouncedCallback(
     async (prompt: PromptEntity, layout: PromptLayout) => {
       if (!prompt || !prompt.id) return
-      setIsSaving(true)
       try {
         await savePromptTab({ layout, promptName: prompt.promptName, content: prompt.content, isPublic: prompt.isPublic, executionMode: prompt.executionMode }, { context: 'manual', skipIfClean: true })
-        setLastSavedLayout(layout)
         setPromptLastSaved({ layout })
         onSave?.()
       } finally {
-        setIsSaving(false)
+        // no-op
       }
     },
     2000
@@ -78,8 +75,15 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
     setSelectedPrompt(prompt)
     setSelectedComponent(null) // Clear component selection when switching prompts
     setPreviewData({}) // Reset preview data
-    setLastSavedLayout(prompt.layout) // Track initial layout
     setPromptLastSaved({ layout: prompt.layout })
+    // Initialize snapshot for unified save/dirty tracking
+    updatePromptSnapshot({
+      layout: prompt.layout,
+      promptName: prompt.promptName,
+      content: prompt.content,
+      isPublic: prompt.isPublic,
+      executionMode: prompt.executionMode
+    })
   }, [])
 
   // Handle component selection (single click - just highlight)
@@ -116,6 +120,14 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
 
     // Trigger auto-save with debouncing
     debouncedAutoSave(updatedPrompt, updatedLayout)
+    // Update snapshot for universal save/idle save
+    updatePromptSnapshot({
+      layout: updatedLayout,
+      promptName: updatedPrompt.promptName,
+      content: updatedPrompt.content,
+      isPublic: updatedPrompt.isPublic,
+      executionMode: updatedPrompt.executionMode
+    })
   }, [selectedPrompt, selectedComponent, debouncedAutoSave])
 
   // Handle layout changes from canvas with auto-save
@@ -127,6 +139,14 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
 
     // Trigger auto-save with debouncing
     debouncedAutoSave(updatedPrompt, layout)
+    // Update snapshot for universal save/idle save
+    updatePromptSnapshot({
+      layout,
+      promptName: updatedPrompt.promptName,
+      content: updatedPrompt.content,
+      isPublic: updatedPrompt.isPublic,
+      executionMode: updatedPrompt.executionMode
+    })
   }, [selectedPrompt, debouncedAutoSave])
 
   // Reset canvas - clear all components
@@ -144,14 +164,59 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
 
     // Trigger auto-save for reset action
     debouncedAutoSave(updatedPrompt, resetLayout)
+    // Update snapshot for universal save/idle save
+    updatePromptSnapshot({
+      layout: resetLayout,
+      promptName: updatedPrompt.promptName,
+      content: updatedPrompt.content,
+      isPublic: updatedPrompt.isPublic,
+      executionMode: updatedPrompt.executionMode
+    })
   }, [selectedPrompt, debouncedAutoSave])
 
-  // Check if there are unsaved changes
-  const hasUnsavedChanges = selectedPrompt && lastSavedLayout && 
-    JSON.stringify(selectedPrompt.layout) !== JSON.stringify(lastSavedLayout)
-    
-  // Combined saving state from both local state and mutation
-  const isCurrentlySaving = isSaving
+  // Bridge global rule-level tab-switch-save to the selected prompt's save
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent
+      if (ev.detail?.ruleId === ruleId && selectedPrompt?.id) {
+        void savePromptOnTabSwitch()
+      }
+    }
+    window.addEventListener('tab-switch-save', handler as EventListener)
+    return () => window.removeEventListener('tab-switch-save', handler as EventListener)
+  }, [ruleId, selectedPrompt?.id, savePromptOnTabSwitch])
+
+  // Remove selected component (single delete)
+  const handleRemoveSelected = useCallback(() => {
+    if (!selectedPrompt || !selectedComponent) return
+    const updatedLayout: PromptLayout = {
+      ...selectedPrompt.layout,
+      items: selectedPrompt.layout.items.filter((item: ComponentItem) => item.id !== selectedComponent.id)
+    }
+    const updatedPrompt = { ...selectedPrompt, layout: updatedLayout }
+    setSelectedPrompt(updatedPrompt)
+    setSelectedComponent(null)
+    debouncedAutoSave(updatedPrompt, updatedLayout)
+    updatePromptSnapshot({
+      layout: updatedLayout,
+      promptName: updatedPrompt.promptName,
+      content: updatedPrompt.content,
+      isPublic: updatedPrompt.isPublic,
+      executionMode: updatedPrompt.executionMode
+    })
+  }, [selectedPrompt, selectedComponent, debouncedAutoSave])
+
+  // Keyboard shortcut: Delete/Backspace removes selected component
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponent) {
+        e.preventDefault()
+        handleRemoveSelected()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selectedComponent, handleRemoveSelected])
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -159,23 +224,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
       <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">Prompt Editor</h2>
-          {selectedPrompt && (
-            <span className="text-sm text-gray-600">
-              Editing: {selectedPrompt.promptName}
-            </span>
-          )}
-          {/* Auto-save status indicator */}
-          {selectedPrompt && (
-            <div className="flex items-center gap-2 text-sm">
-              {isSaving ? (
-                <span className="text-blue-600">Saving...</span>
-              ) : hasUnsavedChanges ? (
-                <span className="text-orange-600">Unsaved changes</span>
-              ) : (
-                <span className="text-green-600">Saved</span>
-              )}
-            </div>
-          )}
+          {/* Removed verbose editing/saving indicator to keep UI minimal */}
         </div>
         <div className="flex items-center gap-2">
           {selectedPrompt && selectedPrompt.layout.items.length > 0 && (
@@ -185,6 +234,15 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
               title="Clear all components from canvas"
             >
               Reset Canvas
+            </button>
+          )}
+          {selectedComponent && (
+            <button
+              onClick={handleRemoveSelected}
+              className="px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Remove selected component"
+            >
+              Remove Selected
             </button>
           )}
         </div>
