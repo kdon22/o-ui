@@ -11,9 +11,10 @@ import type { PromptLayout, ComponentItem, DragItem } from './types'
 interface CanvasEditorProps {
   layout: PromptLayout
   selectedComponent: ComponentItem | null
+  selectedIds: string[]
   isDragging: boolean
   onLayoutChange: (layout: PromptLayout) => void
-  onComponentSelect: (component: ComponentItem | null) => void
+  onComponentSelect: (component: ComponentItem | null, opts?: { append?: boolean }) => void
   onComponentUpdate: (componentId: string, updates: Partial<ComponentItem>) => void
   onComponentDoubleClick: (component: ComponentItem) => void
 }
@@ -21,6 +22,7 @@ interface CanvasEditorProps {
 export function CanvasEditor({
   layout,
   selectedComponent,
+  selectedIds,
   isDragging,
   onLayoutChange,
   onComponentSelect,
@@ -105,7 +107,8 @@ export function CanvasEditor({
   // Handle component click/selection
   const handleComponentClick = (e: React.MouseEvent, component: ComponentItem) => {
     e.stopPropagation()
-    onComponentSelect(component)
+    const append = e.metaKey || e.ctrlKey
+    onComponentSelect(component, { append })
   }
 
   // Handle component double-click for editing
@@ -159,7 +162,7 @@ export function CanvasEditor({
 
   // Render individual component
   const renderComponent = (component: ComponentItem) => {
-    const isSelected = selectedComponent?.id === component.id
+    const isSelected = selectedIds?.includes(component.id)
     const { type, config, x, y } = component
 
     const baseStyle = {

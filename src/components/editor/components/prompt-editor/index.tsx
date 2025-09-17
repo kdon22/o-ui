@@ -27,6 +27,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   // State management
   const [selectedPrompt, setSelectedPrompt] = useState<PromptEntity | null>(null)
   const [selectedComponent, setSelectedComponent] = useState<ComponentItem | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [previewData, setPreviewData] = useState<FormState>({})
   const [isDragging, setIsDragging] = useState(false)
   const [showPropertiesModal, setShowPropertiesModal] = useState(false)
@@ -74,6 +75,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   const handlePromptSelect = useCallback((prompt: PromptEntity) => {
     setSelectedPrompt(prompt)
     setSelectedComponent(null) // Clear component selection when switching prompts
+    setSelectedIds([])
     setPreviewData({}) // Reset preview data
     setPromptLastSaved({ layout: prompt.layout })
     // Initialize snapshot for unified save/dirty tracking
@@ -87,9 +89,23 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   }, [])
 
   // Handle component selection (single click - just highlight)
-  const handleComponentSelect = useCallback((component: ComponentItem | null) => {
-    setSelectedComponent(component)
-    // Don't auto-open modal on selection - only on double-click
+  const handleComponentSelect = useCallback((component: ComponentItem | null, opts?: { append?: boolean }) => {
+    if (!component) {
+      setSelectedComponent(null)
+      setSelectedIds([])
+      return
+    }
+    const append = !!opts?.append
+    if (append) {
+      setSelectedIds((prev) => {
+        const exists = prev.includes(component.id)
+        return exists ? prev.filter((id) => id !== component.id) : [...prev, component.id]
+      })
+      setSelectedComponent(component)
+    } else {
+      setSelectedIds([component.id])
+      setSelectedComponent(component)
+    }
   }, [])
 
   // Handle component double-click (open properties modal)
@@ -188,14 +204,16 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
 
   // Remove selected component (single delete)
   const handleRemoveSelected = useCallback(() => {
-    if (!selectedPrompt || !selectedComponent) return
+    if (!selectedPrompt || (selectedIds.length === 0 && !selectedComponent)) return
+    const idsToRemove = selectedIds.length > 0 ? new Set(selectedIds) : new Set([selectedComponent!.id])
     const updatedLayout: PromptLayout = {
       ...selectedPrompt.layout,
-      items: selectedPrompt.layout.items.filter((item: ComponentItem) => item.id !== selectedComponent.id)
+      items: selectedPrompt.layout.items.filter((item: ComponentItem) => !idsToRemove.has(item.id))
     }
     const updatedPrompt = { ...selectedPrompt, layout: updatedLayout }
     setSelectedPrompt(updatedPrompt)
     setSelectedComponent(null)
+    setSelectedIds([])
     debouncedAutoSave(updatedPrompt, updatedLayout)
     updatePromptSnapshot({
       layout: updatedLayout,
@@ -227,6 +245,11 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
           {/* Removed verbose editing/saving indicator to keep UI minimal */}
         </div>
         <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <span className="px-2 py-1 text-xs rounded bg-red-50 text-red-700 border border-red-200">
+              {selectedIds.length} selected
+            </span>
+          )}
           {selectedPrompt && selectedPrompt.layout.items.length > 0 && (
             <button
               onClick={handleResetCanvas}
@@ -236,15 +259,20 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
               Reset Canvas
             </button>
           )}
-          {selectedComponent && (
-            <button
-              onClick={handleRemoveSelected}
-              className="px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-              title="Remove selected component"
-            >
-              Remove Selected
-            </button>
-          )}
+          <button
+            onClick={handleRemoveSelected}
+            disabled={(selectedIds.length === 0 && !selectedComponent)}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              selectedIds.length > 0 || selectedComponent
+                ? 'text-white bg-red-600 hover:bg-red-700'
+                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+            }`}
+            title={selectedIds.length > 1
+              ? `Remove ${selectedIds.length} selected components`
+              : selectedComponent ? 'Remove selected component' : 'Select components to enable'}
+          >
+            Remove Selected
+          </button>
         </div>
       </div>
 
@@ -272,6 +300,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
               <CanvasEditor
                 layout={selectedPrompt.layout}
                 selectedComponent={selectedComponent}
+                selectedIds={selectedIds}
                 isDragging={isDragging}
                 onLayoutChange={handleLayoutChange}
                 onComponentSelect={handleComponentSelect}
