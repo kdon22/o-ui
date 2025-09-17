@@ -29,5 +29,3 @@ export const ruleDocumentationAdapter: TabSaveAdapter<RuleDocSnapshot> = {
         ...(curr.changelog !== undefined ? { changelog: curr.changelog } : {})
     })
 }
-
-

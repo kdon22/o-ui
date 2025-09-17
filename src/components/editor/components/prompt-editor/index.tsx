@@ -16,8 +16,7 @@ import type {
   PromptLayout,
   FormState 
 } from './types'
-import { useEditorTabSave } from '@/components/editor/components/editor-tabs/save/use-editor-tab-save'
-import { promptAdapter } from '@/components/editor/components/editor-tabs/save/adapters/prompt.adapter'
+import { useEditorSave, promptAdapter } from '@/lib/editor/save'
 
 interface PromptEditorProps {
   ruleId: string
@@ -43,8 +42,13 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
 
   const prompts = (promptsResponse?.data || []) as PromptEntity[]
   
-  // 🚀 Use generic save coordinator for prompt layout saves (per selected prompt)
-  const { save: savePromptTab, setLastSaved: setPromptLastSaved } = useEditorTabSave(
+  // 🚀 SSOT: Use unified save system for prompt layout saves (per selected prompt)
+  const { 
+    save: savePromptTab, 
+    setLastSaved: setPromptLastSaved,
+    isDirty: promptIsDirty,
+    updateSnapshot: updatePromptSnapshot
+  } = useEditorSave(
     promptAdapter,
     { id: selectedPrompt?.id || '', tab: 'prompt' }
   )

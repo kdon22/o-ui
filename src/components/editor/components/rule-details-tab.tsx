@@ -9,7 +9,7 @@ import { InlineForm } from '@/components/auto-generated/table/inline-form'
 import { getFormWidthClass } from '@/components/auto-generated/form/form-utils'
 import { cn } from '@/lib/utils/generalUtils'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
-import { useRuleSaveCoordinator } from '@/components/editor/services/rule-save-coordinator'
+import { useEditorSave, ruleDetailsAdapter } from '@/lib/editor/save'
 import { RULE_SCHEMA } from '@/features/rules/rules.schema'
 import { useNavigationContext, useRuleCreationContext } from '@/lib/context/navigation-context'
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context'
@@ -42,8 +42,16 @@ export function RuleDetailsTab({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  // 🚀 SSOT SAVE COORDINATOR - Single source of truth for all rule saving
-  const { saveRule } = useRuleSaveCoordinator()
+  // 🚀 SSOT: Unified save system for rule details tab
+  const { 
+    save: saveDetailsTab, 
+    setLastSaved: setDetailsLastSaved,
+    isDirty,
+    updateSnapshot 
+  } = useEditorSave(
+    ruleDetailsAdapter,
+    { id: ruleId, tab: 'rule-details' }
+  )
 
   // Get rule creation context to detect if coming from process
   const { isCreatingRuleFromProcess, processContext, clearContext } = useRuleCreationContext()
@@ -130,11 +138,13 @@ export function RuleDetailsTab({
         await contextualCreateMutation.mutateAsync(formData)
         // Success handling is done in the contextualCreateMutation.onSuccess callback
       } else {
-        // 🚀 SSOT: Use unified save coordinator for all rule updates
-        await saveRule(ruleId, {
-          ...formData,
-          id: ruleId
-        }, { context: 'manual' })
+        // 🚀 SSOT: Use generic coordinator for rule details
+        await saveDetailsTab({
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          isActive: formData.isActive
+        }, { context: 'manual', skipIfClean: true })
 
         setHasUnsavedChanges(false)
         onSave?.()

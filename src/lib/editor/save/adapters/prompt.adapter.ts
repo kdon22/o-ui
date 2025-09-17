@@ -33,5 +33,3 @@ export const promptAdapter: TabSaveAdapter<PromptSnapshot> = {
         }
     }
 }
-
-

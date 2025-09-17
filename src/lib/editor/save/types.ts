@@ -1,6 +1,6 @@
 'use client'
 
-// Core types for the generic editor-tab save coordinator
+// Core types for the unified editor save system (SSOT)
 
 export type SaveContext = 'manual' | 'tab-switch' | 'close' | 'refresh' | 'auto-idle'
 
@@ -37,4 +37,17 @@ export interface TabSaveAdapter<TSnapshot extends TabSnapshot = TabSnapshot> {
     selectPersisted?(resultData: any, fallback: TSnapshot): TSnapshot
 }
 
+// Multi-tab editor save coordinator interface
+export interface EditorSaveState {
+    isDirty: boolean
+    dirtyTabs: string[]
+    lastSaved: Record<string, Date>
+    pendingSaves: Record<string, boolean>
+}
 
+// For components that need to register multiple adapters
+export interface TabAdapterRegistration {
+    tabId: string
+    adapter: TabSaveAdapter
+    initialSnapshot?: TabSnapshot
+}

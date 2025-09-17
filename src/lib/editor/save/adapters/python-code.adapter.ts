@@ -15,5 +15,3 @@ export const pythonCodeAdapter: TabSaveAdapter<PythonCodeSnapshot> = {
     },
     buildPayload: (id, curr) => ({ id, pythonCode: curr.pythonCode })
 }
-
-

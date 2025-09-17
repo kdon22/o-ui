@@ -49,14 +49,9 @@ export function EditorHeader({
   }
 
   const handleCloseEditor = async () => {
-    // Best-effort save current editors before closing (does not block if absent)
-    try {
-      const saveHook = (window as any).__orpoc_saveOnClose
-      if (typeof saveHook === 'function') {
-        await saveHook()
-      }
-    } catch {}
-
+    // 🏆 UNIFIED SAVE SYSTEM: Automatic save-on-close handled by useEditorSave hooks
+    // No need for manual global save functions - the unified system handles beforeunload
+    
     // Navigate back to the last accessed node or root
     const lastNodeIdShort = session?.user?.preferences?.lastAccessedNodeIdShort
     const rootNodeIdShort = session?.user?.rootNodeIdShort

@@ -8,13 +8,12 @@
 export * from './utils/monaco-utils'
 export * from './utils/code-analysis-utils'
 
-// Type Detection Services
-export { VariableTypeDetector } from './type-detection/variable-type-detector'
+// Type Detection Services (keep only existing ones)
 export { ClassMemberExtractor, type ClassMember } from './type-detection/class-member-extractor'
 export { TypeInferenceUtils } from './type-detection/type-inference-utils'
 
 // Save Coordination Services
-export { useRuleSaveCoordinator, type RuleState, type SaveContext } from './rule-save-coordinator'
+// Deprecated: use editor-tabs/save instead
 
 // Content Generation
 export { HoverContentGenerator } from './content-generators/hover-content-generator' 

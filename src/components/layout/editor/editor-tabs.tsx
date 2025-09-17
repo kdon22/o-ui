@@ -141,13 +141,23 @@ const RuleCodeTab = ({ rule, onUpdate, onSave, hasUnsavedChanges }: {
   onSave: () => void;
   hasUnsavedChanges: boolean;
 }) => {
-  // 🚀 REMOVED: Cleanup function that was causing infinite save loops
-  // Tab switching auto-save is now handled by EditorLayout's handleTabChange
+  // 🚀 FIXED: Connect the callback chain to parent components
+  console.log('🔥🔥🔥 [RuleCodeTab] Rendering with callbacks:', {
+    ruleId: rule.id,
+    ruleName: rule.name,
+    hasOnUpdate: !!onUpdate,
+    hasOnSave: !!onSave,
+    hasUnsavedChanges,
+    timestamp: new Date().toISOString()
+  })
 
   return (
     <div className="h-full">
       <RuleEditor 
         ruleId={rule.id}
+        onRuleUpdate={onUpdate}
+        onSave={onSave}
+        hasUnsavedChanges={hasUnsavedChanges}
       />
     </div>
   )

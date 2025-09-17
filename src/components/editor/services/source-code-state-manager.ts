@@ -76,11 +76,13 @@ export const useSourceCodeState = create<SourceCodeState & SourceCodeActions>()(
     
     // Actions
     updateSourceCode: async (ruleId: string, sourceCode: string, modifiedBy: string) => {
-      console.log('📝 [SourceCodeStateManager] Updating source code with auto Python generation:', {
+      console.log('🔥🔥🔥 [SourceCodeStateManager] updateSourceCode CALLED!', {
         ruleId,
         sourceCodeLength: sourceCode.length,
         modifiedBy,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        sourcePreview: sourceCode.substring(0, 100) + '...',
+        callerStack: new Error().stack?.split('\n')[1]?.trim()
       })
       
       // Update source code immediately
@@ -88,12 +90,22 @@ export const useSourceCodeState = create<SourceCodeState & SourceCodeActions>()(
         const lastSaved = state.lastSavedSourceCode[ruleId] || ''
         const hasChanges = sourceCode !== lastSaved
         
+        console.log('🔄 [SourceCodeStateManager] Updating Zustand state:', {
+          ruleId,
+          lastSavedLength: lastSaved.length,
+          newSourceLength: sourceCode.length,
+          hasChanges,
+          oldHasChanges: state.hasUnsavedChanges[ruleId] || false
+        })
+        
         return {
           sourceCode: { ...state.sourceCode, [ruleId]: sourceCode },
           lastModifiedBy: { ...state.lastModifiedBy, [ruleId]: modifiedBy },
           hasUnsavedChanges: { ...state.hasUnsavedChanges, [ruleId]: hasChanges }
         }
       })
+      
+      console.log('✅ [SourceCodeStateManager] Zustand state updated!')
       
       // 🚀 ENTERPRISE: Auto-generate Python code
       try {

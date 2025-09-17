@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, RefreshCw, Palette } from 'lucide-react'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
-import { useRuleSaveCoordinator } from '@/components/editor/services/rule-save-coordinator'
 import { AutoModal } from '@/components/auto-generated/modal'
 
 interface RulePromptsTabProps {
@@ -31,8 +30,7 @@ export function RulePromptsTab({ ruleId, onSave }: RulePromptsTabProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
 
-  // 🚀 SSOT SAVE COORDINATOR - Single source of truth for all rule saving
-  const { saveRule } = useRuleSaveCoordinator()
+  // Saving for prompts is handled inside PromptEditor via the generic coordinator
 
   // Use action system for data fetching and mutations
   const { data: promptsResponse, isLoading: loadingPrompts } = useActionQuery(

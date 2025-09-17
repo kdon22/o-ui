@@ -29,5 +29,3 @@ export const ruleDetailsAdapter: TabSaveAdapter<RuleDetailsSnapshot> = {
         ...(curr.isActive !== undefined ? { isActive: curr.isActive } : {})
     })
 }
-
-

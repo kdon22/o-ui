@@ -86,13 +86,10 @@ interface NodeDataProviderProps {
 }
 
 export function NodeDataProvider({ children }: NodeDataProviderProps) {
-  console.log('🔵 [NodeDataProvider] COMPONENT RENDER START', { timestamp: new Date().toISOString() })
-  
   // 🚨 DEBUG: Hook count tracking to find React hook ordering issue
   let hookCount = 0
   const hookDebug = (name: string) => {
     hookCount++
-    console.log(`🪝 [NodeDataProvider] Hook #${hookCount}: ${name}`)
   }
   
   hookDebug('useSession')
@@ -107,15 +104,6 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
     session?.user?.tenantId &&
     session?.user?.branchContext?.currentBranchId
   );
-  
-  console.log('🔵 [NodeDataProvider] Session check:', { 
-    status, 
-    sessionReady, 
-    hasSession: !!session,
-    hasTenantId: !!session?.user?.tenantId,
-    hasBranchContext: !!session?.user?.branchContext,
-    timestamp: new Date().toISOString()
-  })
   
   // ============================================================================
   // SIMPLE NODE QUERY - JUST USE WHAT WORKS
@@ -255,8 +243,6 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
     invalidateNodes,
     refetchNodes
   };
-  
-  console.log(`🪝 [NodeDataProvider] TOTAL HOOK COUNT: ${hookCount}`)
   
   return (
     <NodeDataContext.Provider value={contextValue}>

@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Save, RefreshCw, FileText, BookOpen, Code } from 'lucide-react'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
-import { useEditorTabSave } from './editor-tabs/save/use-editor-tab-save'
-import { ruleDocumentationAdapter } from './editor-tabs/save/adapters/rule-documentation.adapter'
+import { useEditorSave, ruleDocumentationAdapter } from '@/lib/editor/save'
 
 interface RuleDocumentationTabProps {
   ruleId: string
@@ -30,8 +29,13 @@ export function RuleDocumentationTab({ ruleId, onSave }: RuleDocumentationTabPro
     changelog: ''
   })
 
-  // 🚀 SSOT: Generic save coordinator for documentation tab
-  const { save: saveDocTab, setLastSaved: setDocLastSaved } = useEditorTabSave(
+  // 🚀 SSOT: Unified save system for documentation tab
+  const { 
+    save: saveDocTab, 
+    setLastSaved: setDocLastSaved,
+    isDirty: docIsDirty,
+    updateSnapshot: updateDocSnapshot 
+  } = useEditorSave(
     ruleDocumentationAdapter,
     { id: ruleId, tab: 'rule-documentation' }
   )

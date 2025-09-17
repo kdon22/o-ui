@@ -54,13 +54,11 @@ export function UniversalSearchProvider({
   children, 
   defaultOnRuleSelect 
 }: UniversalSearchProviderProps) {
-  console.log('🟠 [UniversalSearchProvider] COMPONENT RENDER START', { timestamp: new Date().toISOString() })
   
   // 🚨 DEBUG: Hook count tracking to find React hook ordering issue
   let hookCount = 0
   const hookDebug = (name: string) => {
     hookCount++
-    console.log(`🪝 [UniversalSearchProvider] Hook #${hookCount}: ${name}`)
   }
   
   // ============================================================================
@@ -135,15 +133,6 @@ export function UniversalSearchProvider({
   hookDebug('useEffect-globalKeyboardShortcuts')
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      console.log('🔍 [UniversalSearch] Global keydown:', {
-        key: e.key,
-        metaKey: e.metaKey,
-        ctrlKey: e.ctrlKey,
-        shiftKey: e.shiftKey,
-        altKey: e.altKey,
-        isOpen,
-        target: e.target?.constructor?.name
-      })
 
       // Cmd/Ctrl + K to open general search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !isOpen) {
@@ -267,7 +256,6 @@ export function UniversalSearchProvider({
   // RENDER
   // ============================================================================
 
-  console.log(`🪝 [UniversalSearchProvider] TOTAL HOOK COUNT: ${hookCount}`)
 
   return (
     <UniversalSearchContext.Provider value={contextValue}>

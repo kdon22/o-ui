@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useRuleSourceCode } from '@/components/editor/services/source-code-state-manager'
 import { useRuleQuery } from './use-rule-query'
-import { useRuleMutation } from './use-rule-mutation'
 import { useDraftPersistence } from './use-draft-persistence'
 
 export function useRuleEditor(ruleId: string) {
@@ -19,24 +18,29 @@ export function useRuleEditor(ruleId: string) {
   
   // 🏆 FOCUSED: Specialized hooks for specific responsibilities
   const ruleQuery = useRuleQuery(ruleId)
-  const ruleMutation = useRuleMutation(ruleId)
   const draftPersistence = useDraftPersistence(ruleId)
 
   // 🚀 CLEAN: Source code change handler (updates SSOT only)
   const onSourceCodeChange = useCallback((newSourceCode: string) => {
-    console.log('🚀 [useRuleEditor] Source code changed:', {
+    console.log('🔥🔥🔥 [useRuleEditor] onSourceCodeChange CALLED!', {
       ruleId,
       newLength: newSourceCode.length,
       oldLength: ruleSourceCode.sourceCode.length,
       timestamp: new Date().toISOString(),
-      preview: newSourceCode.substring(0, 50) + (newSourceCode.length > 50 ? '...' : '')
+      preview: newSourceCode.substring(0, 100) + (newSourceCode.length > 100 ? '...' : ''),
+      hasChanges: newSourceCode !== ruleSourceCode.sourceCode,
+      callerStack: new Error().stack?.split('\n')[1]?.trim()
     })
     
     // Update SSOT (automatically generates Python)
+    console.log('🔥 [useRuleEditor] Calling ruleSourceCode.updateSourceCode...')
     ruleSourceCode.updateSourceCode(newSourceCode, 'monaco-editor')
+    console.log('✅ [useRuleEditor] ruleSourceCode.updateSourceCode completed!')
     
     // Save draft (debounced)
+    console.log('💾 [useRuleEditor] Calling draftPersistence.saveDraft...')
     draftPersistence.saveDraft(newSourceCode)
+    console.log('✅ [useRuleEditor] draftPersistence.saveDraft completed!')
   }, [ruleId, ruleSourceCode, draftPersistence])
 
   // 🚀 CLEAN: Python sync handler
@@ -82,10 +86,7 @@ export function useRuleEditor(ruleId: string) {
     draftPersistence.clearDraft()
   }, [ruleId, draftPersistence])
 
-  // 🚀 CLEAN: Manual save
-  const saveRule = useCallback(async () => {
-    return await ruleMutation.saveRule({ context: 'manual' })
-  }, [ruleMutation])
+  // 🚀 REMOVED: Manual save - now handled by generic save system
 
   // 🚀 CLEANUP: Save on unmount
   // 🚀 CLEANUP: Removed excessive save-on-unmount that was causing re-renders
@@ -107,7 +108,6 @@ export function useRuleEditor(ruleId: string) {
     // 🎯 ACTIONS: Clean, focused actions
     onSourceCodeChange,
     syncFromPython,
-    saveRule,
     
     // 🎯 DRAFTS: Draft recovery
     hasRecoverableDraft,

@@ -73,9 +73,6 @@ const UnifiedAppProviderCore = React.memo(function UnifiedAppProviderCore({
 }: { 
   children: React.ReactNode 
 }) {
-  console.log('🚀 [UnifiedAppProvider] RENDER START', { 
-    timestamp: new Date().toISOString() 
-  });
   
   // ============================================================================
   // SESSION STATE (SINGLE SOURCE OF TRUTH)
@@ -161,8 +158,7 @@ const UnifiedAppProviderCore = React.memo(function UnifiedAppProviderCore({
       setIsCacheReady(false);
       return;
     }
-    
-    console.log('🚀 [UnifiedAppProvider] Starting cache initialization');
+
     
     // Simulate cache initialization
     const initCache = async () => {
@@ -173,7 +169,6 @@ const UnifiedAppProviderCore = React.memo(function UnifiedAppProviderCore({
         await new Promise(resolve => setTimeout(resolve, 500));
         
         setIsCacheReady(true);
-        console.log('✅ [UnifiedAppProvider] Cache ready');
         
         // Auto-fetch nodes after cache is ready
         refetchNodes();
@@ -232,13 +227,6 @@ const UnifiedAppProviderCore = React.memo(function UnifiedAppProviderCore({
     refetchNodes,
     invalidateCache,
   ]);
-  
-  console.log('🚀 [UnifiedAppProvider] Context value created', {
-    isSessionReady: contextValue.isSessionReady,
-    isCacheReady: contextValue.isCacheReady,
-    nodesCount: contextValue.nodes.length,
-    timestamp: new Date().toISOString()
-  });
   
   return (
     <UnifiedAppContext.Provider value={contextValue}>

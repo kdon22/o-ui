@@ -10,9 +10,7 @@ export { useRuleEditor } from './use-rule-editor'
 
 // Focused responsibility hooks
 export { useRuleQuery } from './use-rule-query'
-export { useRuleMutation } from './use-rule-mutation'
 export { useDraftPersistence } from './use-draft-persistence'
 
 // Types
 export type { RuleQueryData } from './use-rule-query'
-export type { SaveOptions } from './use-rule-mutation'

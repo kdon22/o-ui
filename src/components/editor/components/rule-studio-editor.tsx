@@ -20,7 +20,6 @@ import { Loader2, RefreshCw, Lock } from 'lucide-react'
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
 import { useRuleEditor } from '@/lib/editor/hooks'
 import { useRuleSourceCode } from '../services/source-code-state-manager'
-import { useRuleSaveCoordinator } from '../services/rule-save-coordinator'
 import { testUnifiedState } from '../services/test-unified-state'
 import { RuleCodeEditor } from './rule-code-editor'
 import { RulePythonViewer } from './rule-python-viewer'
@@ -30,12 +29,15 @@ import { useSession } from 'next-auth/react'
 import { EditorContextService } from '../language/editor-context'
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context'
 import { useNodeRuleHierarchy } from '@/hooks/node-rule-hierarchy/use-node-rule-hierarchy'
-import { useEditorTabSave } from './editor-tabs/save/use-editor-tab-save'
-import { ruleCodeAdapter } from './editor-tabs/save/adapters/rule-code.adapter'
+import { useEditorSave, ruleCodeAdapter, ruleParametersAdapter } from '@/lib/editor/save'
 
 export interface RuleStudioEditorProps {
   ruleId: string
   enableParameters?: boolean
+  // 🔥 CALLBACK CHAIN: Connect to parent components
+  onRuleUpdate?: (updates: any) => void
+  onSave?: () => void  
+  hasUnsavedChanges?: boolean
 }
 
 /**
@@ -45,8 +47,19 @@ export interface RuleStudioEditorProps {
  */
 export function RuleStudioEditor({ 
   ruleId, 
-  enableParameters = true 
+  enableParameters = true,
+  onRuleUpdate,
+  onSave,
+  hasUnsavedChanges: parentHasUnsavedChanges
 }: RuleStudioEditorProps) {
+  
+  console.log('🔥🔥🔥 [RuleStudioEditor] Rendering with parent callbacks:', {
+    ruleId,
+    hasOnRuleUpdate: !!onRuleUpdate,
+    hasOnSave: !!onSave,
+    parentHasUnsavedChanges,
+    timestamp: new Date().toISOString()
+  })
   
   const { data: session } = useSession()
   // 🎯 FIXED: Use action system for rule data + useRuleEditor for business rule editing
@@ -130,8 +143,7 @@ export function RuleStudioEditor({
     }
   }, [rule, isRuleInherited, navigationContext?.nodeId])
   
-  // Action system mutations for parameters (clean & fast)
-  const updateRuleMutation = useActionMutation('rule.update')
+  // 🏆 REMOVED: Direct mutations - now using unified save system
   
   // 🏆 SSOT: Use the proper architecture we built - useRuleEditor is THE interface
   const {
@@ -142,7 +154,6 @@ export function RuleStudioEditor({
     error: sourceCodeError,
     isReady: isSourceCodeReady,
     onSourceCodeChange,
-    saveRule: saveSourceCode,
     saving: savingSourceCode,
     isDirtySinceServer,
     rule: serverRule
@@ -152,7 +163,7 @@ export function RuleStudioEditor({
   
   // 🏆 SSOT: Combine states for UI using proper SSOT values
   const loading = loadingRule || loadingInheritance || isLoadingEditor
-  const saving = savingSourceCode || updateRuleMutation.isPending
+  const saving = savingSourceCode // Only use SSOT saving state
   const error = ruleError || sourceCodeError
   const isReady = !loading && !!rule
   // Provide editor context for language services (tenant/branch for DataTable lookups)
@@ -188,10 +199,26 @@ export function RuleStudioEditor({
   const [pendingReturnType, setPendingReturnType] = useState<string | undefined>(undefined) // Start undefined to avoid overriding
   const [pendingSchema, setPendingSchema] = useState<any>(null)
 
-  // Generic editor-tab save for Business Rules (rule code)
-  const { save: saveRuleTab, setLastSaved: setRuleTabLastSaved } = useEditorTabSave(
+  // 🏆 SSOT: Unified save system for Business Rules (rule code)
+  const { 
+    save: saveRuleTab, 
+    setLastSaved: setRuleTabLastSaved,
+    isDirty: ruleCodeIsDirty,
+    updateSnapshot: updateRuleCodeSnapshot
+  } = useEditorSave(
     ruleCodeAdapter,
     { id: ruleId, tab: 'rulecode' }
+  )
+  
+  // 🏆 SSOT: Unified save system for Parameters tab
+  const { 
+    save: saveParametersTab, 
+    setLastSaved: setParametersLastSaved,
+    isDirty: parametersIsDirty,
+    updateSnapshot: updateParametersSnapshot
+  } = useEditorSave(
+    ruleParametersAdapter,
+    { id: ruleId, tab: 'parameters' }
   )
 
   // Initialize last-saved snapshot once source code is available
@@ -200,6 +227,13 @@ export function RuleStudioEditor({
       setRuleTabLastSaved({ sourceCode })
     }
   }, [sourceCode, setRuleTabLastSaved])
+
+  // 🏆 SSOT: Update unified save system snapshot when source code changes
+  useEffect(() => {
+    if (sourceCode) {
+      updateRuleCodeSnapshot({ sourceCode, pythonCode: generatedCode })
+    }
+  }, [sourceCode, generatedCode, updateRuleCodeSnapshot])
 
   // 🎯 DERIVED STATE: Calculate rule type and utility status BEFORE using in useEffect
   const ruleType = useMemo((): 'BUSINESS' | 'UTILITY' | 'GLOBAL_VAR' => {
@@ -274,25 +308,50 @@ export function RuleStudioEditor({
   const handleTabChange = useCallback(async (newTab: string) => {
     console.log('🔄 [RuleStudioEditor] Tab change requested:', { from: activeTab, to: newTab })
     
-    // 🎯 AUTO-SAVE: Save parameters when leaving parameters tab
-    if (activeTab === 'parameters' && hasUnsavedParameters && pendingSchema && rule?.id) {
+    // 🎯 AUTO-SAVE: Save parameters when leaving parameters tab (unified save system)
+    if (activeTab === 'parameters' && parametersIsDirty && pendingSchema && rule?.id) {
       try {
-        await updateRuleMutation.mutateAsync({
-          id: rule.id,
-          schema: pendingSchema // Complete UnifiedSchema object for IntelliSense
-        })
+        await saveParametersTab(
+          { schema: pendingSchema, parameters: pendingParameters, returnType: pendingReturnType }, 
+          { context: 'tab-switch', skipIfClean: true }
+        )
         setHasUnsavedParameters(false)
       } catch (error) {
+        console.warn('⚠️ [RuleStudioEditor] Parameters tab-switch save failed:', error)
         // Don't prevent tab change, but user will see unsaved state
       }
     }
     
     // Save rule code (+ python) when leaving Business Rules tab
     if (activeTab === 'business-rules' && sourceCode) {
+      console.log('🔥🔥🔥 [RuleStudioEditor] BUSINESS RULES TAB SAVE TRIGGERED!', {
+        ruleId,
+        activeTab,
+        newTab,
+        sourceCodeLength: sourceCode.length,
+        sourcePreview: sourceCode.substring(0, 100) + '...',
+        pythonLength: (localPythonCode || generatedCode || '').length,
+        pythonPreview: (localPythonCode || generatedCode || '').substring(0, 50) + '...',
+        timestamp: new Date().toISOString()
+      })
+      
       try {
         const pythonForSave = localPythonCode || generatedCode || ''
+        console.log('💾 [RuleStudioEditor] Calling saveRuleTab with unified save system...')
         await saveRuleTab({ sourceCode, pythonCode: pythonForSave }, { context: 'tab-switch', skipIfClean: true })
-      } catch {}
+        console.log('✅ [RuleStudioEditor] saveRuleTab completed successfully!')
+      } catch (error) {
+        console.error('❌ [RuleStudioEditor] saveRuleTab failed:', error)
+      }
+    } else {
+      console.log('⏭️ [RuleStudioEditor] Skipping business rules save:', {
+        ruleId,
+        activeTab,
+        newTab,
+        hasSourceCode: !!sourceCode,
+        sourceCodeLength: sourceCode?.length || 0,
+        reason: activeTab !== 'business-rules' ? 'not leaving business-rules tab' : 'no source code'
+      })
     }
 
     setActiveTab(newTab)
@@ -316,92 +375,92 @@ export function RuleStudioEditor({
       }
       return prev
     })
-  }, [activeTab, hasUnsavedParameters, pendingSchema, rule?.id, updateRuleMutation, sourceCode, lastSourceCode])
+  }, [activeTab, parametersIsDirty, pendingSchema, rule?.id, saveParametersTab, sourceCode, lastSourceCode])
 
   /**
    * Handle rule save (for business rules/source code)
-   * 🚀 ENTERPRISE: Now uses unified save coordinator
+   * 🚀 ENTERPRISE: Now uses unified save system
    */
-  // 🏆 SSOT: Use proper save handler from useRuleEditor
+  // 🏆 GENERIC SAVE SYSTEM: Use unified save system
   const handleSave = useCallback(async () => {
-    console.log('💾 [RuleStudioEditor] Manual save initiated via SSOT')
-    const success = await saveSourceCode()
-    if (success) {
-      console.log('✅ [RuleStudioEditor] Manual save successful')
+    console.log('💾 [RuleStudioEditor] Manual save initiated via generic save system')
+    try {
+      const pythonForSave = localPythonCode || generatedCode || ''
+      const success = await saveRuleTab({ sourceCode, pythonCode: pythonForSave }, { context: 'manual', skipIfClean: false })
+      if (success) {
+        console.log('✅ [RuleStudioEditor] Manual save successful')
+      } else {
+        console.error('❌ [RuleStudioEditor] Manual save failed')
+      }
+    } catch (error) {
+      console.error('❌ [RuleStudioEditor] Manual save failed with error:', error)
     }
-  }, [saveSourceCode])
+  }, [sourceCode, localPythonCode, generatedCode, saveRuleTab])
 
-  // 🏆 SSOT: Provide a global "save on close" hook for the header X button
-  useEffect(() => {
-    ;(window as any).__orpoc_saveOnClose = async () => {
-      try {
-        // 🏆 SSOT: Use proper save handler for close saves
-        if (hasUnsavedChanges) {
-          console.log('🔄 [RuleStudioEditor] Saving on close via SSOT')
-          await saveSourceCode()
-        }
-        // If parameters pending, persist schema via action system
-        if (hasUnsavedParameters && pendingSchema && rule?.id) {
-          await updateRuleMutation.mutateAsync({ id: rule.id, schema: pendingSchema })
-        }
-      } catch (e) {
-        // swallow to avoid blocking navigation
-      }
-    }
-    return () => {
-      if ((window as any).__orpoc_saveOnClose) {
-        delete (window as any).__orpoc_saveOnClose
-      }
-    }
-  }, [hasUnsavedChanges, hasUnsavedParameters, pendingSchema, rule?.id, saveSourceCode, updateRuleMutation])
+  // 🏆 REMOVED: Global window function - unified save system handles close saves automatically via beforeunload
+  // The useEditorSave hooks automatically handle save-on-close through their built-in beforeunload handlers
+  // No need for manual global functions that compete with the unified system
 
   /**
-   * Handle parameters change tracking for auto-save
+   * Handle parameters change tracking - unified save system
    */
   const handleParametersChange = useCallback((parameters: any[]) => {
     setPendingParameters(parameters)
     setHasUnsavedParameters(true)
     
-    // Generate schema for auto-save when parameters change
-    // This ensures we always have a valid schema to save
+    // Generate schema for unified save system
     if (rule && parameters.length >= 0) {
       try {
         const { userUtilitySchemaGenerator } = require('@/lib/editor/services/user-utility-schema-generator')
         const schema = userUtilitySchemaGenerator.generateSchema(rule, parameters, pendingReturnType)
         setPendingSchema(schema)
-      } catch (error) {
         
+        // 🏆 SSOT: Update unified save system snapshot
+        updateParametersSnapshot({
+          schema,
+          parameters,
+          returnType: pendingReturnType
+        })
+      } catch (error) {
+        console.warn('⚠️ [RuleStudioEditor] Schema generation failed:', error)
       }
     }
-  }, [rule, pendingReturnType])
+  }, [rule, pendingReturnType, updateParametersSnapshot])
 
   /**
-   * Handle return type change tracking for auto-save
+   * Handle return type change tracking - unified save system
    */
   const handleReturnTypeChange = useCallback((returnType: string) => {
     setPendingReturnType(returnType)
     setHasUnsavedParameters(true)
     
-    // Generate schema for auto-save when return type changes
+    // Generate schema for unified save system when return type changes
     if (rule && pendingParameters && pendingParameters.length >= 0) {
       try {
         const { userUtilitySchemaGenerator } = require('@/lib/editor/services/user-utility-schema-generator')
         const schema = userUtilitySchemaGenerator.generateSchema(rule, pendingParameters, returnType)
         setPendingSchema(schema)
-      } catch (error) {
         
+        // 🏆 SSOT: Update unified save system snapshot
+        updateParametersSnapshot({
+          schema,
+          parameters: pendingParameters,
+          returnType
+        })
+      } catch (error) {
+        console.warn('⚠️ [RuleStudioEditor] Schema generation failed on return type change:', error)
       }
     }
-  }, [rule, pendingParameters])
+  }, [rule, pendingParameters, updateParametersSnapshot])
 
   /**
-   * Handle parameters save for utility rules
-   * 🎯 FIXED: Now uses action system directly for parameters (clean & fast)
+   * Handle parameters save for utility rules - unified save system
+   * 🏆 SSOT: Now uses unified save system instead of direct mutations
    */
   const handleParametersSave = useCallback(async (parameters: any[], returnType: string, schema: any) => {
     if (!rule?.id) return
     
-    console.log('💾 [RuleStudioEditor] Saving utility schema via action system:', { 
+    console.log('💾 [RuleStudioEditor] Saving parameters via unified save system:', { 
       ruleId: rule.id,
       parameters: parameters.length, 
       returnType, 
@@ -409,26 +468,29 @@ export function RuleStudioEditor({
     })
     
     try {
-      // Store pending changes for auto-save
+      // Store pending changes
       setPendingParameters(parameters)
       setPendingReturnType(returnType)
       setPendingSchema(schema)
       
-      // 🚀 FIXED: Use action system directly for parameters (no Python generation needed)
-      await updateRuleMutation.mutateAsync({
-        id: rule.id,
-        schema: schema // Complete UnifiedSchema object for IntelliSense
-      })
+      // 🏆 SSOT: Use unified save system for parameters
+      const success = await saveParametersTab(
+        { schema, parameters, returnType },
+        { context: 'manual', skipIfClean: false }
+      )
       
-      // Clear unsaved state after successful save
-      setHasUnsavedParameters(false)
-  
-      
+      if (success) {
+        // Clear unsaved state after successful save
+        setHasUnsavedParameters(false)
+        console.log('✅ [RuleStudioEditor] Parameters saved successfully via unified system')
+      } else {
+        throw new Error('Save failed')
+      }
     } catch (error) {
-      
+      console.error('❌ [RuleStudioEditor] Parameters save failed:', error)
       throw error // Let UI handle error display
     }
-  }, [rule?.id, updateRuleMutation])
+  }, [rule?.id, saveParametersTab])
 
   // Loading state
   if (loading) {
