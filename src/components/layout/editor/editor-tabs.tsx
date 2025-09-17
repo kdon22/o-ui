@@ -112,7 +112,7 @@ const RuleEditor = dynamic(
     try {
 
       
-      // Load NEW RuleStudioEditor component with unified Monaco system
+      // Load RuleStudioEditor component with sophisticated Monaco system + Save Coordinator
       const { RuleStudioEditor } = await import('../../editor/components/rule-studio-editor')
       
 

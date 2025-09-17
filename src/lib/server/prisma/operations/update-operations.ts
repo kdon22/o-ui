@@ -144,15 +144,32 @@ export class UpdateOperationsService {
     context: any,
     existingRecord: any
   ): Promise<any> {
-    const updateData = prepareUpdateData(cleanedData, context.userId, schema);
-    
-    // Process any relationships
-    const processedData = await processRelationships(updateData, schema);
-    
-    // 🚀 CRITICAL FIX: Execute the update with include clause to return full updated record
+    // 1) Prepare scalar + relationship payloads
+    const updateData: Record<string, any> = prepareUpdateData(cleanedData, context.userId, schema);
+
+    // 2) Partition by schema relationships to avoid dropping scalar fields
+    const relationshipConfig: Record<string, any> = (schema as any)?.relationships || {};
+    const relationshipUpdates: Record<string, any> = {};
+    const scalarUpdates: Record<string, any> = {};
+
+    Object.keys(updateData).forEach((key) => {
+      if (relationshipConfig[key]) {
+        relationshipUpdates[key] = updateData[key];
+      } else {
+        scalarUpdates[key] = updateData[key];
+      }
+    });
+
+    // 3) Convert only relationship updates into Prisma nested writes
+    const relationshipWrites = processRelationships(relationshipUpdates, relationshipConfig);
+
+    // 4) Merge scalars + relationship writes
+    const finalData: Record<string, any> = { ...scalarUpdates, ...relationshipWrites };
+
+    // 5) Execute update and include full graph per schema
     return await model.update({
       where: { id },
-      data: processedData,
+      data: finalData,
       include: buildInclude(schema)
     });
   }

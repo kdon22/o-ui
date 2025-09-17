@@ -1,17 +1,15 @@
 /**
- * 🚀 RULE SAVE COORDINATOR - SSOT for All Rule Saving
+ * 🚀 SIMPLIFIED RULE SAVE COORDINATOR
  *
- * Single Source of Truth for all rule saving operations:
- * - Tab switching auto-save
- * - Close/refresh auto-save
- * - Manual saves
- * - Background saves
- *
- * Uses proper action-system hooks for cache invalidation and error handling.
+ * Streamlined rule saving that preserves Monaco/schema functionality:
+ * - Direct action system integration
+ * - Simple state management
+ * - Reliable auto-save
+ * - No complex Zustand dependencies
  */
 
 import { useActionMutation } from '@/hooks/use-action-api'
-import { useSourceCodeState } from './source-code-state-manager'
+import { useCallback, useState } from 'react'
 
 // Types for different save contexts
 export type SaveContext = 'tab-switch' | 'close' | 'refresh' | 'manual' | 'auto'
@@ -153,20 +151,13 @@ async function saveOnClose(ruleId: string, ruleState: RuleState): Promise<void> 
 }
 
 /**
- * 🚀 HOOK: Use Rule Save Coordinator
+ * 🚀 SIMPLIFIED RULE SAVE COORDINATOR HOOK
  *
- * Provides unified save interface using proper action-system patterns
+ * Direct, simple rule saving without complex state dependencies
  */
-import { useCallback } from 'react'
-
 export function useRuleSaveCoordinator() {
-  // 🚀 FIXED: Use proper action-system hook with automatic cache invalidation
+  // Simple action system integration
   const updateRuleMutation = useActionMutation('rule.update')
-  
-  // 🚀 ENTERPRISE FIX: Get access to source code state properly
-  const getSourceCode = useSourceCodeState((state) => state.getSourceCode)
-  const getPythonCode = useSourceCodeState((state) => state.getPythonCode)
-  const markAsSaved = useSourceCodeState((state) => state.markAsSaved)
 
   const saveRule = useCallback(async (
     ruleId: string,
@@ -174,26 +165,16 @@ export function useRuleSaveCoordinator() {
     options?: Partial<SaveOptions>
   ): Promise<boolean> => {
     try {
-      console.log('🔍 [useRuleSaveCoordinator] Save request with unified state:', {
+      console.log('🔍 [SimplifiedRuleSave] Save request:', {
         ruleId,
         context: options?.context || 'manual',
         hasSourceCode: ruleState.sourceCode !== undefined,
-        sourceCodeValue: ruleState.sourceCode,
         sourceCodeLength: ruleState.sourceCode?.length || 0,
-        skipIfClean: options?.skipIfClean,
         timestamp: new Date().toISOString()
       })
 
-      // 🚀 ENTERPRISE FIX: Get the LATEST source code from unified state
-      const latestSourceCode = getSourceCode(ruleId)
-      const latestPythonCode = getPythonCode(ruleId)
-      
-      // 🚀 CRITICAL: Use the latest source code from the state manager, not the passed state
-      const enhancedRuleState = {
-        ...ruleState,
-        ...(latestSourceCode ? { sourceCode: latestSourceCode } : {}),
-        ...(latestPythonCode ? { pythonCode: latestPythonCode } : {})
-      }
+      // Use the rule state directly - no complex state merging
+      const finalRuleState = ruleState
 
       // Prevent concurrent saves for the same rule
       const saveKey = `${ruleId}-${options?.context || 'manual'}`
@@ -203,15 +184,15 @@ export function useRuleSaveCoordinator() {
       }
 
       // Skip if no changes and not forced
-      if (options?.skipIfClean && !hasChanges(ruleId, enhancedRuleState)) {
-        console.log(`⏭️ [RuleSaveCoordinator] No changes detected, skipping save`)
+      if (options?.skipIfClean && !hasChanges(ruleId, finalRuleState)) {
+        console.log(`⏭️ [SimplifiedRuleSave] No changes detected, skipping save`)
         return true
       }
 
       // Build payload
       const payload = {
         id: ruleId,
-        ...buildSafeUpdatePayload(enhancedRuleState)
+        ...buildSafeUpdatePayload(finalRuleState)
       }
 
       console.log('🔍 [RuleSaveCoordinator] Executing action request:', {
@@ -241,12 +222,7 @@ export function useRuleSaveCoordinator() {
 
       // Update last saved state
       if (result.success) {
-        // 🚀 ENTERPRISE: Mark as saved in unified state
-        if (enhancedRuleState.sourceCode) {
-          markAsSaved(ruleId, enhancedRuleState.sourceCode)
-        }
-        
-        lastSavedStates.set(ruleId, { ...enhancedRuleState, id: ruleId })
+        lastSavedStates.set(ruleId, { ...finalRuleState, id: ruleId })
       }
 
       // Clean up
@@ -263,7 +239,7 @@ export function useRuleSaveCoordinator() {
 
       return false
     }
-  }, [updateRuleMutation, getSourceCode, getPythonCode, markAsSaved])
+  }, [updateRuleMutation])
 
   const saveOnTabSwitch = useCallback(async (ruleId: string, ruleState: RuleState): Promise<boolean> => {
     return saveRule(ruleId, ruleState, {
