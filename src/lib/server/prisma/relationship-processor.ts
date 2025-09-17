@@ -18,13 +18,24 @@ export function processRelationships(
       continue;
     }
 
+    // Skip null/undefined payloads entirely
+    if (relationPayload == null) {
+      continue;
+    }
+
     // Convert relationship payload to Prisma syntax based on relationship type
+    let converted: Record<string, any> = {};
     if (relationConfig.type === 'many-to-many') {
-      relationshipData[relationName] = processManyToManyRelation(relationPayload, relationConfig);
+      converted = processManyToManyRelation(relationPayload, relationConfig);
     } else if (relationConfig.type === 'one-to-many') {
-      relationshipData[relationName] = processOneToManyRelation(relationPayload, relationConfig);
+      converted = processOneToManyRelation(relationPayload, relationConfig);
     } else if (relationConfig.type === 'one-to-one') {
-      relationshipData[relationName] = processOneToOneRelation(relationPayload, relationConfig);
+      converted = processOneToOneRelation(relationPayload, relationConfig);
+    }
+
+    // Only include relationships that produce actual nested write operations
+    if (converted && Object.keys(converted).length > 0) {
+      relationshipData[relationName] = converted;
     }
   }
 
@@ -36,6 +47,10 @@ export function processRelationships(
  */
 function processManyToManyRelation(payload: any, config: any): any {
   const result: any = {};
+
+  if (payload == null) {
+    return result;
+  }
 
   if (payload.connect && Array.isArray(payload.connect)) {
     // Connect existing records with optional junction attributes
@@ -87,6 +102,10 @@ function processManyToManyRelation(payload: any, config: any): any {
 function processOneToManyRelation(payload: any, config: any): any {
   const result: any = {};
 
+  if (payload == null) {
+    return result;
+  }
+
   if (payload.connect && Array.isArray(payload.connect)) {
     result.connect = payload.connect.map((id: string) => ({ id }));
   }
@@ -114,6 +133,10 @@ function processOneToManyRelation(payload: any, config: any): any {
  */
 function processOneToOneRelation(payload: any, config: any): any {
   const result: any = {};
+
+  if (payload == null) {
+    return result;
+  }
 
   if (payload.connect && payload.connect.id) {
     result.connect = { id: payload.connect.id };

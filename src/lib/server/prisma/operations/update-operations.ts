@@ -160,6 +160,25 @@ export class UpdateOperationsService {
       }
     });
 
+    // 2b) Map one-to-one foreign key scalars (e.g., ruleId) to nested relation connects
+    Object.entries(relationshipConfig).forEach(([relationName, cfg]) => {
+      if (cfg?.type === 'one-to-one' && cfg?.foreignKey) {
+        const fk = cfg.foreignKey as string;
+        const fkValue = scalarUpdates[fk];
+        if (typeof fkValue === 'string' && fkValue.length > 0) {
+          relationshipUpdates[relationName] = { connect: { id: fkValue } };
+          delete scalarUpdates[fk];
+        }
+      }
+    });
+
+    // 2c) Remove null scalar fields to avoid violating non-null Prisma columns
+    Object.keys(scalarUpdates).forEach((k) => {
+      if (scalarUpdates[k] === null) {
+        delete scalarUpdates[k];
+      }
+    });
+
     // 3) Convert only relationship updates into Prisma nested writes
     const relationshipWrites = processRelationships(relationshipUpdates, relationshipConfig);
 
