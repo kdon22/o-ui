@@ -1,6 +1,17 @@
 # Auto-Table Component Documentation
 
-**Complete schema-driven table system with inline forms and advanced table features**
+This document is now split for maintainability. Start here, then drill into focused pages under `docs/auto-generated/table/`.
+
+Updated docs:
+- Overview: `docs/auto-generated/table/overview.md`
+- API (Props & Types): `docs/auto-generated/table/api.md`
+- Data & Filters: `docs/auto-generated/table/data-and-filters.md`
+- Mutations & Row Actions: `docs/auto-generated/table/mutations-and-actions.md`
+- Inline Form: `docs/auto-generated/table/inline-form.md`
+- Context Menu: `docs/auto-generated/table/context-menu.md`
+- Branching & Change History: `docs/auto-generated/table/branching-and-history.md`
+
+— Legacy guide below —
 
 ## Table of Contents
 

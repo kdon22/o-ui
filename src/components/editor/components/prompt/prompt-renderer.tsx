@@ -40,6 +40,34 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
   // State management with stable initial value
   const [formData, setFormData] = useState<Record<string, any>>(() => ({ ...data }));
 
+  // Initialize defaults for select/radio (isDefault) if not already set
+  React.useEffect(() => {
+    const defaults: Record<string, any> = {};
+    layout.items?.forEach(item => {
+      const id = item.config?.componentId || item.id;
+      if (!id) return;
+      if (formData[id] !== undefined && formData[id] !== null && formData[id] !== '') return;
+      if ((item.type === 'select' || item.type === 'radio') && Array.isArray(item.config?.options)) {
+        const def = item.config.options.find(o => o.isDefault)?.value;
+        if (def !== undefined && def !== null && def !== '') {
+          defaults[id] = def;
+        }
+      }
+    });
+    if (Object.keys(defaults).length) {
+      setFormData(prev => ({ ...prev, ...defaults }));
+      if (onChange) {
+        const dataWithValidation = {
+          ...formData,
+          ...defaults,
+          __validation: validation
+        };
+        setTimeout(() => onChange(dataWithValidation), 0);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout.items]);
+
   // Memoized radio groups mapping
   const radioGroups = useMemo(() => {
     const groups: Record<string, string[]> = {};
@@ -92,11 +120,10 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
       // Notify parent with validation included
       if (onChange) {
         const dataWithValidation = {
-          ...newData,
+          ...{ [id]: value },
           __validation: validation
         };
-        // Use setTimeout to prevent render loops
-        setTimeout(() => onChange(dataWithValidation), 0);
+        onChange(dataWithValidation);
       }
       
       return newData;

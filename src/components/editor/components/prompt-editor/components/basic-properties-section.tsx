@@ -30,15 +30,13 @@ export function BasicPropertiesSection({
         />
       )}
 
-      {config.componentId && (
-        <TextField
-          id="componentId"
-          label="Component ID"
-          value={config.componentId}
-          onChange={(value) => onConfigChange('componentId', value)}
-          className="h-8 text-sm font-mono"
-        />
-      )}
+      <TextField
+        id="componentId"
+        label="Component ID"
+        value={config.componentId || ''}
+        onChange={(value) => onConfigChange('componentId', value)}
+        className="h-8 text-sm font-mono"
+      />
 
       {(type === 'text-input' || type === 'select') && (
         <TextField

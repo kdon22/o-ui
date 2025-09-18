@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, context: RouteParams) {
       id: execution.id,
       status: execution.status as PromptExecutionData['status'],
       inputData: execution.inputData as Record<string, any> || {},
-      responseData: execution.responseData as Record<string, any> || {},
+      responseData: execution.responseData as any || {},
       executionUrl: execution.executionUrl || undefined,
       startedAt: execution.startedAt?.toISOString(),
       completedAt: execution.completedAt?.toISOString(),
@@ -74,6 +74,8 @@ export async function POST(request: NextRequest, context: RouteParams) {
   try {
     const { executionId } = await context.params;
     const body: SubmitExecutionRequest = await request.json();
+    // Debug: server-side log of received payload
+    console.log('[API] /prompt/executions POST payload:', JSON.stringify(body)?.slice(0, 2000));
 
     const execution = await prisma.promptExecution.findUnique({
       where: { id: executionId }

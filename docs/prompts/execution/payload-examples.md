@@ -246,6 +246,113 @@ POST /api/prompt/executions/cm4x8y9z1000xyz789ghi012
 }
 ```
 
+### Normalized Entries (SDK Response Example)
+
+The Python SDK (and client helpers) normalize prompt results into an entries array (one per prompt) with `fields[]` and a flat `values{}` map. This is an example of the response you read in Python after completion, not the POST body.
+
+```json
+[
+  {
+      "prompt": "pr1",
+      "executionId": "cmfpm75730001c59cmpssc5nw",
+      "status": "COMPLETED",
+      "submittedAt": "2025-09-18T16:18:18.539Z",
+      "error": "None",
+      "fields": [
+        {
+          "id": "comp_1758195855879_fzzk59vmm",
+          "text": "Reason for decling hotel",
+          "type": "label",
+          "label": "Reason for decling hotel",
+          "errors": [],
+          "isRequired": false,
+          "isAnswerable": false
+        },
+        {
+          "id": "decline_text",
+          "type": "text-input",
+          "label": "Reason for Decline",
+          "value": "lkdjdflasjkdk",
+          "errors": [],
+          "isAnswered": true,
+          "isRequired": false
+        },
+        {
+          "id": "no_car_select",
+          "type": "select",
+          "label": "Select Option",
+          "value": "Busy",
+          "errors": [],
+          "options": [
+            { "id": "Busy", "label": "I'm Busy" },
+            { "id": "Ride", "label": "I have a ride" },
+            { "id": "License", "label": "No License" }
+          ],
+          "isAnswered": true,
+          "isRequired": false,
+          "displayText": "I'm Busy"
+        },
+        {
+          "id": "test_radio",
+          "type": "radio",
+          "label": "Radio Option",
+          "value": "opt2",
+          "errors": [],
+          "options": [
+            { "id": "opt1", "label": "test1" },
+            { "id": "opt2", "label": "test2" },
+            { "id": "opt3", "label": "test3" }
+          ],
+          "isAnswered": true,
+          "isRequired": false,
+          "displayText": "test2"
+        },
+        {
+          "id": "later_check",
+          "type": "checkbox",
+          "label": "Checkbox",
+          "value": true,
+          "errors": [],
+          "isAnswered": true,
+          "isRequired": false
+        },
+        {
+          "id": "comp_1758200559559_fisyl4834",
+          "type": "divider",
+          "label": "Divider",
+          "errors": [],
+          "isRequired": false,
+          "isAnswerable": false
+        },
+        {
+          "id": "comp_1758200720818_9mx8qey2x",
+          "text": "why no car?",
+          "type": "label",
+          "label": "why no car?",
+          "errors": [],
+          "isRequired": false,
+          "isAnswerable": false
+        },
+        {
+          "id": "comp_1758200792318_voh6kpmls",
+          "text": "Do they need one later?",
+          "type": "label",
+          "label": "Do they need one later?",
+          "errors": [],
+          "isRequired": false,
+          "isAnswerable": false
+        }
+      ],
+      "values": {
+        "test_radio": "opt2",
+        "later_check": true,
+        "decline_text": "lkdjdflasjkdk",
+        "no_car_select": "Busy"
+      }
+  }
+]
+```
+
 ## 🎨 **Layout Examples**
 
 ### Insurance Quote Form Layout

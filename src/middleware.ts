@@ -41,7 +41,6 @@ export const config = {
     '/nodes/:path*',
     '/rules/:path*',
     '/classes/:path*',
-    '/prompt/execute/:path*',
     '/marketplace/:path*',
     '/test-parser',
     '/test-typescript-completion',

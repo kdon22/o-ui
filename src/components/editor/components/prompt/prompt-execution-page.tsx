@@ -63,24 +63,131 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
 
   // Handle form data changes
   const handleFormChange = (data: PromptFormData) => {
-    setFormData(data);
+    // Merge incoming prompt data into the aggregate formData (support multiple prompts)
+    const { __validation, ...rest } = data || {};
+    setFormData(prev => ({ ...prev, ...rest }));
+    try {
+      // Debug: log each change with current values snapshot
+      const dbg = { ...rest } as Record<string, any>;
+      if ('__validation' in dbg) delete (dbg as any).__validation;
+      // eslint-disable-next-line no-console
+      console.log('[Prompt] onChange data:', dbg);
+    } catch {}
     
     // Simple validation - check if required fields are filled
-    const validation = data.__validation;
+    const validation = __validation;
     setIsFormValid(!validation?.missingRequired?.length);
   };
+
+  // Ensure defaults are saved into formData if not present (select/radio isDefault, checkbox default false)
+  useEffect(() => {
+    if (!execution?.prompts?.length) return;
+    const next: Record<string, any> = { ...formData };
+    let changed = false;
+    execution.prompts.forEach((p) => {
+      const items = (p.layout?.items || []) as Array<any>;
+      items.forEach((item) => {
+        const id = item?.config?.componentId || item?.id;
+        if (!id) return;
+        const type = item?.type as string;
+        if (next[id] !== undefined) return;
+        if (type === 'checkbox') {
+          next[id] = false; changed = true;
+        } else if (type === 'select' || type === 'radio') {
+          const def = item?.config?.options?.find((o: any) => o.isDefault)?.value;
+          if (def !== undefined && def !== null && def !== '') { next[id] = def; changed = true; }
+        }
+      });
+    });
+    if (changed) {
+      setFormData(prev => ({ ...prev, ...next }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [execution?.prompts]);
 
   // Handle form submission
   const handleSubmit = () => {
     if (!isFormValid || !execution) return;
     
     // Clean the form data before submitting
-    const cleanedData = { ...formData };
+    const cleanedData = { ...formData } as Record<string, any>;
+    const validation = cleanedData.__validation;
     if ('__validation' in cleanedData) {
       delete cleanedData.__validation;
     }
-    
-    submitMutation.mutate(cleanedData);
+    // eslint-disable-next-line no-console
+    console.log('[Prompt] handleSubmit cleanedData:', cleanedData);
+
+    // Build structured response with fields + flat values map per prompt (no summary)
+    const submittedAt = new Date().toISOString();
+    const responsePayload = execution.prompts.map((prompt) => {
+      const items = (prompt.layout?.items || []) as Array<any>;
+
+      const fields = items.map((item) => {
+        const id = item?.config?.componentId || item?.id;
+        const type = item?.type as string;
+        const label = item?.config?.label || item?.label || '';
+        const isRequired = Boolean(item?.config?.required);
+        const errorMsg = validation?.errors?.[id];
+        const base = {
+          id,
+          type,
+          label,
+          isRequired,
+          errors: errorMsg ? [errorMsg] : [],
+        } as any;
+
+        switch (type) {
+          case 'label':
+            return { ...base, text: label, isAnswerable: false };
+          case 'divider':
+            return { ...base, label: 'Divider', isAnswerable: false };
+          case 'text-input': {
+            const value = cleanedData[id] ?? '';
+            return { ...base, value, isAnswered: value !== '' };
+          }
+          case 'select': {
+            const options = (item?.config?.options || []).map((o: any) => ({ id: o.value, label: o.label }));
+            const value = cleanedData[id] ?? '';
+            const selected = options.find((o: any) => o.id === value);
+            return { ...base, options, value, displayText: selected?.label, isAnswered: value !== '' };
+          }
+          case 'radio': {
+            const options = (item?.config?.options || []).map((o: any) => ({ id: o.value, label: o.label }));
+            const value = cleanedData[id] ?? '';
+            const selected = options.find((o: any) => o.id === value);
+            return { ...base, options, value, displayText: selected?.label, isAnswered: value !== '' };
+          }
+          case 'checkbox': {
+            const value = cleanedData[id] === true;
+            return { ...base, value, isAnswered: cleanedData[id] !== undefined };
+          }
+          default:
+            return base;
+        }
+      });
+
+      // Values map: id -> raw submitted value (answerable fields only)
+      const values = fields.reduce((acc: Record<string, any>, f: any) => {
+        if (f.isAnswerable === false) return acc;
+        acc[f.id] = f.value;
+        return acc;
+      }, {} as Record<string, any>);
+      // eslint-disable-next-line no-console
+      console.log(`[Prompt] built values for ${prompt.promptName}:`, values);
+
+      return {
+        prompt: prompt.promptName,
+        executionId: execution.id,
+        status: 'COMPLETED',
+        submittedAt,
+        error: null,
+        fields,
+        values
+      };
+    });
+
+    submitMutation.mutate(responsePayload as unknown as Record<string, any>);
   };
 
   // Loading state (if we had initialData, this branch typically won't run)

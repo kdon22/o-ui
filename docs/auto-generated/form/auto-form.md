@@ -1,6 +1,17 @@
 # AutoForm Component Documentation
 
-**Complete schema-driven form system with optimistic updates and action integration**
+This document is now split for maintainability. Start here, then drill into focused pages under `docs/auto-generated/form/`.
+
+Updated docs:
+- Overview: `docs/auto-generated/form/overview.md`
+- API (Props & Utilities): `docs/auto-generated/form/api.md`
+- Validation & Layout: `docs/auto-generated/form/validation-and-layout.md`
+- Fields & Rendering: `docs/auto-generated/form/fields.md`
+- Context & Defaults: `docs/auto-generated/form/context-and-defaults.md`
+- Submission & Actions: `docs/auto-generated/form/submission-and-actions.md`
+- Debugging: `docs/auto-generated/form/debugging.md`
+
+— Legacy guide below —
 
 ## Table of Contents
 
@@ -1741,23 +1752,7 @@ function RobustForm() {
 
 ## API Reference
 
-### AutoForm Component
-
-```typescript
-interface AutoFormProps {
-  schema: ResourceSchema;
-  mode: 'create' | 'edit';
-  initialData?: Record<string, any>;
-  onSubmit: (data: Record<string, any>) => Promise<void>;
-  onCancel: () => void;
-  isLoading?: boolean;
-  className?: string;
-  onValuesChange?: (values: Record<string, any>) => void;
-  // NEW: Context-aware auto-population
-  navigationContext?: { nodeId?: string; parentId?: string; selectedId?: string };
-  componentContext?: { parentData?: any; contextId?: string };
-}
-```
+For the up-to-date API and utilities, see `docs/auto-generated/form/api.md`.
 
 ### ResourceSchema Interface
 
