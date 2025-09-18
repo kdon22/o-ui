@@ -30,6 +30,8 @@ export function CanvasEditor({
   onComponentDoubleClick
 }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
+  const isResizingRef = useRef(false)
+  const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null)
 
   // Generate unique ID for new components
   const generateId = () => `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -423,6 +425,32 @@ export function CanvasEditor({
   const canvasWidth = layout.canvasWidth || 960
   const canvasHeight = layout.canvasHeight || 615
 
+  // Resize handle interactions
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isResizingRef.current = true
+    resizeStartRef.current = { x: e.clientX, y: e.clientY, w: canvasWidth, h: canvasHeight }
+
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizingRef.current || !resizeStartRef.current) return
+      const dx = ev.clientX - resizeStartRef.current.x
+      const dy = ev.clientY - resizeStartRef.current.y
+      const newW = Math.max(200, Math.round(resizeStartRef.current.w + dx))
+      const newH = Math.max(200, Math.round(resizeStartRef.current.h + dy))
+      onLayoutChange({ ...layout, canvasWidth: newW, canvasHeight: newH })
+    }
+
+    const onUp = () => {
+      isResizingRef.current = false
+      resizeStartRef.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Canvas Header */}
@@ -435,6 +463,50 @@ export function CanvasEditor({
           <Badge variant="outline" className="text-xs">
             {layout.items.length} components
           </Badge>
+          {/* Canvas size spinners */}
+          <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
+            <span className="text-xs text-gray-500 font-medium">Size:</span>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="canvas-width" className="text-xs text-gray-500">W</Label>
+              <Input
+                id="canvas-width"
+                type="number"
+                inputMode="numeric"
+                value={canvasWidth}
+                min={200}
+                max={1600}
+                step={1}
+                onChange={(e) => {
+                  const val = Math.max(200, Math.min(1600, parseInt(e.target.value || '0') || 0))
+                  onLayoutChange({ ...layout, canvasWidth: val })
+                }}
+                className="h-6 w-20 text-xs px-1 border-gray-300 focus:border-gray-300 focus:ring-0"
+                autoComplete="off"
+                spellCheck={false}
+                showSuccessIndicator={false}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="canvas-height" className="text-xs text-gray-500">H</Label>
+              <Input
+                id="canvas-height"
+                type="number"
+                inputMode="numeric"
+                value={canvasHeight}
+                min={200}
+                max={1600}
+                step={1}
+                onChange={(e) => {
+                  const val = Math.max(200, Math.min(1600, parseInt(e.target.value || '0') || 0))
+                  onLayoutChange({ ...layout, canvasHeight: val })
+                }}
+                className="h-6 w-20 text-xs px-1 border-gray-300 focus:border-gray-300 focus:ring-0"
+                autoComplete="off"
+                spellCheck={false}
+                showSuccessIndicator={false}
+              />
+            </div>
+          </div>
           
           {/* Canvas Position Controls - Only show when component is selected */}
           {selectedComponent && (
@@ -488,7 +560,8 @@ export function CanvasEditor({
           style={{
             width: `${canvasWidth}px`,
             height: `${canvasHeight}px`,
-            maxWidth: '100%'
+            maxWidth: '100%',
+            overflow: 'hidden'
           }}
           onDrop={(e) => {
             // Handle component moving first (higher priority)
@@ -512,6 +585,22 @@ export function CanvasEditor({
           ) : (
             layout.items.map(renderComponent)
           )}
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={onResizeMouseDown}
+            className="absolute"
+            style={{
+              right: '-6px',
+              bottom: '-6px',
+              width: '14px',
+              height: '14px',
+              cursor: 'nwse-resize',
+              background: 'linear-gradient(135deg, transparent 0 50%, #9ca3af 50% 100%)',
+              borderRadius: '2px'
+            }}
+            aria-label="Resize canvas"
+          />
         </div>
       </div>
     </div>
