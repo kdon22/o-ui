@@ -14,7 +14,6 @@ export interface ComponentConfig {
   placeholder?: string
   size?: 'sm' | 'md' | 'lg'
   color?: string
-  isDisabled?: boolean
   backgroundColor?: string
   borderColor?: string
   borderWidth?: number

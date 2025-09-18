@@ -38,10 +38,10 @@ export function CanvasEditor({
   const getDefaultConfig = (type: string) => {
     const configs = {
       label: { label: 'Label Text', fontSize: 12, textColor: '#374151' },
-      'text-input': { label: 'Text Input', placeholder: 'Enter text...', width: 150, height: 32 },
-      select: { label: 'Select Option', options: [{ label: 'Option 1', value: 'opt1' }], width: 150 },
+      'text-input': { placeholder: 'Enter text...', width: 150, height: 32 },
+      select: { options: [{ label: 'Option 1', value: 'opt1' }], width: 150 },
       radio: { label: 'Radio Option', options: [{ label: 'Option 1', value: 'opt1', isDefault: true }] },
-      checkbox: { label: 'Checkbox', defaultChecked: false },
+      checkbox: { defaultChecked: false },
       button: { label: 'Button', color: '#3b82f6', backgroundColor: '#3b82f6' }
     }
     return configs[type as keyof typeof configs] || { label: 'Component' }
@@ -257,7 +257,7 @@ export function CanvasEditor({
                 padding: '4px 8px'
               }}
             >
-              <option>{config.label || 'Select option...'}</option>
+              <option>{config.placeholder || 'Select option...'}</option>
             </select>
           </div>
         )
@@ -285,7 +285,7 @@ export function CanvasEditor({
                 borderRadius: '50%'
               }}
             />
-            <span className="text-xs">{config.label || component.label}</span>
+            {/* Checkbox has no visible label in canvas preview */}
           </div>
         )
 
@@ -312,7 +312,7 @@ export function CanvasEditor({
                 borderRadius: config.borderRadius ? `${config.borderRadius}px` : '2px'
               }}
             />
-            <span className="text-xs">{config.label || component.label}</span>
+            {/* No label text for checkbox in canvas preview */}
           </div>
         )
 

@@ -19,13 +19,16 @@ export function BasicPropertiesSection({
         Basic Properties
       </h4>
 
-      <TextField
-        id="label"
-        label="Label"
-        value={config.label || ''}
-        placeholder="Component label"
-        onChange={(value) => onConfigChange('label', value)}
-      />
+      {/* Label text: show only for 'label'. Hidden for inputs/select/checkbox. */}
+      {type === 'label' && (
+        <TextField
+          id="label"
+          label="Label"
+          value={config.label || ''}
+          placeholder="Component label"
+          onChange={(value) => onConfigChange('label', value)}
+        />
+      )}
 
       {config.componentId && (
         <TextField
@@ -47,19 +50,15 @@ export function BasicPropertiesSection({
         />
       )}
 
-      <SwitchField
-        id="required"
-        label="Required"
-        checked={config.required || false}
-        onChange={(checked) => onConfigChange('required', checked)}
-      />
-
-      <SwitchField
-        id="disabled"
-        label="Disabled"
-        checked={config.isDisabled || false}
-        onChange={(checked) => onConfigChange('isDisabled', checked)}
-      />
+      {/* Required switch: only for input-like components; not for 'label' or 'button' */}
+      {(type === 'text-input' || type === 'select' || type === 'radio' || type === 'checkbox') && (
+        <SwitchField
+          id="required"
+          label="Required"
+          checked={config.required || false}
+          onChange={(checked) => onConfigChange('required', checked)}
+        />
+      )}
     </div>
   )
 } 
