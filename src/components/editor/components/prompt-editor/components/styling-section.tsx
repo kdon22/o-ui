@@ -15,7 +15,7 @@ const STYLING_OPTIONS = {
   'text-input': { useFont: true, useBackground: true, useBorder: true },
   'select': { useFont: true, useBackground: true, useBorder: true },
   'checkbox': { useBackground: true, useBorder: true },
-  'radio': { useBackground: true, useBorder: true },
+  'radio': { useBackground: true, useBorder: true, useLabelPosition: true },
   'label': { useFont: true },
   'button': { useFont: true, useBackground: true, useBorder: true }
 }
@@ -104,6 +104,27 @@ export function StylingSection({
                 onChange={(value) => onConfigChange('backgroundColor', value)}
                 defaultValue="#ffffff"
               />
+            </div>
+          )}
+
+          {/* Radio specific: label position */}
+          {'useLabelPosition' in options && (options as any).useLabelPosition && (
+            <div className="space-y-2">
+              <h5 className="text-xs font-medium text-gray-600 uppercase tracking-wide">Radio Layout</h5>
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500">Label Position</label>
+                <Select onValueChange={(value) => onConfigChange('labelPosition', value)} defaultValue={config.labelPosition || 'right'}>
+                  <SelectTrigger className="w-full h-8 text-sm border border-gray-300 rounded px-2">
+                    <SelectValue placeholder="Select position" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Left</SelectItem>
+                    <SelectItem value="right">Right</SelectItem>
+                    <SelectItem value="top">Above</SelectItem>
+                    <SelectItem value="bottom">Below</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 

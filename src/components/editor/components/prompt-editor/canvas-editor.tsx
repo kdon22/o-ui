@@ -40,7 +40,7 @@ export function CanvasEditor({
       label: { label: 'Label Text', fontSize: 12, textColor: '#374151' },
       'text-input': { placeholder: 'Enter text...', width: 150, height: 32 },
       select: { options: [{ label: 'Option 1', value: 'opt1' }], width: 150 },
-      radio: { label: 'Radio Option', options: [{ label: 'Option 1', value: 'opt1', isDefault: true }] },
+      radio: { label: 'Radio Option', labelPosition: 'right' as const, options: [{ label: 'Option 1', value: 'opt1', isDefault: true }] },
       checkbox: { defaultChecked: false },
       button: { label: 'Button', color: '#3b82f6', backgroundColor: '#3b82f6' }
     }
@@ -267,25 +267,60 @@ export function CanvasEditor({
           <div
             key={component.id}
             style={baseStyle}
-            className={`flex items-center gap-1.5 ${selectionStyle} px-1.5 py-0.5 rounded`}
+            className={`flex flex-col gap-1.5 ${selectionStyle} px-1.5 py-0.5 rounded`}
             onClick={(e) => handleComponentClick(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
             draggable
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
-            <input 
-              type="radio" 
-              disabled 
-              className="pointer-events-none"
-              style={{
-                width: '16px',
-                height: '16px',
-                backgroundColor: config.backgroundColor || 'transparent',
-                border: `${config.borderWidth || 1}px ${config.borderStyle || 'solid'} ${config.borderColor || '#d1d5db'}`,
-                borderRadius: '50%'
-              }}
-            />
-            {/* Checkbox has no visible label in canvas preview */}
+            {(config.options || [{ label: 'Option 1', value: 'opt1' }]).map((opt: any, idx: number) => {
+              const position = (config.labelPosition || 'right') as 'left' | 'right' | 'top' | 'bottom'
+              const isHorizontal = position === 'left' || position === 'right'
+              const first = idx === 0
+              return (
+                <div
+                  key={idx}
+                  className={`${isHorizontal ? 'flex items-center gap-2' : 'flex flex-col'} ${first ? '' : 'mt-0.5'}`}
+                >
+                  {(position === 'left' || position === 'top') && (
+                    <span
+                      className="text-[12px] text-gray-700"
+                      style={{
+                        fontSize: config.fontSize ? `${config.fontSize}px` : '12px',
+                        color: config.textColor || '#374151',
+                        fontWeight: config.fontWeight || 'normal'
+                      }}
+                    >
+                      {opt.label}
+                    </span>
+                  )}
+                  <input 
+                    type="radio" 
+                    disabled 
+                    className="pointer-events-none"
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      backgroundColor: config.backgroundColor || 'transparent',
+                      border: `${config.borderWidth || 1}px ${config.borderStyle || 'solid'} ${config.borderColor || '#d1d5db'}`,
+                      borderRadius: '50%'
+                    }}
+                  />
+                  {(position === 'right' || position === 'bottom') && (
+                    <span
+                      className="text-[12px] text-gray-700"
+                      style={{
+                        fontSize: config.fontSize ? `${config.fontSize}px` : '12px',
+                        color: config.textColor || '#374151',
+                        fontWeight: config.fontWeight || 'normal'
+                      }}
+                    >
+                      {opt.label}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )
 
