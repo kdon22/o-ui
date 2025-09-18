@@ -32,6 +32,8 @@ export function CanvasEditor({
   const canvasRef = useRef<HTMLDivElement>(null)
   const isResizingRef = useRef(false)
   const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null)
+  const isGroupDraggingRef = useRef(false)
+  const groupDragStartRef = useRef<{ startX: number, startY: number, positions: Record<string, { x: number, y: number }> } | null>(null)
 
   // Generate unique ID for new components
   const generateId = () => `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -134,6 +136,52 @@ export function CanvasEditor({
     }))
   }
 
+  // Multi-select drag (custom mouse drag when >1 selected)
+  const handleGroupMouseDown = (e: React.MouseEvent, component: ComponentItem) => {
+    if (!selectedIds?.includes(component.id) || (selectedIds?.length || 0) < 2) return
+    e.preventDefault()
+
+    const positions: Record<string, { x: number, y: number }> = {}
+    layout.items.forEach(it => {
+      if (selectedIds.includes(it.id)) {
+        positions[it.id] = { x: it.x, y: it.y }
+      }
+    })
+
+    isGroupDraggingRef.current = true
+    groupDragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      positions
+    }
+
+    const onMove = (ev: MouseEvent) => {
+      if (!isGroupDraggingRef.current || !groupDragStartRef.current) return
+      const dx = ev.clientX - groupDragStartRef.current.startX
+      const dy = ev.clientY - groupDragStartRef.current.startY
+
+      const updated = layout.items.map(it => {
+        if (!selectedIds.includes(it.id)) return it
+        const startPos = groupDragStartRef.current!.positions[it.id]
+        const newX = Math.max(0, Math.round(startPos.x + dx))
+        const newY = Math.max(0, Math.round(startPos.y + dy))
+        return { ...it, x: newX, y: newY }
+      })
+
+      onLayoutChange({ ...layout, items: updated })
+    }
+
+    const onUp = () => {
+      isGroupDraggingRef.current = false
+      groupDragStartRef.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   const handleComponentDrop = (e: React.DragEvent) => {
     e.preventDefault()
     
@@ -187,8 +235,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`px-1 py-0.5 rounded ${selectionStyle}`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <span
@@ -210,8 +259,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`${selectionStyle}`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <input
@@ -241,8 +291,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`${selectionStyle}`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <select
@@ -272,8 +323,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`flex flex-col gap-1.5 ${selectionStyle} px-1.5 py-0.5 rounded`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             {(config.options || [{ label: 'Option 1', value: 'opt1' }]).map((opt: any, idx: number) => {
@@ -334,8 +386,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`flex items-center gap-1.5 ${selectionStyle} px-1.5 py-0.5 rounded`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <input 
@@ -361,8 +414,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`${selectionStyle}`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <button
@@ -392,8 +446,9 @@ export function CanvasEditor({
             style={baseStyle}
             className={`px-1 ${selectionStyle}`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <div
@@ -413,6 +468,7 @@ export function CanvasEditor({
             style={baseStyle}
             className={`px-3 py-2 bg-gray-100 border border-gray-300 rounded ${selectionStyle}`}
             onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
           >
             {type}
