@@ -1,4 +1,4 @@
-cl# Monaco Business Rules Editor - Scalable Architecture
+# Monaco Business Rules Editor - Scalable Architecture
 
 ## 📁 **FILE STRUCTURE** (All files < 300 lines)
 
@@ -137,3 +137,14 @@ Variable Detection Flow:
 3. Auto-suggested with property access
 
 This architecture supports **unlimited growth** while maintaining **clean, focused files**. 
+
+## See also
+
+- Code completion system
+  - `../editor/code-completion/architecture.md`
+  - `../editor/code-completion/schemas-and-methods.md`
+  - `../editor/code-completion/schema-architecture.md`
+  - `../editor/code-completion/type-inference.md`
+  - `../editor/code-completion/python-generation.md`
+  - `../editor/code-completion/extension-guide.md`
+  - `../editor/code-completion/troubleshooting.md`

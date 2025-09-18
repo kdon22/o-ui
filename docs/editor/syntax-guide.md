@@ -63,10 +63,10 @@ else
   message = "Other"
 ```
 
-- While
+- While with a max-loop guard (prevents infinite loops)
 ```
-while isActive
-  count = count + 1
+while items.count < 100 | maxloop 1000
+  # Loop body
 ```
 
 - For (over arrays or collections)
@@ -74,6 +74,18 @@ while isActive
 for passenger in booking.passengers
   if passenger.age >= 65
     passenger.requiresAssistance = true
+```
+
+- Any / All over collections
+```
+# If any item in a collection matches a condition
+if any airSeg in utr.airSegments has airSeg.carrier = "AC"
+  if airSeg.flightNumber = "1234"
+    newVal = true
+
+# If all items in a collection match a condition
+if all passenger in booking.passengers has passenger.age >= 18
+  adultsOnly = true
 ```
 
 - Switch
@@ -103,6 +115,9 @@ class Booking {
   passengers = <Passenger>
 }
 
+Note:
+- `<Passenger>` means "a list of Passenger objects". Use `<Type>` to declare a collection of that type.
+
 class Passenger {
   name = string
   age = number
@@ -114,7 +129,7 @@ class Passenger {
 ```
 interface HttpResponse {
   statusCode = number
-  error = string | null
+  error = string
   response = object
 }
 
@@ -169,6 +184,26 @@ parsedDate = date.parse(value: "2024-01-15")
 timestamp = parsedDate.timestamp
 formatted = parsedDate.formatted
 ```
+
+### Regex matching and groups
+- Use `string.match(/regex/)` in an `if` to test. If the pattern contains named groups using `(?<name>...)`, those groups are bound as local variables inside the block; otherwise, no groups are created.
+
+```
+# Binds named groups as local variables within the block
+if air.match(/(?<num1>\d+)(?<word>[A-Z])+/)
+  if num1 = "9"
+    flagged = true
+
+# Boolean-only test (no named groups → no variables bound)
+if air.match(/AC\d{3,4}/)
+  isAC = true
+```
+
+Notes:
+- Groups are strings. Convert if needed (e.g., `num1.toInt()`).
+- If there is no match, the block doesn’t run and no variables are created.
+- Repeated groups (e.g., `(...)+`) expose the last captured value.
+- If no `(?<name>...)` is present, `match` behaves as a boolean test only.
 
 ## 9) Embedded SQL Queries & Results
 The editor supports SELECT queries embedded in assignments. Completion covers tables and columns from your configured data tables.

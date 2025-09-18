@@ -66,6 +66,36 @@ export const STRING_UTILITY_METHODS: UnifiedSchema[] = [
   },
 
   {
+    id: 'string-match',
+    name: 'match',
+    type: 'method',
+    category: 'string',
+    returnType: 'object',
+    description: 'Tests string against a regex literal and exposes named groups within the block. If no named groups present, acts as boolean test only.',
+    examples: [
+      'if air.match(/(?<num1>\\d+)(?<word>[A-Z])+/)',
+      '  if num1 = "9"\n    flagged = true',
+      'if air.match(/AC\\d{3,4}/)\n  isAC = true'
+    ],
+    snippetTemplate: 'match(/${1:pattern}/${2:i})',
+    parameters: [
+      { name: 'regex', type: 'string', required: true }
+    ],
+    debugInfo: {
+      helperFunction: 'regex_match',
+      complexity: 'multi-line'
+    },
+    pythonGenerator: (variable: string, resultVar: string = 'result', params: any) => {
+      const raw = params?.regex || params?.arg1 || '/.*/'
+      const match = String(raw).match(/^\/(.*)\/([gimsyu]*)$/)
+      const pattern = match ? match[1] : String(raw)
+      const flags = match ? match[2] : ''
+      return `${resultVar} = regex_match(${variable}, r'${pattern}', '${flags}')`
+    },
+    pythonImports: ['from helper_functions import regex_match']
+  },
+
+  {
     id: 'string-truncate',
     name: 'truncate',
     type: 'method',
