@@ -84,6 +84,22 @@ export class CreateOperationsService {
         createData = PrismaDataFactory.prepareForPrisma(cleanedData, schema, resolvedContext, 'create');
       }
       
+      // Denormalize ruleName for Prompt entities when ruleId is provided
+      if (schema.modelName === 'Prompt') {
+        const ruleIdForName = (cleanedData as any)?.ruleId as string | undefined;
+        if (ruleIdForName && typeof ruleIdForName === 'string') {
+          try {
+            const rule = await (this.prisma as any).rule.findUnique({ where: { id: ruleIdForName } });
+            if (rule?.name) {
+              (createData as any).ruleName = rule.name;
+            }
+          } catch (e) {
+            // Non-blocking: failure to denormalize should not break create
+            console.warn('⚠️ [CreateOperations] Failed to denormalize ruleName for Prompt:', e);
+          }
+        }
+      }
+      
       // Calculate hierarchy fields for Node entities using focused service
       if (schema.modelName === 'Node') {
         createData = await this.handleNodeHierarchy(createData, resolvedContext);

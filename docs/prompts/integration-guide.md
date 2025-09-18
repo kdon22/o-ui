@@ -296,8 +296,10 @@ class PromptRenderer:
         execution_url = f"{self.base_url}/prompt/execute/{execution_id}"
         webbrowser.open(execution_url)
         
-        # ✅ Wait for user completion and return data
-        return self._wait_for_response()
+        # ✅ Wait for user completion and return normalized data
+        entries = self._wait_for_response()
+        # returns list like [{ prompt, executionId, status, values, fields, error }]
+        return entries
 
     def _create_execution(self, prompt_names, rule_name):
         data = {
@@ -358,17 +360,18 @@ response = prompt.display(
     ["customer-info", "vehicle-details", "coverage-options"],
     "Auto Insurance Quote"
 )
-# Opens 3 perfectly-aligned forms, returns combined data
+# Opens 3 perfectly-aligned forms, returns list of entries
+values_by_prompt = {e["prompt"]: e["values"] for e in response}
 ```
 
 ### **Real-World Business Logic**
 ```python
 # Step 1: Risk assessment
-risk_data = prompt.display("risk-assessment", "Insurance Processing")
+risk_data = prompt.display("risk-assessment", "Insurance Processing")[0]["values"]
 
 # Step 2: Conditional follow-up  
 if risk_data.get('riskLevel') == 'high':
-    additional = prompt.display("additional-details", "High Risk Review")
+    additional = prompt.display("additional-details", "High Risk Review")[0]["values"]
     final_data = {**risk_data, **additional}
 else:
     final_data = risk_data

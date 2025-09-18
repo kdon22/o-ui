@@ -568,9 +568,10 @@ from scripts import prompt
 # Execute prompt
 response = prompt.display("Customer Survey", "Feedback Form")
 
-# Response contains all form data
+# New shape: list of entries; access values dict
+values = response[0]["values"]
 print("Customer Responses:")
-for key, value in response.items():
+for key, value in values.items():
     print(f"  {key}: {value}")
 
 # Example output:
@@ -592,7 +593,7 @@ def process_insurance_application():
     """Complete insurance application with multiple validation steps"""
     
     # Step 1: Get customer details
-    customer_info = prompt.display("Customer Information", "Insurance Application")
+    customer_info = prompt.display("Customer Information", "Insurance Application")[0]["values"]
     
     print(f"Processing application for {customer_info['customerName']}")
     
@@ -603,15 +604,15 @@ def process_insurance_application():
         return None
     
     # Step 2: Get vehicle information
-    vehicle_info = prompt.display("Vehicle Details", "Insurance Application")
+    vehicle_info = prompt.display("Vehicle Details", "Insurance Application")[0]["values"]
     
     # Step 3: Calculate risk and get coverage preferences
     risk_level = calculate_risk(customer_info, vehicle_info)
     
     if risk_level == 'high':
-        coverage_info = prompt.display("High Risk Coverage", "Insurance Application")
+        coverage_info = prompt.display("High Risk Coverage", "Insurance Application")[0]["values"]
     else:
-        coverage_info = prompt.display("Standard Coverage", "Insurance Application")
+        coverage_info = prompt.display("Standard Coverage", "Insurance Application")[0]["values"]
     
     # Combine all data
     application_data = {

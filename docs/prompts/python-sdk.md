@@ -46,6 +46,9 @@ response = prompt.display(
     prompts="customer-details",
     rule_name="Insurance Quote"
 )
+
+# New response shape: list of entries (one per prompt)
+values = response[0]["values"]  # {'fullName': 'Alice', ...}
 ```
 
 ### Multiple Prompts (Aligned Perfectly)
@@ -54,6 +57,10 @@ response = prompt.display(
     prompts=["customer-info", "vehicle-details", "coverage-options"],
     rule_name="Auto Insurance"
 )
+
+# Access per-prompt values
+values_by_prompt = {entry["prompt"]: entry["values"] for entry in response}
+# e.g., values_by_prompt['customer-info']['firstName']
 ```
 
 ## 📋 **Method Reference**
@@ -65,17 +72,35 @@ response = prompt.display(
 - `rule_name` (str): Name of the rule containing the prompts
 
 **Returns:**
-- `dict`: Combined response data from all prompts
+- `list[dict]`: One entry per prompt with stable `values` dict
 
-**Example Response:**
+**Example Response (multiple prompts):**
 ```python
-{
-    "customerName": "John Doe",
-    "age": "35",
-    "hasLicense": True,
-    "vehicleType": "sedan",
-    "comments": "Looking for full coverage"
-}
+[
+    {
+        "prompt": "customer-info",
+        "executionId": "cmfok8fz...",
+        "status": "COMPLETED",
+        "values": {
+            "customerName": "John Doe",
+            "age": "35"
+        },
+        "fields": [
+            {"id": "customerName", "label": "Customer Name", "type": "text"}
+        ],
+        "error": None
+    },
+    {
+        "prompt": "vehicle-details",
+        "executionId": "cmfok8fz...",
+        "status": "COMPLETED",
+        "values": {
+            "vehicleType": "sedan"
+        },
+        "fields": [],
+        "error": None
+    }
+]
 ```
 
 ## 🚨 **Error Handling (Bulletproof)**
@@ -85,7 +110,8 @@ The system handles all common errors automatically:
 ```python
 try:
     response = prompt.display("my-form", "My Rule")
-    print("Success:", response)
+    values = response[0]["values"]
+    print("Success:", values)
 except Exception as e:
     print(f"Error: {e}")
     # All errors are clear and actionable
@@ -110,11 +136,12 @@ response = prompt.display("form1", "rule1")
 ### 2. Handle Response Data
 ```python
 response = prompt.display("user-info", "Registration")
+values = response[0]["values"]
 
 # Access data safely with defaults
-name = response.get('fullName', 'Unknown')
-age = int(response.get('age', 0))
-email = response.get('email', '')
+name = values.get('fullName', 'Unknown')
+age = int(values.get('age', 0))
+email = values.get('email', '')
 
 if not email:
     print("Email is required!")
@@ -123,13 +150,16 @@ if not email:
 ### 3. Sequential Workflows
 ```python
 # Step 1: Basic info
-basic = prompt.display("basic-info", "User Setup") 
+basic_entries = prompt.display("basic-info", "User Setup")
+basic = basic_entries[0]["values"]
 
 # Step 2: Use previous data for next step
 if basic.get('accountType') == 'premium':
-    details = prompt.display("premium-features", "Account Setup")
+    details_entries = prompt.display("premium-features", "Account Setup")
 else:
-    details = prompt.display("standard-features", "Account Setup")
+    details_entries = prompt.display("standard-features", "Account Setup")
+
+details = details_entries[0]["values"]
 
 # Combine results
 final_data = {**basic, **details}
@@ -166,10 +196,10 @@ response = prompt.display(
     rule_name="Auto Insurance Quote"
 )
 
-# Use the data
-customer_name = response.get('customerName')
-vehicle_year = int(response.get('vehicleYear', 0))
-coverage_level = response.get('coverageLevel')
+values_by_prompt = {e["prompt"]: e["values"] for e in response}
+customer_name = values_by_prompt["customer-info"].get('customerName')
+vehicle_year = int(values_by_prompt["vehicle-details"].get('vehicleYear', 0))
+coverage_level = values_by_prompt["coverage-selection"].get('coverageLevel')
 
 print(f"Quote for {customer_name}: {coverage_level} coverage on {vehicle_year} vehicle")
 ```
@@ -177,11 +207,13 @@ print(f"Quote for {customer_name}: {coverage_level} coverage on {vehicle_year} v
 ### Multi-Step Workflow
 ```python
 # Step 1: Initial assessment
-assessment = prompt.display("risk-assessment", "Insurance Processing")
+assessment_entry = prompt.display("risk-assessment", "Insurance Processing")[0]
+assessment = assessment_entry["values"]
 
 # Step 2: Conditional follow-up
 if assessment.get('riskLevel') == 'high':
-    additional = prompt.display("additional-details", "High Risk Review")
+    additional_entry = prompt.display("additional-details", "High Risk Review")[0]
+    additional = additional_entry["values"]
     final_data = {**assessment, **additional}
 else:
     final_data = assessment
@@ -193,18 +225,19 @@ process_application(final_data)
 ### Data Validation
 ```python
 response = prompt.display("application-form", "Loan Processing")
+values = response[0]["values"]
 
 # Validate required fields
 required_fields = ['applicantName', 'ssn', 'income', 'loanAmount']
-missing = [field for field in required_fields if not response.get(field)]
+missing = [field for field in required_fields if not values.get(field)]
 
 if missing:
     print(f"Missing required fields: {', '.join(missing)}")
     exit(1)
 
 # Convert data types  
-income = float(response.get('income', 0))
-loan_amount = float(response.get('loanAmount', 0))
+income = float(values.get('income', 0))
+loan_amount = float(values.get('loanAmount', 0))
 
 # Business logic
 debt_ratio = loan_amount / income

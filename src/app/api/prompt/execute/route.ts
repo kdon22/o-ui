@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import type { CreateExecutionRequest, CreateExecutionResponse } from '@/components/editor/components/prompt/types';
 
+// Run on the edge and always treat as dynamic to minimize latency and avoid caching issues
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // 🔓 Python script bypass for programmatic access
@@ -31,8 +35,11 @@ export async function POST(request: NextRequest) {
     const { ruleName, promptNames, sessionId } = body;
     
 
-    // Convert single prompt to array
+    // Convert single prompt to array and normalize input (trim, collapse empties)
     const promptNamesArray = Array.isArray(promptNames) ? promptNames : [promptNames];
+    const normalizedInput = promptNamesArray
+      .map((n) => (typeof n === 'string' ? n.trim() : n))
+      .filter((n): n is string => Boolean(n && typeof n === 'string'));
     
 
     // TODO: Get tenant ID from session/context
@@ -57,28 +64,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find all prompts for this rule
-    
+    // Find all prompts for this rule using case-insensitive matching
+    // Prisma does not support mode on `in`, so build OR equals filters
+    const nameFilters = normalizedInput.map((name) => ({
+      promptName: { equals: name, mode: 'insensitive' as const }
+    }));
+
     const prompts = await prisma.prompt.findMany({
       where: {
         ruleId: rule.id,
-        promptName: {
-          in: promptNamesArray
-        },
-        tenantId
-      },
-      orderBy: {
-        promptName: 'asc'
+        tenantId,
+        OR: nameFilters
       }
     });
 
     
     if (prompts.length === 0) {
       return NextResponse.json(
-        { error: `No prompts found for rule '${ruleName}' with names: ${promptNamesArray.join(', ')}` },
+        { error: `No prompts found for rule '${ruleName}' with names: ${normalizedInput.join(', ')}` },
         { status: 404 }
       );
     }
+
+    // Validate that all requested prompts were found (case-insensitive)
+    const foundLower = new Set(prompts.map((p) => p.promptName.toLowerCase()));
+    const missingNames = normalizedInput.filter((n) => !foundLower.has(n.toLowerCase()));
+    const hasPartial = missingNames.length > 0;
+
+    // Preserve caller order
+    const orderIndex: Record<string, number> = {};
+    normalizedInput.forEach((name, idx) => {
+      orderIndex[name.toLowerCase()] = idx;
+    });
+    prompts.sort((a, b) => {
+      const ai = orderIndex[a.promptName.toLowerCase()] ?? 0;
+      const bi = orderIndex[b.promptName.toLowerCase()] ?? 0;
+      return ai - bi;
+    });
 
     // Create the prompt execution
     
@@ -124,7 +146,11 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    
+    // Attach warnings if any prompts were missing, but still return 200 so clients can open the page
+    if (hasPartial) {
+      return NextResponse.json({ ...response, warnings: { missingNames, requestedPromptNames: normalizedInput } });
+    }
+
     return NextResponse.json(response);
 
   } catch (error) {

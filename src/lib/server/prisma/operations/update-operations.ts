@@ -185,6 +185,21 @@ export class UpdateOperationsService {
     // 4) Merge scalars + relationship writes
     const finalData: Record<string, any> = { ...scalarUpdates, ...relationshipWrites };
 
+    // 4b) Denormalize ruleName for Prompt when ruleId changes
+    if (schema.modelName === 'Prompt') {
+      const newRuleId = (scalarUpdates as any)?.ruleId;
+      if (typeof newRuleId === 'string' && newRuleId.length > 0) {
+        try {
+          const rule = await (this.prisma as any).rule.findUnique({ where: { id: newRuleId } });
+          if (rule?.name) {
+            (finalData as any).ruleName = rule.name;
+          }
+        } catch (e) {
+          console.warn('⚠️ [UpdateOperations] Failed to denormalize ruleName for Prompt:', e);
+        }
+      }
+    }
+
     // 5) Execute update and include full graph per schema
     return await model.update({
       where: { id },

@@ -46,15 +46,27 @@ print(response)
 
 **That's it!** No complex setup, no debugging, no configuration. Just works.
 
-### Response Data
+### Response Data (new shape)
 ```json
-{
-  "customerName": "John Doe",
-  "age": "35",  
-  "hasLicense": true,
-  "vehicleType": "sedan",
-  "comments": "Looking for comprehensive coverage"
-}
+[
+  {
+    "prompt": "ads",
+    "executionId": "<id>",
+    "status": "COMPLETED",
+    "values": {
+      "customerName": "John Doe",
+      "age": "35",
+      "hasLicense": true
+    },
+    "fields": [],
+    "error": null
+  }
+]
+```
+
+Access values:
+```python
+values = response[0]["values"]
 ```
 
 ## ✨ **UI Improvements**

@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma';
 import type { PromptExecutionData, SubmitExecutionRequest } from '@/components/editor/components/prompt/types';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     executionId: string;
-  };
+  }>;
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteParams) {
   try {
-    const { executionId } = params;
+    const { executionId } = await context.params;
 
     const execution = await prisma.promptExecution.findUnique({
       where: { id: executionId },
@@ -70,9 +70,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, context: RouteParams) {
   try {
-    const { executionId } = params;
+    const { executionId } = await context.params;
     const body: SubmitExecutionRequest = await request.json();
 
     const execution = await prisma.promptExecution.findUnique({

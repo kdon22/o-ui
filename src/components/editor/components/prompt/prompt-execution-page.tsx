@@ -11,31 +11,14 @@ import type { PromptExecutionData, PromptFormData, SubmitExecutionRequest } from
 
 interface PromptExecutionPageProps {
   executionId: string;
+  initialData?: PromptExecutionData;
 }
 
-export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ executionId }) => {
+export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ executionId, initialData }) => {
   const [formData, setFormData] = useState<PromptFormData>({});
   const [isFormValid, setIsFormValid] = useState(false);
 
-  // Calculate consistent width for all prompts
-  const calculateUniformWidth = (prompts: any[]) => {
-    if (prompts.length <= 1) return undefined; // Let single prompts auto-size
-    
-    let maxWidth = 300; // Minimum width
-    
-    prompts.forEach(prompt => {
-      if (prompt.layout?.items?.length) {
-        const promptWidth = prompt.layout.items.reduce((max: number, item: any) => {
-          const rightEdge = item.x + (item.config.width || 200);
-          return Math.max(max, rightEdge);
-        }, 0);
-        
-        maxWidth = Math.max(maxWidth, promptWidth + 40); // Add padding
-      }
-    });
-    
-    return maxWidth;
-  };
+  // Auto-size prompts: no forced uniform width; let content determine size
 
   // Fetch execution data
   const { data: execution, isLoading, error, refetch } = useQuery({
@@ -47,6 +30,7 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
       }
       return response.json();
     },
+    initialData,
          refetchInterval: (query) => {
        // Poll every 2 seconds if status is PENDING or RUNNING
        return query.state.data?.status === 'PENDING' || query.state.data?.status === 'RUNNING' ? 2000 : false;
@@ -99,7 +83,7 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
     submitMutation.mutate(cleanedData);
   };
 
-  // Loading state
+  // Loading state (if we had initialData, this branch typically won't run)
   if (isLoading) {
     return (
       <Card className="w-full max-w-4xl mx-auto">
@@ -139,8 +123,7 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
     return null;
   }
 
-  // Calculate uniform width for multiple prompts
-  const uniformWidth = calculateUniformWidth(execution.prompts);
+  // We no longer enforce a uniform width; allow each prompt to size naturally
 
   // Status-based rendering
   const isExpired = execution.expiresAt && new Date(execution.expiresAt) < new Date();
@@ -219,21 +202,14 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
       )}
 
       {/* Render all prompts */}
-      {execution.prompts.map((prompt, index) => (
+      {execution.prompts.map((prompt) => (
         <Card key={prompt.id} className="w-fit">
-          <CardHeader>
-            <CardTitle className="text-lg">
-              {execution.prompts.length > 1 && `${index + 1}. `}
-              {prompt.promptName}
-            </CardTitle>
-          </CardHeader>
           <CardContent className="p-0">
             <PromptRenderer
               layout={prompt.layout}
               data={execution.inputData || {}}
               onChange={handleFormChange}
               readOnly={isReadOnly}
-              fixedWidth={uniformWidth}
             />
           </CardContent>
         </Card>
