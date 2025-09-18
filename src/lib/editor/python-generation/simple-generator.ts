@@ -2,6 +2,7 @@
 // Replaces the over-engineered system with simple, reliable logic
 
 import { transformationFactory } from './transformation/transformation-pattern-factory'
+import { translateAssignmentInvocation } from './method-invocation-translator'
 import type { TransformationMetadata } from './transformation/types'
 
 export interface SimplePythonResult {
@@ -50,6 +51,9 @@ export class SimplePythonGenerator {
       const pythonLines: string[] = []
       const errors: string[] = []
       const transformationMetadata: TransformationMetadata[] = []
+      // Collect imports required by translated method invocations
+      const requiredStdImports = new Set<string>()
+      const requiredHelperModules = new Set<string>()
 
       // Skip header comment - user requested removal
 
@@ -122,7 +126,7 @@ export class SimplePythonGenerator {
           }
 
           // 🔧 FALLBACK TO SIMPLE TRANSLATION
-          const pythonCode = this.translateLine(line, lines, i)
+          const pythonCode = this.translateLine(line, lines, i, requiredStdImports, requiredHelperModules)
           if (pythonCode !== null) {
             if (Array.isArray(pythonCode)) {
               // Multiple lines (legacy if any handling)
@@ -136,6 +140,23 @@ export class SimplePythonGenerator {
           errors.push(errorMsg)
           pythonLines.push(`# ERROR: ${trimmed}`)
         }
+      }
+
+      // Prepend imports if any were collected
+      const importLines: string[] = []
+      if (requiredStdImports.size > 0) {
+        for (const mod of requiredStdImports) {
+          importLines.push(`import ${mod}`)
+        }
+      }
+      if (requiredHelperModules.size > 0) {
+        // Import helper submodules explicitly to match helperFunction usage (e.g., string_helpers.encode_base64)
+        for (const sub of requiredHelperModules) {
+          importLines.push(`from helper_functions import ${sub}`)
+        }
+      }
+      if (importLines.length > 0) {
+        pythonLines.unshift(...importLines)
       }
 
       // 🎯 SIMPLE COMPLETION - No validation needed, indentation-create generates clean Python
@@ -172,7 +193,13 @@ export class SimplePythonGenerator {
   /**
    * 🎯 **TRANSLATE SINGLE LINE** - Core translation logic with ROBUST INDENTATION
    */
-  private translateLine(line: string, allLines: string[], currentIndex: number): string | string[] | null {
+  private translateLine(
+    line: string,
+    allLines: string[],
+    currentIndex: number,
+    requiredStdImports: Set<string>,
+    requiredHelperModules: Set<string>
+  ): string | string[] | null {
     const indent = this.getIndentation(line)
     const trimmed = line.trim()
 
@@ -241,7 +268,21 @@ export class SimplePythonGenerator {
       return '' // Empty line to remove the brace
     }
 
-    // Handle assignments and expressions - use original indentation
+    // Handle simple assignments with method invocation on RHS
+    const assignMatch = trimmed.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/)
+    if (assignMatch) {
+      const lhs = assignMatch[1]
+      const rhs = assignMatch[2]
+      const translated = translateAssignmentInvocation(lhs, rhs, { useHelpers: true })
+      if (translated.code) {
+        // Accumulate imports
+        translated.imports.forEach(m => requiredStdImports.add(m))
+        translated.helperModules.forEach(m => requiredHelperModules.add(m))
+        return `${pythonIndent}${translated.code}`
+      }
+    }
+
+    // Handle assignments and expressions - default passthrough with original indentation
     return `${pythonIndent}${trimmed}`
   }
 
