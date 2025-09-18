@@ -13,6 +13,8 @@
 
 import type * as monaco from 'monaco-editor'
 import type { UnifiedType } from '@/lib/editor/schemas'
+import { schemaBridge } from '@/lib/editor/type-system/schema-bridge'
+import { ALL_METHOD_SCHEMAS } from '@/lib/editor/schemas/methods'
 import { getDisplayName } from '@/lib/editor/schemas/types/unified-types'
 
 // =============================================================================
@@ -227,15 +229,79 @@ export class MasterTypeDetector {
       }
     }
 
-    // 8. METHOD CALLS (module.method() or var.method())
-    const methodMatch = trimmedRhs.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/)
-    if (methodMatch) {
-      const [, owner, method] = methodMatch
-      // TODO: Implement method return type detection
-      return { type: 'unknown', confidence: 0.3 }
+    // 8. METHOD/CHAIN CALLS (var.method(), var.method, chaining)
+    if (/^[a-zA-Z_][a-zA-Z0-9_]*\./.test(trimmedRhs)) {
+      const chainType = this.analyzeMethodOrPropertyChain(trimmedRhs, allText)
+      if (chainType.type !== 'unknown') return chainType
     }
 
     return { type: 'unknown', confidence: 0.0 }
+  }
+
+  /** Analyze chained method/property and infer final type */
+  private analyzeMethodOrPropertyChain(chainExpr: string, allText: string): { type: UnifiedType; elementType?: UnifiedType; confidence: number; properties?: Record<string, UnifiedType> } {
+    try {
+      const parts = this.splitChain(chainExpr)
+      if (parts.length === 0) return { type: 'unknown', confidence: 0.0 }
+
+      const baseVar = parts[0]
+      let current: UnifiedType = this.detectType(baseVar, allText).type
+      let confidence = 0.7
+
+      for (let i = 1; i < parts.length; i++) {
+        const seg = parts[i]
+        const m = seg.match(/^([a-zA-Z_][a-zA-Z0-9_]*)(\(.*\))?$/)
+        if (!m) return { type: 'unknown', confidence: 0.3 }
+        const name = m[1]
+
+        // Method via schema
+        const schema = (ALL_METHOD_SCHEMAS as any[]).find(s => s.name === name)
+        if (schema) {
+          let ret: any = schemaBridge.getTypeMethodReturnType(String(current), name)
+          if (!ret || ret === 'unknown') ret = schema.returnType || (schema.returnInterface ? 'object' : 'unknown')
+          if (ret && ret !== 'unknown') { 
+            current = ret as UnifiedType
+            confidence = Math.min(1.0, confidence + 0.2)
+            continue 
+          }
+        }
+
+        // Property fallback
+        const propType = schemaBridge.getBusinessObjectPropertyType(String(current), name, allText)
+        if (propType && propType !== 'unknown') { 
+          current = propType as UnifiedType
+          confidence = Math.min(1.0, confidence + 0.1)
+          continue 
+        }
+
+        return { type: 'unknown', confidence: 0.3 }
+      }
+
+      return { type: current, confidence }
+    } catch { 
+      return { type: 'unknown', confidence: 0.0 } 
+    }
+  }
+
+  /** Split a.b().c into tokens respecting parentheses */
+  private splitChain(expr: string): string[] {
+    const s = expr.trim()
+    const tokens: string[] = []
+    let current = ''
+    let depth = 0
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i]
+      if (ch === '(') depth++
+      if (ch === ')') depth = Math.max(0, depth - 1)
+      if (ch === '.' && depth === 0) { 
+        if (current) tokens.push(current)
+        current = ''
+        continue 
+      }
+      current += ch
+    }
+    if (current) tokens.push(current)
+    return tokens
   }
 
   /**

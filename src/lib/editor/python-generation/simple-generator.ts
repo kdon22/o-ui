@@ -150,9 +150,9 @@ export class SimplePythonGenerator {
         }
       }
       if (requiredHelperModules.size > 0) {
-        // Import helper submodules explicitly to match helperFunction usage (e.g., string_helpers.encode_base64)
+        // Import helper submodules with alias matching schema usage: import helper_functions.<sub> as <sub>
         for (const sub of requiredHelperModules) {
-          importLines.push(`from helper_functions import ${sub}`)
+          importLines.push(`import helper_functions.${sub} as ${sub}`)
         }
       }
       if (importLines.length > 0) {
