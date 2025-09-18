@@ -203,7 +203,7 @@ const actionMappings = {
 // Auto-generated IndexedDB store
 const storeConfig = {
   name: 'products',           // From databaseKey
-  keyPath: undefined,         // Uses compound keys
+  keyPath: 'id',              // Uses 'id' as the primary key
   autoIncrement: false,
   indexes: [
     { name: 'idx_tenantId', keyPath: 'tenantId', unique: false },
@@ -416,7 +416,7 @@ switch (operation) {
 }
 ```
 
-### **Prisma Integration**
+### **Prisma Integration (Models + Branching Fields)**
 
 Your schema integrates with Prisma models:
 
@@ -435,14 +435,26 @@ model Product {
   updatedAt   DateTime @updatedAt
   createdById String?
   updatedById String?
+  originalProductId String?  // Link to original if branched
   
   // Relationships
   category    Category? @relation(fields: [categoryId], references: [id])
   tags        ProductTag[]
   
   @@map("products")  // Table name matches databaseKey
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([originalProductId])
 }
 ```
+
+Run prisma generate after updating schema:
+
+```bash
+npx prisma generate
+```
+
+If adding a new model/table, create a migration and apply it as appropriate.
 
 ---
 
@@ -504,11 +516,8 @@ export const PRODUCT_TAG_SCHEMA = {
   }
 };
 
-// Register in resource-registry.ts
-const STANDALONE_JUNCTION_SCHEMAS = [
-  PRODUCT_TAG_SCHEMA,  // ✅ Add to junction schemas
-  // ... other junction schemas
-];
+// Register in resource-registry.ts by importing and
+// including in the explicit junction schemas array.
 ```
 
 ### **Junction Auto-Discovery**
@@ -794,6 +803,52 @@ function TestProductSchema() {
   return <button onClick={handleCreate}>Test Create</button>;
 }
 ```
+
+---
+
+## Repository & Dependency Injection (Backend Usage)
+
+When adding new entities that require services (tree, relationships, versioning), ensure the repository factory wires dependencies:
+
+- Update `src/lib/database/repositories/RepositoryFactory.ts` to create your repository with required services (e.g., `VersioningService`, relationship services) and shared Prisma client.
+- Follow the existing patterns for `WorkflowRepository`, `NodeRepository`, etc. as references.
+- Repositories must accept a `BranchContext` and implement fallback + Copy‑on‑Write as per the refactoring rules.
+
+Server routes and actions should resolve repositories through the factory. Keep service instantiation centralized in the factory.
+
+---
+
+## Start‑to‑Finish New Schema Checklist
+
+1) Prisma model
+- Add model with `tenantId`, `branchId`, optional `original<Entity>Id`.
+- Add indexes for `tenantId`, `branchId`, `original<Entity>Id`.
+- Run `npx prisma generate`.
+
+2) Schema file
+- Create `<feature>.schema.ts` implementing `ResourceSchema`.
+- Define `fields`, `search`, `actions`, and `indexedDBKey`.
+- Define `relationships` (M2M junctions discovered via `junction.tableName`).
+
+3) Register schema
+- Import in `src/lib/resource-system/resource-registry.ts` and add to `SCHEMA_RESOURCES`.
+
+4) Cache invalidation
+- Add/extend resource family in `src/hooks/query/cache-invalidation.ts` if needed.
+
+5) Repository/DI (if needed)
+- Add repository class or extend existing.
+- Wire dependencies in `RepositoryFactory.ts`.
+
+6) Verify UI
+- Use `useResourceList/read/create/update/delete` hooks.
+- Use `AutoTable`, `AutoForm`, `AutoModal` as needed.
+
+7) Junctions
+- Prefer embedded M2M relationships; add standalone junction schema only when necessary and register explicitly.
+
+8) Performance/Server‑Only
+- For large resources, set `serverOnly` or `actions.serverOnly` in the schema.
 
 ---
 

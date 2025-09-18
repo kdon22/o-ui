@@ -80,7 +80,6 @@ export const PRODUCT_SCHEMA: ResourceSchema = {
       required: true,
       autoValue: { 
         source: 'session.user.branchContext.currentBranchId', 
-        fallback: 'main',
         required: true 
       }
     },
@@ -1827,3 +1826,14 @@ This completes the comprehensive feature schema developer guide! The documentati
 ✅ **Examples & Recipes** - Real-world patterns and proven solutions  
 
 The guide covers everything from basic schema creation to advanced patterns like junction tables, polymorphic relationships, performance optimization, and migration strategies. Developers now have a complete reference for building schema-driven applications with the auto-generated component system.
+
+---
+
+## Schema Tips (Quick Reference)
+
+- ContextSource for auto-values: use sources defined in `schemas.ts` (e.g., `session.user.tenantId`, `session.user.branchContext.currentBranchId`, `navigation.nodeId`, `auto.uuid`). Avoid custom string constants.
+- Defaults: prefer `defaultValue` on `FieldSchema` for static defaults (e.g., `isActive: true`).
+- serverOnly: for large datasets (like `tableData`), set `serverOnly: true` and `cacheStrategy: 'server-only'` to bypass IndexedDB.
+- indexedDBKey: entities typically return `record.id`; junctions use compound keys (e.g., `${record.processId}:${record.ruleId}`) and include additional keys (like `nodeId`) when scope requires it.
+- actionPrefix/resourceKey: ensure `resourceKey` used by Auto* components equals the schema `actionPrefix`.
+- relationships: define M2M junctions under `relationships` with `junction.tableName` for auto-discovery; add standalone junction schemas only when necessary.

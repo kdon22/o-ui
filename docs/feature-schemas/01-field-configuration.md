@@ -40,7 +40,7 @@ The system supports 25+ field types with automatic Input/Display components:
 'tags'        // Tag selection with creation
 'switch'      // Boolean toggle switch
 'checkbox'    // Boolean checkbox
-'radio'       // Radio button group
+// (Note: Radio is not a built-in FieldType. Use 'select' with static options for radio-like UX.)
 
 // Number & Range Fields
 'number'      // Number input with validation
@@ -147,44 +147,38 @@ The auto-value system provides dynamic field population from various sources:
 ### **Auto-Value Sources**
 
 ```typescript
-export type AutoValueSource = 
-  // UUID Generation
-  | 'auto.uuid'                    // Generate UUID
-  | 'auto.nodeShortId'            // Generate short node ID (N8K9L3)
-  | 'auto.ruleShortId'            // Generate short rule ID (R7M2P4)
-  | 'auto.processShortId'         // Generate short process ID (P5Q8N1)
-  
-  // Session Context
-  | 'session.user.tenantId'       // Current user's tenant
-  | 'session.user.branchContext.currentBranchId'  // Current branch
-  | 'session.user.branchContext.defaultBranchId'  // Default branch
-  | 'session.user.id'             // Current user ID
-  
-  // Navigation Context  
-  | 'navigation.nodeId'           // Selected node from tree
-  | 'navigation.processId'        // Selected process
-  | 'navigation.parentId'         // Parent entity ID
-  
-  // Component Context
-  | 'component.selectedNodeId'    // Node selected in component
-  | 'component.parentEntityId'    // Parent entity from component
-  
-  // Default Values
-  | 'default.true'               // Boolean true
-  | 'default.false'              // Boolean false
-  | 'default.emptyString'        // Empty string
-  | 'default.emptyArray'         // Empty array []
-  | 'default.zero';              // Number 0
+// Source of truth: o-ui/src/lib/resource-system/schemas.ts (ContextSource)
+export type ContextSource = 
+  | 'session.user.tenantId'
+  | 'session.user.branchContext.currentBranchId'
+  | 'session.user.branchContext.defaultBranchId'
+  | 'session.user.id'
+  | 'session.context.originalId'
+  | 'navigation.nodeId'
+  | 'navigation.parentId'
+  | 'navigation.selectedId'
+  | 'component.parentData'
+  | 'component.contextId'
+  | 'auto.timestamp'
+  | 'auto.uuid'
+  | 'auto.nodeShortId'
+  | 'auto.ruleShortId'
+  | 'auto.hierarchyPath'
+  | 'auto.hierarchyAncestors'
+  | 'self.id';
 ```
 
 ### **Auto-Value Configuration**
 
 ```typescript
+// Source of truth: o-ui/src/lib/resource-system/schemas.ts (AutoValueConfig)
 interface AutoValueConfig {
-  source: AutoValueSource;
-  required: boolean;           // Whether this auto-value is required
-  fallback?: string | number | boolean; // Fallback if source unavailable
-  condition?: string;          // Conditional logic
+  source: ContextSource;
+  fallback?: any;
+  transform?: (value: any) => any;
+  required?: boolean;
+  onlyIfAvailable?: boolean; // Apply only when context value exists
+  condition?: (value: any) => boolean; // Custom predicate
 }
 ```
 
@@ -219,13 +213,12 @@ interface AutoValueConfig {
   }
 }
 
-// Default Values
+// Default Values (use FieldSchema.defaultValue instead of autoValue)
 {
   key: 'isActive',
-  autoValue: {
-    source: 'default.true',
-    required: false
-  }
+  label: 'Active',
+  type: 'switch',
+  defaultValue: true
 }
 ```
 

@@ -114,6 +114,27 @@ const RESOURCE_FAMILIES: Record<string, string[]> = {
   
   // Class system
   class: ['class'],
+
+  // ==========================================================================
+  // MARKETPLACE & PR SYSTEM
+  // ==========================================================================
+  marketplacePackages: ['marketplacePackages'],
+  packageInstallations: ['packageInstallations', 'marketplacePackages'],
+
+  pullRequests: ['pullRequests', 'pullRequestReviews', 'pullRequestComments'],
+  pullRequestReviews: ['pullRequests', 'pullRequestReviews', 'pullRequestComments'],
+  pullRequestComments: ['pullRequests', 'pullRequestReviews', 'pullRequestComments'],
+  prSettings: ['prSettings'],
+
+  // ==========================================================================
+  // DATA TABLE SYSTEM
+  // ==========================================================================
+  tables: ['tables', 'tableCategory', 'tableData'],
+  tableCategory: ['tableCategory', 'tables'],
+  tableData: ['tableData', 'tables'],
+
+  // Session (global)
+  session: ['session'],
 };
 
 // ============================================================================

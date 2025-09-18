@@ -15,7 +15,7 @@
 
 ## System Overview
 
-The Feature Schema System is the **Single Source of Truth (SSOT)** for all data structures, UI components, and business logic in the application. It provides:
+The Feature Schema System is the **Single Source of Truth (SSOT)** for all data structures, UI components, and business logic in the application. All behavior flows from the schema definitions under `src/features/**/**/*.schema.ts` and the central registry in `src/lib/resource-system/resource-registry.ts`.
 
 ### **🎯 Core Benefits**
 
@@ -50,6 +50,10 @@ export const RULE_SCHEMA: ResourceSchema = {
 - ✅ **Validation**: Zod schemas with custom rules
 - ✅ **Navigation**: Tree structures and breadcrumbs
 - ✅ **Search**: Full-text search with filtering
+
+Notes:
+- Set `serverOnly` or `actions.serverOnly` in the schema to bypass local IndexedDB and force server paths for large resources.
+- Control optimistic updates with `actions.optimistic` (default enabled for CUD in generated mappings).
 
 ---
 
@@ -86,6 +90,10 @@ export const YOUR_SCHEMA: ResourceSchema = {
   
   // ... rest of configuration
 };
+
+Branching/tenant fields and audit fields should exist in models and be represented as fields where relevant:
+- `tenantId`, `branchId`, and optional `original<Entity>Id` for CoW lineage.
+- `createdAt`, `updatedAt`, `createdById`, `updatedById`, and `version` where applicable.
 ```
 
 ### **3. Auto-Discovery System**
@@ -100,6 +108,10 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   RULE_SCHEMA,       // Auto-discovered from @/features/rules/rules.schema
   // ... all other schemas
 ];
+
+Junction auto-discovery:
+- Any `relationships` entry of type `'many-to-many'` with `junction.tableName` becomes a discovered junction.
+- Standalone junctions (e.g., `PROCESS_RULE_SCHEMA`) are imported and added explicitly for full schema metadata.
 ```
 
 ---
@@ -132,6 +144,10 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
 - **React Components**: Available via `useResourceCreate`, `useResourceList`, etc.
 - **Types**: Auto-generated TypeScript interfaces
 
+Additionally:
+- **Action Mappings**: Generated for `create`, `update`, `delete`, `list`, `read` (+ custom actions), using the unified endpoint `/api/workspaces/current/actions`.
+- **Cache Strategy**: `cacheStrategy` and `serverOnly` influence client‑side storage and queries.
+
 ### **Phase 4: Usage**
 ```tsx
 // Instant CRUD operations
@@ -144,6 +160,10 @@ const updateRule = useResourceUpdate('rule');
 <AutoTable schema={RULE_SCHEMA} />
 <AutoModal schema={RULE_SCHEMA} />
 ```
+
+Branching best practices:
+- Updates to inherited items cause a CoW fork at the repository/service layer; ensure models have `original<Entity>Id` and queries include branch context.
+- Lists and reads use branch‑aware logic in the Action/Repository pipeline; UI simply passes `branchId` via context (TanStack Query + action hooks).
 
 ---
 

@@ -170,6 +170,10 @@ AutoForm automatically populates fields based on context:
   onSubmit={handleSubmit}
   onCancel={handleCancel}
 />
+// Notes:
+// - Auto-values use ContextSource (see schemas.ts): 'session.user.*', 'navigation.*', 'auto.uuid', etc.
+// - Prefer FieldSchema.defaultValue for static defaults (e.g., isActive: true).
+// - For large resources, set schema.serverOnly or actions.serverOnly to bypass IndexedDB.
 ```
 
 ### **Junction Auto-Creation**
@@ -206,6 +210,7 @@ function ProductsTable() {
   );
 }
 ```
+// Tip: resourceKey must equal the schema's actionPrefix (e.g., 'products').
 
 ### **AutoTable Props Reference**
 
@@ -611,6 +616,9 @@ useResourceCreate(resourceKey, options?)   // Create resource
 useResourceUpdate(resourceKey, options?)   // Update resource
 useResourceDelete(resourceKey, options?)   // Delete resource
 useActionMutation(action, options?)        // Custom mutation
+// Notes:
+// - Hooks are branch-aware via the action system; pass branch context via options if needed.
+// - Cache invalidation uses resource families; ensure your new resource is added to RESOURCE_FAMILIES.
 ```
 
 ### **Hook Examples**
