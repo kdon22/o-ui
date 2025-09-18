@@ -17,7 +17,8 @@ const STYLING_OPTIONS = {
   'checkbox': { useBackground: true, useBorder: true },
   'radio': { useBackground: true, useBorder: true, useLabelPosition: true },
   'label': { useFont: true },
-  'button': { useFont: true, useBackground: true, useBorder: true }
+  'button': { useFont: true, useBackground: true, useBorder: true },
+  'divider': { useDivider: true }
 }
 
 export function StylingSection({ 
@@ -173,6 +174,49 @@ export function StylingSection({
                 onChange={(value) => onConfigChange('borderRadius', value)}
                 min={0}
                 max={50}
+              />
+            </div>
+          )}
+
+          {/* Divider Styling */}
+          {'useDivider' in options && (options as any).useDivider && (
+            <div className="space-y-3">
+              <h5 className="text-xs font-medium text-gray-600 uppercase tracking-wide">Divider</h5>
+              <NumberField
+                id="thickness"
+                label="Thickness (px)"
+                value={config.thickness}
+                onChange={(value) => onConfigChange('thickness', value)}
+                min={1}
+                max={8}
+              />
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500">Line Style</label>
+                <Select onValueChange={(value) => onConfigChange('style', value)} defaultValue={config.style || 'solid'}>
+                  <SelectTrigger className="w-full h-8 text-sm border border-gray-300 rounded px-2">
+                    <SelectValue placeholder="Select a style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="solid">Solid</SelectItem>
+                    <SelectItem value="dashed">Dashed</SelectItem>
+                    <SelectItem value="dotted">Dotted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <ColorField
+                id="color"
+                label="Color"
+                value={config.color}
+                onChange={(value) => onConfigChange('color', value)}
+                defaultValue="#e5e7eb"
+              />
+              <NumberField
+                id="width"
+                label="Width (px)"
+                value={config.width}
+                onChange={(value) => onConfigChange('width', value)}
+                min={50}
+                max={600}
               />
             </div>
           )}

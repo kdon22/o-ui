@@ -3,7 +3,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Type, CheckSquare, Circle, List, Square, MousePointer } from 'lucide-react'
+import { Type, CheckSquare, Circle, List, Square, MousePointer, Minus } from 'lucide-react'
 import type { ComponentType, DragItem } from './types'
 
 interface ComponentPaletteProps {
@@ -52,6 +52,13 @@ const COMPONENT_ITEMS: Array<{
     label: 'Button',
     icon: MousePointer,
     description: 'Action button'
+  }
+  ,
+  {
+    type: 'divider',
+    label: 'Divider',
+    icon: Minus,
+    description: 'Horizontal divider line'
   }
 ]
 

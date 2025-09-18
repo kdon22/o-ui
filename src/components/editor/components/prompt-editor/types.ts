@@ -1,6 +1,6 @@
 // Shared types for the unified prompt editor system
 
-export type ComponentType = 'label' | 'radio' | 'text-input' | 'select' | 'checkbox' | 'button'
+export type ComponentType = 'label' | 'radio' | 'text-input' | 'select' | 'checkbox' | 'button' | 'divider'
 
 export interface ComponentConfig {
   label?: string
@@ -28,6 +28,9 @@ export interface ComponentConfig {
   defaultChecked?: boolean
   labelPosition?: 'top' | 'bottom' | 'left' | 'right'
   labelFontSize?: number
+  // Divider specific
+  thickness?: number
+  style?: 'solid' | 'dashed' | 'dotted'
 }
 
 export interface ComponentItem {

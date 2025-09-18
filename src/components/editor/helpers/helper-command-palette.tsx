@@ -12,7 +12,8 @@ import {
   Hash,
   Settings,
   BookOpen,
-  Plus
+  Plus,
+  Palette
 } from 'lucide-react'
 import { getAllHelpers, type HelperConfig } from './helper-registry'
 
@@ -170,6 +171,21 @@ export function HelperCommandPalette({
 
   const totalHelpers = Object.values(filteredHelpers).reduce((sum, arr) => sum + arr.length, 0)
 
+  // Static styling actions shown after a divider
+  const STYLING_ACTIONS: Array<{ id: string; name: string; description?: string }> = [
+    { id: 'style.fontSize.increase', name: 'Increase Font Size' },
+    { id: 'style.fontSize.decrease', name: 'Decrease Font Size' },
+    { id: 'style.textColor', name: 'Set Text Color…' },
+    { id: 'style.backgroundColor', name: 'Set Background Color…' },
+    { id: 'style.borderWidth.increase', name: 'Increase Border Width' },
+    { id: 'style.borderWidth.decrease', name: 'Decrease Border Width' },
+    { id: 'style.borderColor', name: 'Set Border Color…' },
+    { id: 'style.labelPosition.left', name: 'Label Position: Left' },
+    { id: 'style.labelPosition.right', name: 'Label Position: Right' },
+    { id: 'style.labelPosition.top', name: 'Label Position: Above' },
+    { id: 'style.labelPosition.bottom', name: 'Label Position: Below' }
+  ]
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center pt-[10vh]">
       <Command className="bg-background border rounded-lg shadow-2xl w-full max-w-2xl max-h-[70vh] overflow-hidden">
@@ -269,7 +285,7 @@ export function HelperCommandPalette({
                             <span className="font-medium text-sm">{helper.name}</span>
                             {intellisense && (
                               <code className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                                {intellisense.value}
+                                {typeof intellisense.value === 'string' ? intellisense.value : ''}
                               </code>
                             )}
                           </div>
@@ -293,6 +309,36 @@ export function HelperCommandPalette({
               )
             })
           )}
+
+          {/* Divider */}
+          <div className="my-2 h-px bg-border" />
+
+          {/* Styling options group */}
+          <Command.Group heading={
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-2 py-1.5">
+              <Palette className="w-3 h-3 text-pink-500" />
+              Styling Options
+            </div>
+          }>
+            {STYLING_ACTIONS.map(action => (
+              <Command.Item
+                key={action.id}
+                value={`${action.name} ${action.id}`}
+                onSelect={() => {
+                  // Expose styling commands through onSelectHelper with a namespaced id
+                  onSelectHelper(action.id)
+                  onClose()
+                }}
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/50 aria-selected:bg-muted"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm">{action.name}</span>
+                  </div>
+                </div>
+              </Command.Item>
+            ))}
+          </Command.Group>
         </Command.List>
 
         {/* Footer */}

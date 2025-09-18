@@ -42,7 +42,8 @@ export function CanvasEditor({
       select: { options: [{ label: 'Option 1', value: 'opt1' }], width: 150 },
       radio: { label: 'Radio Option', labelPosition: 'right' as const, options: [{ label: 'Option 1', value: 'opt1', isDefault: true }] },
       checkbox: { defaultChecked: false },
-      button: { label: 'Button', color: '#3b82f6', backgroundColor: '#3b82f6' }
+      button: { label: 'Button', color: '#3b82f6', backgroundColor: '#3b82f6' },
+      divider: { thickness: 1, color: '#e5e7eb', width: 200, style: 'solid' as const }
     }
     return configs[type as keyof typeof configs] || { label: 'Component' }
   }
@@ -379,6 +380,27 @@ export function CanvasEditor({
             >
               {config.label || component.label}
             </button>
+          </div>
+        )
+
+      case 'divider':
+        return (
+          <div
+            key={component.id}
+            style={baseStyle}
+            className={`px-1 ${selectionStyle}`}
+            onClick={(e) => handleComponentClick(e, component)}
+            onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
+            draggable
+            onDragStart={(e) => handleComponentDragStart(e, component)}
+          >
+            <div
+              className="pointer-events-none"
+              style={{
+                width: config.width ? `${config.width}px` : '200px',
+                borderTop: `${(config as any).thickness || 1}px ${(config as any).style || 'solid'} ${config.color || '#e5e7eb'}`
+              }}
+            />
           </div>
         )
 
