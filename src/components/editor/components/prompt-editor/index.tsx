@@ -225,8 +225,20 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
   }, [selectedPrompt, selectedComponent, debouncedAutoSave])
 
   // Keyboard shortcut: Delete/Backspace removes selected component
+  // Guard: disabled when properties modal is open or when typing in inputs/contenteditable
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // If the properties modal is open, do not let background shortcuts run
+      if (showPropertiesModal) return
+
+      // Ignore when user is typing in an input/textarea/select or contenteditable
+      const active = document.activeElement as HTMLElement | null
+      if (active) {
+        const tag = active.tagName
+        const isFormField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+        if (isFormField || active.isContentEditable) return
+      }
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponent) {
         e.preventDefault()
         handleRemoveSelected()
@@ -234,7 +246,7 @@ export function PromptEditor({ ruleId, onSave }: PromptEditorProps) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedComponent, handleRemoveSelected])
+  }, [selectedComponent, handleRemoveSelected, showPropertiesModal])
 
   return (
     <div className="h-full flex flex-col bg-gray-50">

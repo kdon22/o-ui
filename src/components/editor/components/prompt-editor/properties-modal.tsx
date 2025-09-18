@@ -29,6 +29,19 @@ export function PropertiesModal({
     setLocalConfig(selectedComponent?.config || {})
   }, [selectedComponent])
 
+  // Close on ESC only (and header X button). Disable backdrop-to-close.
+  useEffect(() => {
+    if (!isOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isOpen, onClose])
+
   // Handle immediate updates for instant feedback
   const handleConfigChange = (key: string, value: any) => {
     if (!selectedComponent) return
@@ -52,7 +65,6 @@ export function PropertiesModal({
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/20 z-40 transition-opacity duration-300"
-          onClick={onClose}
         />
       )}
 
