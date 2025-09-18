@@ -419,6 +419,7 @@ export function CanvasEditor({
     }
   }
 
+  // Use explicit canvas size from layout
   const canvasWidth = layout.canvasWidth || 960
   const canvasHeight = layout.canvasHeight || 615
 
@@ -487,8 +488,7 @@ export function CanvasEditor({
           style={{
             width: `${canvasWidth}px`,
             height: `${canvasHeight}px`,
-            minWidth: '100%',
-            minHeight: '400px'
+            maxWidth: '100%'
           }}
           onDrop={(e) => {
             // Handle component moving first (higher priority)

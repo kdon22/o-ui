@@ -297,36 +297,9 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
     }
   }, [formData, validation, readOnly, handleFieldChange, handleRadioChange]);
 
-  // Canvas dimensions with safe defaults
-  const canvasWidth = Math.max(layout.canvasWidth || 800, 400);
-  const canvasHeight = Math.max(layout.canvasHeight || 600, 300);
-  
-  // Calculate actual content bounds for auto-fit
-  const contentBounds = useMemo(() => {
-    if (!layout.items?.length) return { width: 400, height: 300 }; // Minimal size for empty
-    
-    const bounds = layout.items.reduce(
-      (acc, item) => {
-        // Calculate the actual right and bottom edges of each component
-        const rightEdge = item.x + (item.config.width || 200);
-        const bottomEdge = item.y + (item.config.height || 40);
-        
-        return {
-          width: Math.max(acc.width, rightEdge),
-          height: Math.max(acc.height, bottomEdge)
-        };
-      },
-      { width: 0, height: 0 }
-    );
-    
-    // Use fixed width for consistent multi-prompt layouts, or auto-calculate
-    const calculatedWidth = fixedWidth || Math.max(bounds.width + 40, 300);
-    
-    return {
-      width: calculatedWidth, // Use fixed width if provided, otherwise auto-fit
-      height: Math.max(bounds.height + 40, 200)  // 20px padding each side, 200px minimum
-    };
-  }, [layout.items, fixedWidth]);
+  // Use explicit canvas size from layout (exact sizing)
+  const canvasWidth = Math.max(layout.canvasWidth || 800, 200);
+  const canvasHeight = Math.max(layout.canvasHeight || 600, 200);
 
   // Empty state
   if (!layout.items?.length) {
@@ -342,9 +315,8 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
       <div
         className="relative"
         style={{
-          width: `${contentBounds.width}px`,
-          height: `${contentBounds.height}px`,
-          padding: '20px'
+          width: `${canvasWidth}px`,
+          height: `${canvasHeight}px`
         }}
       >
         {layout.items.map(renderComponent)}
