@@ -27,6 +27,7 @@ export interface ComponentConfig {
   checkboxSize?: 'sm' | 'md' | 'lg'
   defaultChecked?: boolean
   labelPosition?: 'top' | 'bottom' | 'left' | 'right'
+  orientation?: 'vertical' | 'horizontal'
   labelFontSize?: number
   // Divider specific
   thickness?: number

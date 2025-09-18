@@ -2,7 +2,7 @@ export interface PromptLayoutItem {
   x: number;
   y: number;
   id: string;
-  type: 'label' | 'text-input' | 'select' | 'checkbox' | 'radio';
+  type: 'label' | 'text-input' | 'select' | 'checkbox' | 'radio' | 'divider';
   label?: string;
   config: {
     componentId: string;
@@ -23,6 +23,13 @@ export interface PromptLayoutItem {
     }>;
     checkboxSize?: 'sm' | 'md' | 'lg';
     color?: string;
+    // Radio specific: label positioning relative to options
+    labelPosition?: 'left' | 'top' | 'right' | 'bottom';
+    // Radio specific: orientation of options
+    orientation?: 'vertical' | 'horizontal';
+    // Divider specific
+    style?: 'solid' | 'dashed' | 'dotted';
+    thickness?: number;
   };
 }
 

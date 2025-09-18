@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -257,40 +258,67 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
           </div>
         );
 
-      case 'radio':
-        const groupName = id.split('_')[0];
-        const isSelected = formData[groupName] === id;
-        
+      case 'radio': {
+        const groupName = id; // store selected value under componentId key
+        const selectedValue = formData[groupName] ?? config.options?.find(o => o.isDefault)?.value ?? '';
+        const layoutDirection = config.labelPosition === 'top' || config.labelPosition === 'bottom' ? 'column' : 'row';
+        const isLabelLeft = config.labelPosition === 'left';
+
         return (
           <div key={item.id} style={baseStyle}>
-            <button
-              type="button"
-              onClick={() => !readOnly && !config.isDisabled && handleRadioChange(groupName, id)}
-              disabled={readOnly || config.isDisabled}
-              className={cn(
-                'relative h-4 w-4 rounded-full border-2 transition-colors duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                'disabled:cursor-not-allowed disabled:opacity-50',
-                isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white',
-                hasError && 'border-red-500'
-              )}
-              style={{
-                borderColor: hasError ? '#ef4444' : (isSelected ? config.color || '#2563eb' : '#d1d5db')
-              }}
+            <div
+              className={cn('flex gap-2 items-center')}
+              style={{ flexDirection: layoutDirection as React.CSSProperties['flexDirection'], width: config.width ? `${config.width}px` : undefined }}
             >
-              {isSelected && (
-                <div 
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <div className="h-2 w-2 rounded-full bg-white" />
-                </div>
+              {config.label && (config.labelPosition === 'top' || config.labelPosition === 'left') && (
+                <Label className="text-sm" style={{ color: config.textColor }}>{config.label}</Label>
               )}
-            </button>
+              <RadioGroup
+                value={String(selectedValue)}
+                defaultValue={String(config.options?.find(o => o.isDefault)?.value ?? '')}
+                onValueChange={(val) => handleFieldChange(groupName, val)}
+                disabled={readOnly || config.isDisabled}
+                className={cn(isLabelLeft && 'ml-2')}
+                aria-label={config.label || 'Options'}
+              >
+                <div className={cn('gap-4', config.orientation === 'vertical' || !config.orientation ? 'flex flex-col' : 'flex items-center') }>
+                  {config.options?.map(opt => (
+                    <div key={opt.value} className="flex items-center gap-2">
+                      <RadioGroupItem id={`${groupName}_${opt.value}`} value={opt.value} />
+                      <Label htmlFor={`${groupName}_${opt.value}`} className="text-sm">{opt.label}</Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+              {config.label && (config.labelPosition === 'right' || config.labelPosition === 'bottom') && (
+                <Label className="text-sm" style={{ color: config.textColor }}>{config.label}</Label>
+              )}
+            </div>
             {hasError && (
-              <p className="text-xs text-red-500 mt-1 absolute top-6">{hasError}</p>
+              <p className="text-xs text-red-500 mt-1">{hasError}</p>
             )}
           </div>
         );
+      }
+
+      case 'divider': {
+        const widthPx = config.width ? `${config.width}px` : '200px';
+        const thickness = typeof config.thickness === 'number' ? config.thickness : 1;
+        const style = config.style || 'solid';
+        const color = config.color || '#e5e7eb';
+        return (
+          <div key={item.id} style={baseStyle}>
+            <div
+              style={{
+                width: widthPx,
+                borderTopStyle: style as React.CSSProperties['borderTopStyle'],
+                borderTopWidth: thickness,
+                borderTopColor: color
+              }}
+            />
+          </div>
+        );
+      }
 
       default:
         return null;

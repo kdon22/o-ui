@@ -126,6 +126,19 @@ export function StylingSection({
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500">Orientation</label>
+                <Select onValueChange={(value) => onConfigChange('orientation', value)} defaultValue={config.orientation || 'vertical'}>
+                  <SelectTrigger className="w-full h-8 text-sm border border-gray-300 rounded px-2">
+                    <SelectValue placeholder="Select orientation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vertical">Vertical</SelectItem>
+                    <SelectItem value="horizontal">Horizontal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 
