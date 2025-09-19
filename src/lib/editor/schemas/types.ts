@@ -94,6 +94,19 @@ export interface UnifiedSchema {
   parameters?: ParameterSchema[]
   snippetTemplate?: string // Monaco snippet for tab placeholders: 'method(${1:param})'
   noParensAllowed?: boolean // Allow calling without parentheses: variable.method
+  // Whether a non-boolean method may be used directly in a condition (if/elseif)
+  // Defaults: methods are assignment-only; boolean return types are allowed in conditions automatically.
+  // Set supportsCondition: true for exceptions like string.match
+  supportsCondition?: boolean
+
+  // Context gating for completion filtering and code generation
+  // assignment: usable on RHS of an assignment
+  // expression: usable as a sub-expression (e.g., inside arithmetic or comparisons)
+  // condition: usable directly as a condition (e.g., if obj.method)
+  allowedIn?: Array<'assignment' | 'expression' | 'condition'>
+
+  // Marks predicates (boolean-returning or special cases like match)
+  isPredicate?: boolean
   
   // Function-specific (type: 'function') - for user-defined utilities
   // Uses same returnType and parameters as methods, but called directly: functionName(args)

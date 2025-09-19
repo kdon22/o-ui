@@ -479,10 +479,11 @@ function getVariableType(variableName: string, allText: string): string {
  * Gets both properties and methods in a single, consistent way
  */
 async function getUnifiedCompletions(
-  variableName: string, 
-  typeName: string, 
-  allText: string, 
-  monacoInstance: typeof monaco
+  variableName: string,
+  typeName: string,
+  allText: string,
+  monacoInstance: typeof monaco,
+  context: 'condition' | 'expression' | 'assignment' = 'expression'
 ): Promise<monaco.languages.CompletionItem[]> {
   console.log(`[PropertyCompletionHandler] getUnifiedCompletions for "${variableName}" with type: "${typeName}"`)
   
@@ -533,6 +534,26 @@ async function getUnifiedCompletions(
       }
       
       const schema = p.schema
+      // Context filter based on schema.allowedIn/isPredicate
+      try {
+        const allowedIn: Array<'assignment'|'expression'|'condition'> | undefined = schema?.allowedIn
+        const isPredicate: boolean | undefined = schema?.isPredicate || (schema?.returnType === 'boolean') || schema?.supportsCondition === true
+        if (context === 'condition') {
+          // Only allow methods explicitly allowed in conditions
+          const allowedForCondition = (allowedIn ? allowedIn.includes('condition') : Boolean(isPredicate))
+          if (!allowedForCondition) {
+            continue
+          }
+        } else if (context === 'expression') {
+          if (allowedIn && !allowedIn.includes('expression')) {
+            continue
+          }
+        } else if (context === 'assignment') {
+          if (allowedIn && !allowedIn.includes('assignment')) {
+            continue
+          }
+        }
+      } catch {}
       const description = schema?.description || 'No description available'
       const examples = schema?.examples || []
       

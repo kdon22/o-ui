@@ -2,7 +2,7 @@
 // Replaces the over-engineered system with simple, reliable logic
 
 import { transformationFactory } from './transformation/transformation-pattern-factory'
-import { translateAssignmentInvocation } from './method-invocation-translator'
+import { translateAssignmentInvocation, translateExpressionInvocation } from './method-invocation-translator'
 import type { TransformationMetadata } from './transformation/types'
 
 export interface SimplePythonResult {
@@ -146,7 +146,12 @@ export class SimplePythonGenerator {
       const importLines: string[] = []
       if (requiredStdImports.size > 0) {
         for (const mod of requiredStdImports) {
-          importLines.push(`import ${mod}`)
+          const m = String(mod).trim()
+          if (/^(from|import)\s+/.test(m)) {
+            importLines.push(m)
+          } else {
+            importLines.push(`import ${m}`)
+          }
         }
       }
       if (requiredHelperModules.size > 0) {
@@ -231,14 +236,16 @@ export class SimplePythonGenerator {
     // Handle elseif/elif
     if (trimmed.startsWith('elseif ') || trimmed.startsWith('elif ')) {
       const condition = trimmed.replace(/^(elseif|elif)\s+/, '')
-      const pythonCondition = this.translateCondition(condition)
+      let pythonCondition = this.translateCondition(condition)
+      pythonCondition = this.translateConditionExpressions(pythonCondition, requiredStdImports, requiredHelperModules)
       return `${pythonIndent}elif ${pythonCondition}:`
     }
 
     // Handle regular if
     if (trimmed.startsWith('if ')) {
       const condition = trimmed.replace(/^if\s+/, '')
-      const pythonCondition = this.translateCondition(condition)
+      let pythonCondition = this.translateCondition(condition)
+      pythonCondition = this.translateConditionExpressions(pythonCondition, requiredStdImports, requiredHelperModules)
       return `${pythonIndent}if ${pythonCondition}:`
     }
 
@@ -254,7 +261,8 @@ export class SimplePythonGenerator {
     // Handle while loops
     if (trimmed.startsWith('while ')) {
       const condition = trimmed.replace(/^while\s+/, '')
-      const pythonCondition = this.translateCondition(condition)
+      let pythonCondition = this.translateCondition(condition)
+      pythonCondition = this.translateConditionExpressions(pythonCondition, requiredStdImports, requiredHelperModules)
       return `${pythonIndent}while ${pythonCondition}:`
     }
 
@@ -402,6 +410,42 @@ export class SimplePythonGenerator {
 
     console.log('🔧 [translateCondition] Final result:', pythonCondition)
     return pythonCondition
+  }
+
+  /**
+   * 🔧 Replace method/property invocations inside a condition with Python expressions
+   * using method schemas. Aggregates required imports and helper modules.
+   */
+  private translateConditionExpressions(
+    conditionExpr: string,
+    requiredStdImports: Set<string>,
+    requiredHelperModules: Set<string>
+  ): string {
+    // Replace simple owner.method(...) or owner.method occurrences globally
+    const pattern = /([A-Za-z_][\w\.]*?)\.(\w+)(\s*\(([^)]*)\))?/g
+    let result = ''
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(conditionExpr)) !== null) {
+      const [full, owner, method, _call, args] = match
+      // Append preceding text
+      result += conditionExpr.slice(lastIndex, match.index)
+      lastIndex = match.index + full.length
+      const expr = args !== undefined ? `${owner}.${method}(${args || ''})` : `${owner}.${method}`
+      const translated = translateExpressionInvocation(expr, { useHelpers: true })
+      if (translated.code) {
+        // Collect imports
+        translated.imports.forEach(m => requiredStdImports.add(m))
+        translated.helperModules.forEach(m => requiredHelperModules.add(m))
+        result += translated.code
+      } else {
+        // Fallback to original text if not translatable
+        result += full
+      }
+    }
+    // Append remaining tail
+    result += conditionExpr.slice(lastIndex)
+    return result
   }
 
   /**

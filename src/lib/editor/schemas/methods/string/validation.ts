@@ -25,17 +25,23 @@ export const STRING_VALIDATION_METHODS: UnifiedSchema[] = [
         params: []
       }
     },
-    pythonGenerator: (variable: string, resultVar: string = 'result', params?: any, debugContext?: DebugContext) => {
+    allowedIn: ['assignment', 'expression', 'condition'],
+    isPredicate: true,
+    pythonGenerator: (variable: string, resultVar?: string, params?: any, debugContext?: DebugContext) => {
       // 🚀 Debug mode: Use clean helper function for perfect line mapping
       if (debugContext?.useHelpers || debugContext?.mode === 'debug') {
-        return `${resultVar} = validate_email(${variable})`
+        const code = `validate_email(${variable})`
+        if (resultVar === undefined) return code
+        return `${resultVar} = ${code}`
       }
       
       // 🔧 Inline mode: Generate multi-line code for standalone execution
-      return `
+      const code = `
 import re
 email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
-${resultVar} = bool(re.match(email_pattern, ${variable}))`
+bool(re.match(email_pattern, ${variable}))`
+      if (resultVar === undefined) return code
+      return `\n${code.replace(/^/gm, '')}`.replace(/^\n/, '').replace('bool(re.match', `${resultVar} = bool(re.match`)
     },
     pythonImports: ['re']
   },
@@ -59,14 +65,20 @@ ${resultVar} = bool(re.match(email_pattern, ${variable}))`
         params: []
       }
     },
-    pythonGenerator: (variable: string, resultVar: string = 'result', params?: any, debugContext?: DebugContext) => {
+    allowedIn: ['assignment', 'expression', 'condition'],
+    isPredicate: true,
+    pythonGenerator: (variable: string, resultVar?: string, params?: any, debugContext?: DebugContext) => {
       // 🚀 Debug mode: Use clean helper function for perfect line mapping
       if (debugContext?.useHelpers || debugContext?.mode === 'debug') {
-        return `${resultVar} = is_numeric_string(${variable})`
+        const code = `is_numeric_string(${variable})`
+        if (resultVar === undefined) return code
+        return `${resultVar} = ${code}`
       }
       
       // 🔧 Inline mode: Generate direct Python code
-      return `${resultVar} = ${variable}.isdigit()`
+      const code = `${variable}.isdigit()`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
     },
     pythonImports: []
   },
@@ -90,14 +102,20 @@ ${resultVar} = bool(re.match(email_pattern, ${variable}))`
         params: []
       }
     },
-    pythonGenerator: (variable: string, resultVar: string = 'result', params?: any, debugContext?: DebugContext) => {
+    allowedIn: ['assignment', 'expression', 'condition'],
+    isPredicate: true,
+    pythonGenerator: (variable: string, resultVar?: string, params?: any, debugContext?: DebugContext) => {
       // 🚀 Debug mode: Use clean helper function for perfect line mapping
       if (debugContext?.useHelpers || debugContext?.mode === 'debug') {
-        return `${resultVar} = is_empty_string(${variable})`
+        const code = `is_empty_string(${variable})`
+        if (resultVar === undefined) return code
+        return `${resultVar} = ${code}`
       }
       
       // 🔧 Inline mode: Generate direct Python code
-      return `${resultVar} = len(${variable}) == 0`
+      const code = `len(${variable}) == 0`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
     },
     pythonImports: []
   }

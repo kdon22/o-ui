@@ -15,13 +15,18 @@ export const STRING_ENCODING_METHODS: UnifiedSchema[] = [
     examples: ['data.toBase64', 'credentials.toBase64()'],
     noParensAllowed: true,
     snippetTemplate: 'toBase64',
-    pythonGenerator: (variable: string, resultVar: string = 'result', params: any, debugContext?: any) => {
+    allowedIn: ['assignment', 'expression'],
+    pythonGenerator: (variable: string, resultVar?: string, params: any, debugContext?: any) => {
       // 🚀 Use helper function for perfect debug mapping
       if (debugContext?.useHelpers) {
-        return `${resultVar} = string_helpers.encode_base64(${variable})`
+        const code = `string_helpers.encode_base64(${variable})`
+        if (resultVar === undefined) return code
+        return `${resultVar} = ${code}`
       }
       // Fallback to inline code if helpers not available
-      return `${resultVar} = base64.b64encode(${variable}.encode('utf-8')).decode('utf-8')`
+      const code = `base64.b64encode(${variable}.encode('utf-8')).decode('utf-8')`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
     },
     pythonImports: ['base64'],
     debugInfo: {
@@ -39,13 +44,18 @@ export const STRING_ENCODING_METHODS: UnifiedSchema[] = [
     examples: ['encoded.fromBase64', 'data.fromBase64()'],
     noParensAllowed: true,
     snippetTemplate: 'fromBase64',
-    pythonGenerator: (variable: string, resultVar: string = 'result', params: any, debugContext?: any) => {
+    allowedIn: ['assignment', 'expression'],
+    pythonGenerator: (variable: string, resultVar?: string, params: any, debugContext?: any) => {
       // 🚀 Use helper function for perfect debug mapping
       if (debugContext?.useHelpers) {
-        return `${resultVar} = string_helpers.decode_base64(${variable})`
+        const code = `string_helpers.decode_base64(${variable})`
+        if (resultVar === undefined) return code
+        return `${resultVar} = ${code}`
       }
       // Fallback to inline code if helpers not available
-      return `${resultVar} = base64.b64decode(${variable}.encode('utf-8')).decode('utf-8')`
+      const code = `base64.b64decode(${variable}.encode('utf-8')).decode('utf-8')`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
     },
     pythonImports: ['base64'],
     debugInfo: {
@@ -63,7 +73,12 @@ export const STRING_ENCODING_METHODS: UnifiedSchema[] = [
     examples: ['query.toUrlSafe', 'searchTerm.toUrlSafe()'],
     noParensAllowed: true,
     snippetTemplate: 'toUrlSafe',
-    pythonGenerator: (variable: string, resultVar: string = 'result') => `${resultVar} = urllib.parse.quote(${variable})`,
+    allowedIn: ['assignment', 'expression'],
+    pythonGenerator: (variable: string, resultVar?: string) => {
+      const code = `urllib.parse.quote(${variable})`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
+    },
     pythonImports: ['urllib.parse']
   }
 ]

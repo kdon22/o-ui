@@ -85,11 +85,18 @@ export const STRING_UTILITY_METHODS: UnifiedSchema[] = [
       helperFunction: 'regex_match',
       complexity: 'multi-line'
     },
+    supportsCondition: true,
+    allowedIn: ['assignment', 'expression', 'condition'],
+    isPredicate: true,
     pythonGenerator: (variable: string, resultVar: string = 'result', params: any) => {
       const raw = params?.regex || params?.arg1 || '/.*/'
       const match = String(raw).match(/^\/(.*)\/([gimsyu]*)$/)
       const pattern = match ? match[1] : String(raw)
       const flags = match ? match[2] : ''
+      if (resultVar === undefined) {
+        // Condition context: return boolean expression
+        return `regex_match(${variable}, r'${pattern}', '${flags}') is not None`
+      }
       return `${resultVar} = regex_match(${variable}, r'${pattern}', '${flags}')`
     },
     pythonImports: ['from helper_functions import regex_match']
@@ -198,7 +205,11 @@ export const STRING_UTILITY_METHODS: UnifiedSchema[] = [
     description: 'Converts string to integer',
     examples: ['text.toInt()', 'ageText.toInt()'],
     snippetTemplate: 'toInt()',
-    pythonGenerator: (variable: string, resultVar: string = 'result') => `${resultVar} = int(${variable})`,
+    allowedIn: ['assignment', 'expression'],
+    pythonGenerator: (variable: string, resultVar?: string) => {
+      if (resultVar === undefined) return `int(${variable})`
+      return `${resultVar} = int(${variable})`
+    },
     pythonImports: []
   },
   {
@@ -211,7 +222,12 @@ export const STRING_UTILITY_METHODS: UnifiedSchema[] = [
     examples: ['text.length', 'name.length()'],
     noParensAllowed: true,
     snippetTemplate: 'length',
-    pythonGenerator: (variable: string, resultVar: string = 'result') => `${resultVar} = len(${variable})`,
+    allowedIn: ['assignment', 'expression', 'condition'],
+    isPredicate: false,
+    pythonGenerator: (variable: string, resultVar?: string) => {
+      if (resultVar === undefined) return `len(${variable})`
+      return `${resultVar} = len(${variable})`
+    },
     pythonImports: []
   },
   {
@@ -222,17 +238,33 @@ export const STRING_UTILITY_METHODS: UnifiedSchema[] = [
     returnType: 'string',
     description: 'Replaces all occurrences of a substring with another string',
     examples: ['text.replace("old", "new")', 'message.replace(searchTerm, replacement)'],
-    snippetTemplate: 'replace("${1:string}", "${2:string}")',
+    snippetTemplate: 'replace(${1:patternOrText}, ${2:replacement})',
     parameters: [
       { name: 'search', type: 'string', required: true },
       { name: 'replace', type: 'string', required: true }
     ],
-    pythonGenerator: (variable: string, resultVar: string = 'result', params: any) => {
+    allowedIn: ['assignment', 'expression'],
+    pythonGenerator: (variable: string, resultVar?: string, params?: any) => {
       const search = params?.search || params?.arg1 || '"search"'
-      const replace = params?.replace || params?.arg2 || '"replace"'
-      return `${resultVar} = ${variable}.replace(${search}, ${replace})`
+      const replacement = params?.replace || params?.arg2 || '"replace"'
+      const m = String(search).match(/^\/(.*)\/([gimsyu]*)$/)
+      if (m) {
+        const pattern = m[1]
+        const flags = m[2] || ''
+        const pyFlags: string[] = []
+        if (flags.includes('i')) pyFlags.push('re.IGNORECASE')
+        if (flags.includes('m')) pyFlags.push('re.MULTILINE')
+        if (flags.includes('s')) pyFlags.push('re.DOTALL')
+        const flagExpr = pyFlags.length ? `, ${pyFlags.join(' | ')}` : ''
+        const code = `re.sub(r'${pattern}', ${replacement}, ${variable}${flagExpr})`
+        if (resultVar === undefined) return code
+        return `${resultVar} = ${code}`
+      }
+      const code = `${variable}.replace(${search}, ${replacement})`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
     },
-    pythonImports: []
+    pythonImports: ['re']
   },
   {
     id: 'string-split',
@@ -244,9 +276,12 @@ export const STRING_UTILITY_METHODS: UnifiedSchema[] = [
     examples: ['text.split(",")', 'csv.split(";")', 'words.split(" ")'],
     snippetTemplate: 'split("${1:string}")',
     parameters: [{ name: 'delimiter', type: 'string', required: true }],
-    pythonGenerator: (variable: string, resultVar: string = 'result', params: any) => {
+    allowedIn: ['assignment', 'expression'],
+    pythonGenerator: (variable: string, resultVar?: string, params?: any) => {
       const delimiter = params?.delimiter || params?.arg1 || '","'
-      return `${resultVar} = ${variable}.split(${delimiter})`
+      const code = `${variable}.split(${delimiter})`
+      if (resultVar === undefined) return code
+      return `${resultVar} = ${code}`
     },
     pythonImports: []
   }

@@ -151,3 +151,56 @@ export function translateAssignmentInvocation(
 }
 
 
+/**
+ * Translate an expression that may contain a simple member invocation or property
+ * into a Python expression string using method schemas. This is used for
+ * conditions (if/elif/while) where we need an expression, not an assignment.
+ */
+export function translateExpressionInvocation(
+  expr: string,
+  options: InvocationTranslateOptions
+): InvocationTranslateResult {
+  const result: InvocationTranslateResult = {
+    code: null,
+    imports: new Set<string>(),
+    helperModules: new Set<string>()
+  }
+
+  // Try a single simple invocation/property per call; caller can repeat as needed
+  const parsed = parseSimpleMethodCall(expr)
+  if (!parsed) return result
+
+  const schema = getSchemaForMethod(parsed.method)
+  if (!schema || !schema.pythonGenerator) return result
+
+  const debugContext = options.useHelpers ? { useHelpers: true } : undefined
+  const params = buildParamsObject(schema, parsed.args)
+
+  try {
+    // For expression context, pass undefined resultVar to get expression form
+    const code = schema.pythonGenerator(parsed.owner, undefined, params, debugContext)
+    if (code) {
+      result.code = code
+    }
+  } catch {
+    // keep null
+  }
+
+  if (Array.isArray(schema.pythonImports)) {
+    for (const imp of schema.pythonImports) {
+      result.imports.add(imp)
+    }
+  }
+
+  if (options.useHelpers && schema.debugInfo?.helperFunction) {
+    const parts = schema.debugInfo.helperFunction.split('.')
+    if (parts.length >= 2) {
+      const moduleName = parts[0]
+      result.helperModules.add(moduleName)
+    }
+  }
+
+  return result
+}
+
+
