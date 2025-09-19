@@ -15,7 +15,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
     examples: ['name.toProperCase', 'title.toProperCase()'],
     noParensAllowed: true,
     snippetTemplate: 'toProperCase',
-    allowedIn: ['assignment', 'expression'],
+    allowedIn: ['assignment', 'expression', 'condition'],
     pythonGenerator: (variable: string, resultVar?: string) => {
       const code = `${variable}.title()`
       if (resultVar === undefined) return code
@@ -33,7 +33,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
     examples: ['name.toLowerCase', 'text.toLowerCase()'],
     noParensAllowed: true,
     snippetTemplate: 'toLowerCase',
-    allowedIn: ['assignment', 'expression'],
+    allowedIn: ['assignment', 'expression', 'condition'],
     pythonGenerator: (variable: string, resultVar?: string) => {
       const code = `${variable}.lower()`
       if (resultVar === undefined) return code
@@ -51,7 +51,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
     examples: ['name.toUpperCase', 'text.toUpperCase()'],
     noParensAllowed: true,
     snippetTemplate: 'toUpperCase',
-    allowedIn: ['assignment', 'expression'],
+    allowedIn: ['assignment', 'expression', 'condition'],
     pythonGenerator: (variable: string, resultVar?: string) => {
       const code = `${variable}.upper()`
       if (resultVar === undefined) return code
@@ -76,7 +76,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
     parameters: [{ name: 'substring', type: 'string', required: true }],
     allowedIn: ['assignment', 'expression', 'condition'],
     isPredicate: true,
-    pythonGenerator: (variable: string, resultVar?: string, params: any) => {
+    pythonGenerator: (variable: string, resultVar?: string, params?: any) => {
       const substring = params?.substring || params?.arg1 || params?.[0] || '"substring"'
       
       // 🚀 REGEX PATTERN DETECTION: Check if parameter is a regex pattern /pattern/
@@ -128,7 +128,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
       { name: 'rightSide', type: 'string', required: false }
     ],
     allowedIn: ['assignment', 'expression'],
-    pythonGenerator: (variable: string, resultVar?: string, params: any) => {
+    pythonGenerator: (variable: string, resultVar?: string, params?: any) => {
       const side1 = params?.arg1?.replace(/"/g, '')
       const code = !side1 ? `${variable}.strip()` : side1 === 'l' ? `${variable}.lstrip()` : side1 === 'r' ? `${variable}.rstrip()` : `${variable}.strip()`
       if (resultVar === undefined) return code

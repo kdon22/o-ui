@@ -213,6 +213,10 @@ export const propertyCompletionHandler = {
       const base = trimmed.slice(0, -1).split(/\s+/).pop() || ''
       console.log(`[PropertyCompletionHandler] base extracted: "${base}"`)
 
+      // Detect completion context so we can respect schema.allowedIn
+      const context = detectCompletionContext(monacoInstance, model, position)
+      console.log(`[PropertyCompletionHandler] Detected context: ${context}`)
+
       // Module access (e.g., http. or Math.) — support lowercase module names from schema
       if (/^[A-Za-z][A-Za-z0-9_]*$/.test(base)) {
         const methods = getModuleMethodSuggestions(monacoInstance, base)
@@ -344,7 +348,7 @@ export const propertyCompletionHandler = {
             }
             
             // Get unified completions from Master System (properties + methods)
-            const unifiedCompletions = await getUnifiedCompletions(cleanBase.path, varType, allText, monacoInstance)
+            const unifiedCompletions = await getUnifiedCompletions(cleanBase.path, varType, allText, monacoInstance, context)
             console.log(`[PropertyCompletionHandler] Found ${unifiedCompletions.length} unified completions`)
             
             return { suggestions: unifiedCompletions }
@@ -368,7 +372,7 @@ export const propertyCompletionHandler = {
             const elementType = getCollectionElementType(String(baseType), collectionProp)
             if (elementType && elementType !== 'unknown') {
               const allText = model.getValue()
-              const suggestions = await getUnifiedCompletions(cleanBase.path, elementType, allText, monacoInstance)
+              const suggestions = await getUnifiedCompletions(cleanBase.path, elementType, allText, monacoInstance, context)
               return { suggestions }
             }
           } catch (err) {
@@ -377,7 +381,7 @@ export const propertyCompletionHandler = {
         }
 
         // Use simplified property resolution for complex chains
-        const suggestions = await getSimplifiedPropertySuggestions(monacoInstance, cleanBase.path, model)
+        const suggestions = await getSimplifiedPropertySuggestions(monacoInstance, cleanBase.path, model, context)
         return { suggestions }
       }
     }
@@ -393,7 +397,8 @@ export const propertyCompletionHandler = {
 async function getSimplifiedPropertySuggestions(
   monacoInstance: typeof monaco,
   baseChain: string,
-  model: monaco.editor.ITextModel
+  model: monaco.editor.ITextModel,
+  context: 'condition' | 'expression' | 'assignment' = 'expression'
 ): Promise<monaco.languages.CompletionItem[]> {
   try {
     console.log(`[PropertyCompletionHandler] getSimplifiedPropertySuggestions for: "${baseChain}"`)
@@ -419,7 +424,7 @@ async function getSimplifiedPropertySuggestions(
 
     // Use unified system for final type to prevent duplicates
     if (finalType !== 'unknown') {
-      return await getUnifiedCompletions(baseChain, finalType, allText, monacoInstance)
+      return await getUnifiedCompletions(baseChain, finalType, allText, monacoInstance, context)
     }
     
     return []
@@ -446,7 +451,7 @@ async function getSimplifiedPropertySuggestions(
 
     // Use unified system for consistency
     if (typeName !== 'unknown') {
-      return await getUnifiedCompletions(baseChain, typeName, allText, monacoInstance)
+      return await getUnifiedCompletions(baseChain, typeName, allText, monacoInstance, context)
     }
     
     return []
@@ -527,6 +532,8 @@ async function getUnifiedCompletions(
     )
     
     for (const p of schemaCompletions) {
+      // DEBUG: log candidate entry
+      console.log(`[PropertyCompletionHandler] Candidate from schema: label=${p.label}, type=${p.type}`)
       // Skip if this is a property that Master System already provided
       if (existingPropertyNames.has(p.label)) {
         console.log(`[PropertyCompletionHandler] Skipping duplicate property "${p.label}" from schema system`)
@@ -538,10 +545,15 @@ async function getUnifiedCompletions(
       try {
         const allowedIn: Array<'assignment'|'expression'|'condition'> | undefined = schema?.allowedIn
         const isPredicate: boolean | undefined = schema?.isPredicate || (schema?.returnType === 'boolean') || schema?.supportsCondition === true
+        console.log(`[PropertyCompletionHandler] Context=${context}, allowedIn=${JSON.stringify(allowedIn)}, isPredicate=${isPredicate}, returnType=${schema?.returnType}`)
         if (context === 'condition') {
-          // Only allow methods explicitly allowed in conditions
-          const allowedForCondition = (allowedIn ? allowedIn.includes('condition') : Boolean(isPredicate))
+          // Only allow when explicitly marked for conditions OR marked predicate
+          const allowedForCondition = (
+            (Array.isArray(allowedIn) && allowedIn.includes('condition')) ||
+            Boolean(isPredicate)
+          )
           if (!allowedForCondition) {
+            console.log(`[PropertyCompletionHandler] SKIP in condition: ${p.label} (not allowedIn condition and not predicate)`)            
             continue
           }
         } else if (context === 'expression') {
@@ -593,4 +605,41 @@ async function getUnifiedCompletions(
   
   console.log(`[PropertyCompletionHandler] Unified completions: ${completions.length} total`)
   return completions
+}
+
+/**
+ * Detect the current completion context by inspecting the text up to the cursor
+ * - condition: inside if/when/while predicate (line before cursor ends with one of these and no '=')
+ * - assignment: right side of an assignment (a = <here>)
+ * - expression: default fallback
+ */
+function detectCompletionContext(
+  monacoInstance: typeof monaco,
+  model: monaco.editor.ITextModel,
+  position: monaco.Position
+): 'condition' | 'assignment' | 'expression' {
+  try {
+    const lineContent = model.getLineContent(position.lineNumber)
+    const beforeCursor = lineContent.substring(0, Math.max(0, position.column - 1))
+
+    // Quick heuristic for assignment: look for '=' not part of '==' etc., before cursor
+    // Enforce language constraint: single '=' is assignment in our DSL
+    if (/=\s*[^=]*$/.test(beforeCursor) && !/==|!=|>=|<=/.test(beforeCursor)) {
+      return 'assignment'
+    }
+
+    // Condition: if/when/while ... <cursor> or inside parentheses after those keywords
+    const textUpToHere = model.getValueInRange(new monacoInstance.Range(1, 1, position.lineNumber, position.column))
+    if (/\b(if|when|while)\b[\s\S]*$/.test(textUpToHere)) {
+      // More targeted: cursor is on the same line after if/when/while and before a then-like token
+      const lc = beforeCursor.trim()
+      if (/^(if|when|while)\b/.test(lc) || /\b(and|or|not|\(|\)|\.|\[\d+\])$/.test(lc)) {
+        return 'condition'
+      }
+    }
+
+    return 'expression'
+  } catch {
+    return 'expression'
+  }
 }

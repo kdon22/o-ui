@@ -5,6 +5,7 @@ This folder documents the Monaco completion system, schema-driven methods, Pytho
 Contents:
 - architecture.md – High-level data flow and provider pipeline
 - schemas-and-methods.md – Method schemas, categories, and examples
+- method-visibility-matrix.md – Grid of methods × contexts (condition | expression | assignment)
 - python-generation.md – Method invocation translator and imports
 - type-inference.md – Assignment typing and chain-aware detection
 - integration-map.md – File-by-file responsibilities and relationships

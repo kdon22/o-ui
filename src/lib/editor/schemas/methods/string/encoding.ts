@@ -15,8 +15,8 @@ export const STRING_ENCODING_METHODS: UnifiedSchema[] = [
     examples: ['data.toBase64', 'credentials.toBase64()'],
     noParensAllowed: true,
     snippetTemplate: 'toBase64',
-    allowedIn: ['assignment', 'expression'],
-    pythonGenerator: (variable: string, resultVar?: string, params: any, debugContext?: any) => {
+    allowedIn: ['assignment', 'expression', 'condition'],
+    pythonGenerator: (variable: string, resultVar?: string, params?: any, debugContext?: any) => {
       // 🚀 Use helper function for perfect debug mapping
       if (debugContext?.useHelpers) {
         const code = `string_helpers.encode_base64(${variable})`
@@ -44,8 +44,8 @@ export const STRING_ENCODING_METHODS: UnifiedSchema[] = [
     examples: ['encoded.fromBase64', 'data.fromBase64()'],
     noParensAllowed: true,
     snippetTemplate: 'fromBase64',
-    allowedIn: ['assignment', 'expression'],
-    pythonGenerator: (variable: string, resultVar?: string, params: any, debugContext?: any) => {
+    allowedIn: ['assignment', 'expression', 'condition'],
+    pythonGenerator: (variable: string, resultVar?: string, params?: any, debugContext?: any) => {
       // 🚀 Use helper function for perfect debug mapping
       if (debugContext?.useHelpers) {
         const code = `string_helpers.decode_base64(${variable})`
