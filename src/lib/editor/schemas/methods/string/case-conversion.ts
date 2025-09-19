@@ -72,7 +72,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
       'input.contains(/\\d+/)',  // Regex pattern example
       'email.contains(/^[\\w.-]+@[\\w.-]+\\.\\w+$/)'
     ],
-    snippetTemplate: 'contains("${1:string}")',
+    snippetTemplate: 'contains(${1:string})',
     parameters: [{ name: 'substring', type: 'string', required: true }],
     allowedIn: ['assignment', 'expression', 'condition'],
     isPredicate: true,
@@ -111,7 +111,7 @@ export const STRING_CASE_CONVERSION_METHODS: UnifiedSchema[] = [
         return `${resultVar} = ${code}`
       }
     },
-    pythonImports: [] // Note: Dynamic import handling will be added in the translator
+    pythonImports: ['re'] // Regex support when user types /.../
   },
   {
     id: 'string-trim-white-all',
