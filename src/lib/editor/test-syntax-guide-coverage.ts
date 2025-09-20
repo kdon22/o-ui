@@ -239,7 +239,7 @@ export const COMPLETION_TEST_SCENARIOS = [
   { cursor: 'if any utr.airsegments as segment\n  segment.|', expectation: 'Should suggest AirSegment properties' },
   
   // SQL completions
-  { cursor: 'rows = SELECT |', expectation: 'Should suggest table columns' },
+  { cursor: 'rows = SELECT2 |', expectation: 'Should suggest table columns' },
   { cursor: 'rows = SELECT * FROM |', expectation: 'Should suggest table names' },
   { cursor: 'for row in rows\n  row.|', expectation: 'Should suggest SQL columns' },
   

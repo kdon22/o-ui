@@ -135,8 +135,8 @@ export function QueryBuilderPane({
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder={
                 selectedTable 
-                  ? `SELECT * FROM ${selectedTable.tableName}` 
-                  : "SELECT columns FROM table WHERE conditions"
+                  ? `SELECT * FROM [${selectedTable.tableName}]` 
+                  : "SELECT columns FROM [table] WHERE conditions"
               }
               className="font-mono text-sm flex-1 resize-none"
               style={{ minHeight: '120px' }}
@@ -217,8 +217,8 @@ export function QueryBuilderPane({
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder={
               selectedTable 
-                ? `SELECT * FROM ${selectedTable.tableName}` 
-                : "SELECT columns FROM table WHERE conditions"
+                ? `SELECT * FROM [${selectedTable.tableName}]` 
+                : "SELECT columns FROM [table] WHERE conditions"
             }
             className="font-mono text-sm flex-1 min-h-[200px] resize-none"
           />

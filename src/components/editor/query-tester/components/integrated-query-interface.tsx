@@ -82,7 +82,7 @@ export function IntegratedQueryInterface({
       // Auto-populate query (but don't execute)
       // Use tableName (sanitized) instead of name (display name)
       const tableRef = selectedTable.tableName;
-      const searchAllQuery = `SELECT * FROM ${tableRef}`;
+      const searchAllQuery = `SELECT * FROM [${tableRef}]`;
       setQueryText(searchAllQuery);
     }
   }, [selectedTable, viewMode]);
@@ -246,7 +246,7 @@ export function IntegratedQueryInterface({
                 <TextArea
                   value={queryText}
                   onChange={(e) => handleQueryChange(e.target.value)}
-                  placeholder={`SELECT * FROM ${selectedTable.tableName}`}
+                  placeholder={`SELECT * FROM [${selectedTable.tableName}]`}
                   className="font-mono text-sm flex-1 min-h-[200px] resize-none"
                 />
                 

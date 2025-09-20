@@ -23,8 +23,8 @@ export function parseSimpleSQL(query: string): ParsedQuery {
     // Clean up the query
     const cleanQuery = query.trim().replace(/\s+/g, ' ');
     
-    // Basic SELECT pattern – permissive table capture, we'll sanitize after
-    const selectMatch = cleanQuery.match(/^SELECT\s+(.+?)\s+FROM\s+(.+?)(?:\s+WHERE\s+(.+))?$/i);
+    // Basic SELECT pattern – capture table allowing spaces and brackets/quotes
+    const selectMatch = cleanQuery.match(/^SELECT\s+(.+?)\s+FROM\s+(\[[^\]]+\]|"[^"]+"|`[^`]+`|\S+)(?:\s+WHERE\s+(.+))?$/i);
     
     if (!selectMatch) {
       return {
@@ -43,8 +43,22 @@ export function parseSimpleSQL(query: string): ParsedQuery {
     
     // Parse WHERE conditions
     const whereConditions = whereClause ? parseWhereClause(whereClause) : [];
+    const hadWhereClause = Boolean(whereClause);
     
+    // If a WHERE keyword was provided but we could not parse any conditions,
+    // surface a clear error instead of silently returning all rows.
+    if (hadWhereClause && whereConditions.length === 0) {
+      return {
+        tableName: rawTableName.trim().replace(/^\[|\]$|^"|"$|^`|`$/g, ''),
+        columns,
+        whereConditions,
+        isValid: false,
+        error: 'Invalid WHERE clause. Use column operators like =, !=, >, <, >=, <=, LIKE.'
+      };
+    }
+
     return {
+      // Normalize table: support [table name] syntax
       tableName: rawTableName.trim().replace(/^\[|\]$|^"|"$|^`|`$/g, ''),
       columns,
       whereConditions,
@@ -80,8 +94,11 @@ function parseColumns(columnsStr: string): string[] {
 function parseWhereClause(whereClause: string): WhereCondition[] {
   const conditions: WhereCondition[] = [];
   
-  // Split by AND/OR (simple approach)
-  const parts = whereClause.split(/\s+(AND|OR)\s+/i);
+  // Remove parentheses – our evaluator processes left-to-right with explicit ops
+  const normalized = whereClause.replace(/[()]/g, ' ').trim();
+  
+  // Split by AND/OR (after normalization)
+  const parts = normalized.split(/\s+(AND|OR)\s+/i);
   
   for (let i = 0; i < parts.length; i += 2) {
     const conditionStr = parts[i].trim();
@@ -98,18 +115,20 @@ function parseWhereClause(whereClause: string): WhereCondition[] {
 }
 
 function parseCondition(conditionStr: string): WhereCondition | null {
-  // Match: column operator value
-  const match = conditionStr.match(/^(\w+)\s*(=|!=|>=|<=|>|<|LIKE|NOT\s+LIKE)\s*(.+)$/i);
-  
+  // Match: column (supports [brackets], "quotes", `backticks`, or bare word) operator value
+  // Allow bare column names to include hyphens and dots (e.g., test-3, user.name)
+  const match = conditionStr.match(/^(?:\[([^\]]+)\]|"([^"]+)"|`([^`]+)`|([\w.-]+))\s*(=|!=|>=|<=|>|<|LIKE|NOT\s+LIKE)\s*(.+)$/i);
+
   if (!match) {
     return null;
   }
-  
-  const [, column, operator, valueStr] = match;
+
+  const [, bracketed, dquoted, bquoted, bare, operator, valueStr] = match;
+  const columnRaw = bracketed || dquoted || bquoted || bare || '';
   const value = parseValue(valueStr.trim());
-  
+
   return {
-    column: column.trim(),
+    column: columnRaw.trim(),
     operator: operator.toUpperCase().replace(/\s+/g, ' ') as WhereCondition['operator'],
     value
   };

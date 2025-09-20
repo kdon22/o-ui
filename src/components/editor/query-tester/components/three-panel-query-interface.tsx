@@ -77,7 +77,7 @@ export function ThreePanelQueryInterface({
     if (selectedTable) {
       // Use tableName (sanitized) instead of name (display name)
       const tableRef = selectedTable.tableName;
-      const searchAllQuery = `SELECT * FROM ${tableRef}`;
+      const searchAllQuery = `SELECT * FROM [${tableRef}]`;
       setQueryText(searchAllQuery);
     }
   }, [selectedTable]);
