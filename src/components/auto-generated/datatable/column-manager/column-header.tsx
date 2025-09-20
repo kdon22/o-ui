@@ -11,7 +11,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils/generalUtils';
 import { 
   Type, 
@@ -44,6 +44,12 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   onInsertColumn
 }) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  // Initialize from persisted width if available
+  const [width, setWidth] = useState<number | undefined>(column.width);
+  const thRef = useRef<HTMLTableCellElement | null>(null);
+  const isResizingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
   
   const Icon = COLUMN_TYPE_ICONS[column.type];
 
@@ -112,18 +118,56 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
     console.log('Edit permissions for', column.name);
   };
 
+  // ----------------------------------------------------------------------------
+  // Resize handlers (basic column resize by dragging right edge)
+  // ----------------------------------------------------------------------------
+  const onMouseMove = (e: MouseEvent) => {
+    if (!isResizingRef.current) return;
+    const delta = e.clientX - startXRef.current;
+    const newWidth = Math.max(80, startWidthRef.current + delta);
+    setWidth(newWidth);
+  };
+
+  const onMouseUp = () => {
+    if (!isResizingRef.current) return;
+    isResizingRef.current = false;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    // Persist the new width to schema
+    if (width && onColumnUpdate) {
+      onColumnUpdate({ ...column, width });
+    }
+  };
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingRef.current = true;
+    startXRef.current = e.clientX;
+    const el = thRef.current;
+    startWidthRef.current = el ? el.getBoundingClientRect().width : (width || 120);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
   return (
     <>
       <th
+        ref={thRef}
         className={cn(
-          "group px-3 py-2 text-left text-sm font-medium text-gray-700 border-r border-gray-200 min-w-[120px] cursor-pointer hover:bg-gray-100",
+          // Tighter padding and smaller default min width
+          "group relative px-2 py-1.5 text-left text-sm font-medium text-gray-700 border-r border-gray-200 min-w-[100px] cursor-pointer hover:bg-gray-100",
           sortDirection && "bg-blue-50"
         )}
-        style={{ borderBottom: '1px solid #e5e7eb' }}
+        style={{ 
+          borderBottom: '1px solid #e5e7eb',
+          width: width ? `${width}px` : column.width ? `${column.width}px` : undefined
+        }}
         onClick={handleSort}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+          {/* Left cluster: icon, title, sort */}
+          <div className="flex items-center gap-2 pr-1 min-w-0">
             <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <span className="truncate">{column.name}</span>
             {column.required && <span className="text-red-500 flex-shrink-0">*</span>}
@@ -133,8 +177,8 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
             {sortDirection === 'desc' && <ArrowDown className="w-4 h-4 text-blue-600 flex-shrink-0" />}
           </div>
           
-          {/* Dropdown Menu */}
-          <div className="flex-shrink-0">
+          {/* Right cluster: dropdown pinned to cell edge */}
+          <div className="flex-shrink-0 pl-2" onClick={(e) => e.stopPropagation()}>
             <ColumnHeaderDropdown
               column={column}
               onEditField={handleEditField}
@@ -151,6 +195,18 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
             />
           </div>
         </div>
+
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleResizeStart}
+          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            // subtle visual separator when hovering the handle
+            background:
+              'linear-gradient(to right, transparent, rgba(0,0,0,0.06), transparent)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
       </th>
 
       {/* Column Type Editor Modal */}

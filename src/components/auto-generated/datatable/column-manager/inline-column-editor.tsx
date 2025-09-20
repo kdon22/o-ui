@@ -43,7 +43,8 @@ export const InlineColumnEditor: React.FC<InlineColumnEditorProps> = ({
     type: 'str',
     required: false,
     options: [],
-    description: ''
+    description: '',
+    width: 140
   });
 
   const [newOption, setNewOption] = useState('');
@@ -63,7 +64,8 @@ export const InlineColumnEditor: React.FC<InlineColumnEditorProps> = ({
         type: column.type || 'str',
         required: column.required || false,
         options: column.options || [],
-        description: column.description || ''
+        description: column.description || '',
+        width: column.width ?? (existingColumns[existingColumns.length - 1]?.width ?? 140)
       });
     } else {
       setFormData({
@@ -71,7 +73,8 @@ export const InlineColumnEditor: React.FC<InlineColumnEditorProps> = ({
         type: 'str',
         required: false,
         options: [],
-        description: ''
+        description: '',
+        width: existingColumns[existingColumns.length - 1]?.width ?? 140
       });
     }
     setErrors({});
@@ -344,7 +347,7 @@ export const InlineColumnEditor: React.FC<InlineColumnEditorProps> = ({
         <Button
           size="sm"
           onClick={handleSave}
-          className="h-8 px-3 text-sm bg-blue-600 hover:bg-blue-700"
+          className="h-8 px-3 text-sm bg-black hover:bg-black/90 text-white"
           disabled={!formData.name.trim()}
         >
           <Check className="w-4 h-4 mr-1" />

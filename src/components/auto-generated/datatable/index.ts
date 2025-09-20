@@ -16,9 +16,8 @@
  * - Excellent patterns and maintainability
  */
 
-// Main component (clean refactored version)
+// Main component (refactored only - no backward compatibility)
 export { AutoDataTable } from './auto-datatable';
-export { AutoDataTable as AutoDataTableRefactored } from './auto-datatable-refactored';
 
 // Provider and context system
 export {

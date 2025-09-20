@@ -57,7 +57,7 @@ export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
   // Enhanced state management with validation
   const [formData, setFormData] = useState<TableColumn>({
     name: '',
-    type: 'text',
+    type: 'str',
     required: false,
     options: [],
     description: '',
@@ -91,7 +91,7 @@ export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
     if (column) {
       setFormData({
         name: column.name || '',
-        type: column.type || 'text',
+        type: (column.type as any) || 'str',
         required: column.required || false,
         options: column.options || [],
         description: column.description || '',
@@ -100,7 +100,7 @@ export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
     } else {
       setFormData({
         name: '',
-        type: 'text',
+        type: 'str',
         required: false,
         options: [],
         description: '',

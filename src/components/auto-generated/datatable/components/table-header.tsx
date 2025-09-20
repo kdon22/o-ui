@@ -84,7 +84,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
     const insertIndex = position === 'left' ? index : index + 1;
     const newColumn: TableColumn = {
       name: `Column ${columns.length + 1}`,
-      type: 'text'
+      type: 'str'
     };
     
     const newColumns = [...columns];
@@ -112,7 +112,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   return (
     <thead>
       <tr style={{ backgroundColor: '#f8fafc' }}>
-        {/* Row number header */}
+        {/* Select-all checkbox in first header cell */}
         <th
           className="px-3 py-2 border-r border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50"
           style={{ 
@@ -121,23 +121,13 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
             zIndex: 10
           }}
         >
-          #
-        </th>
-
-        {/* Row select header */}
-        <th
-          className="px-3 py-2 border-r border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-          style={{ 
-            borderBottom: '2px solid #e5e7eb',
-            width: 40
-          }}
-        >
           <input
             type="checkbox"
             className="rounded"
-            onChange={() => {
-              // TODO: Implement select all functionality
-            }}
+            aria-label="Select all rows"
+            // This header is only used in the extracted header version; wiring left to caller
+            // The orchestrating table uses its own header implementation.
+            onChange={() => {}}
           />
         </th>
 
@@ -145,11 +135,11 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
         {columns.map((column, index) => (
           <th
             key={`${column.name}-${index}`}
-            className="px-3 py-2 border-r border-gray-200 text-left"
+            className="px-2 py-1.5 border-r border-gray-200 text-left"
             style={{ 
               borderBottom: '2px solid #e5e7eb',
-              minWidth: 150,
-              maxWidth: 300
+              minWidth: 110,
+              maxWidth: 320
             }}
           >
             <ColumnHeader

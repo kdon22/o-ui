@@ -175,13 +175,20 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
   // ============================================================================
 
   const handleAddColumn = useCallback(async (column: TableColumn) => {
-    const updatedColumns = [...columns, column];
+    // Default width: inherit from last column or fallback to 140px
+    const inheritedWidth = columns.length > 0 ? columns[columns.length - 1].width : undefined;
+    const withWidth: TableColumn = {
+      width: inheritedWidth ?? 140,
+      ...column,
+    };
+    const updatedColumns = [...columns, withWidth];
     await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleUpdateColumn = useCallback(async (columnIndex: number, updatedColumn: TableColumn) => {
+    // Preserve other column metadata; update the target index
     const updatedColumns = columns.map((col, index) => 
-      index === columnIndex ? updatedColumn : col
+      index === columnIndex ? { ...col, ...updatedColumn } : col
     );
     await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
@@ -225,7 +232,9 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
       // Default to camelCase for dot access in code
       name: 'newField',
       type: 'str',
-      required: false
+      required: false,
+      // Inherit width from neighbor, else fallback
+      width: (position === 'left' ? columns[columnIndex]?.width : columns[columnIndex]?.width) ?? 140
     };
     
     const insertIndex = position === 'left' ? columnIndex : columnIndex + 1;

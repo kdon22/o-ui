@@ -74,7 +74,7 @@ export const ColumnHeaderDropdown: React.FC<ColumnHeaderDropdownProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-5 w-5 p-0 opacity-70 hover:opacity-100 transition-opacity rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           <ChevronDown className="w-4 h-4" />
         </Button>

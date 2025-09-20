@@ -167,30 +167,25 @@ const AutoDataTableUI: React.FC = () => {
           {/* Header */}
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              {/* Row number column */}
+              {/* Select-all checkbox (replaces #) */}
               <th 
                 className="px-3 py-2 border-r border-gray-200 text-left text-xs font-medium text-gray-500" 
-                style={{ borderBottom: '1px solid #e5e7eb' }}
+                style={{ borderBottom: '1px solid #e5e7eb', width: 40 }}
               >
-                #
-              </th>
-              
-              {/* Select all checkbox */}
-              <th 
-                className="px-3 py-2 border-r border-gray-200 text-left text-xs font-medium text-gray-500" 
-                style={{ borderBottom: '1px solid #e5e7eb' }}
-              >
-                <input
-                  type="checkbox"
-                  checked={selection.isAllSelected}
-                  onChange={selection.toggleSelectAll}
-                />
+                <div className="flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all rows"
+                    checked={selection.isAllSelected}
+                    onChange={selection.toggleSelectAll}
+                  />
+                </div>
               </th>
               
               {/* Column headers */}
               {columns.map((column, columnIndex) => (
                 <ColumnHeader
-                  key={column.name}
+                  key={`col-${columnIndex}`}
                   column={column}
                   sortDirection={state.sortConfig?.column === column.name ? state.sortConfig.direction : null}
                   onSort={(direction) => eventHandlers.handleSort(column.name, direction)}
@@ -227,7 +222,7 @@ const AutoDataTableUI: React.FC = () => {
                 <tr 
                   key={row.id}
                   className={cn(
-                    "hover:bg-gray-50 transition-colors",
+                    "group hover:bg-gray-50 transition-colors",
                     isInherited && "bg-blue-50/30",
                     isOptimistic && "bg-yellow-50",
                     hasChanges && "bg-orange-50/50",
@@ -239,25 +234,33 @@ const AutoDataTableUI: React.FC = () => {
                     }
                   }}
                 >
-                  {/* Row number */}
+                  {/* Row number with hover-to-checkbox select */}
                   <td
-                    className="px-3 py-2 border-r border-gray-200 text-xs text-gray-500"
+                    className="relative px-3 py-2 border-r border-gray-200 text-xs text-gray-500"
                     style={{ borderBottom: '1px solid #e5e7eb', width: 40 }}
                   >
-                    {rowIndex + 1}
-                  </td>
-                  
-                  {/* Row select */}
-                  <td
-                    className="px-3 py-2 border-r border-gray-200"
-                    style={{ borderBottom: '1px solid #e5e7eb', width: 40 }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selection.isRowSelected(row.id)}
-                      onChange={() => selection.toggleSelectRow(row.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    {/* Number label (hidden on row hover when not selected) */}
+                    <span
+                      className={cn(
+                        "transition-opacity",
+                        selection.isRowSelected(row.id) ? "opacity-0" : "group-hover:opacity-0"
+                      )}
+                    >
+                      {rowIndex + 1}
+                    </span>
+                    {/* Checkbox overlay (visible on hover or if selected) */}
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        className={cn(
+                          "opacity-0 group-hover:opacity-100",
+                          selection.isRowSelected(row.id) && "opacity-100"
+                        )}
+                        checked={selection.isRowSelected(row.id)}
+                        onChange={() => selection.toggleSelectRow(row.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </span>
                   </td>
                   
                   {/* Data cells */}
@@ -276,7 +279,8 @@ const AutoDataTableUI: React.FC = () => {
                         )}
                         style={{ 
                           borderBottom: '1px solid #e5e7eb',
-                          minHeight: '40px'
+                          minHeight: '40px',
+                          width: column.width ? `${column.width}px` : undefined
                         }}
                         onClick={() => !isEditing && eventHandlers.handleCellClick(row.id, column.name, value)}
                       >
@@ -324,7 +328,7 @@ const AutoDataTableUI: React.FC = () => {
             {/* Add Row */}
             <tr className="hover:bg-gray-50">
               <td 
-                colSpan={columns.length + 3}
+                colSpan={columns.length + 2}
                 className="px-3 py-2 border-r border-gray-200 cursor-pointer"
                 style={{ borderBottom: '1px solid #e5e7eb' }}
                 onClick={eventHandlers.handleAddRow}

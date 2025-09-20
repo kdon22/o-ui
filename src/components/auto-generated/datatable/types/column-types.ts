@@ -33,6 +33,8 @@ export interface TableColumn {
   format?: string;
   description?: string;
   richText?: boolean;
+  // Optional persisted column width in pixels. When present, header/body use it.
+  width?: number;
 }
 
 // ============================================================================
