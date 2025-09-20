@@ -41,6 +41,7 @@ import { QueryVariablesPanel } from './query-variables-panel';
 import { useQueryExecution } from '../hooks/use-query-execution';
 import { useTableSelection } from '../hooks/use-table-selection';
 import { useQueryVariables } from '../hooks/use-query-variables';
+import { parseSimpleSQL } from '../utils/simple-sql-parser';
 
 export interface ThreePanelQueryInterfaceProps {
   onQueryGenerated?: (query: string) => void;
@@ -91,6 +92,13 @@ export function ThreePanelQueryInterface({
     
     // Use the final query with variables substituted
     const finalQuery = getFinalQuery();
+
+    // Pre-validate SQL (require [Table] and [Column] identifiers)
+    const parsed = parseSimpleSQL(finalQuery);
+    if (!parsed.isValid) {
+      toast({ title: 'Invalid SQL', description: parsed.error || 'Please fix your query syntax.', variant: 'destructive' });
+      return;
+    }
     await executeQuery(queryText, finalQuery);
   };
 
@@ -215,7 +223,7 @@ export function ThreePanelQueryInterface({
                 onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder={
                   selectedTable
-                    ? `SELECT * FROM ${selectedTable.tableName}`
+                    ? `SELECT * FROM [${selectedTable.tableName}]`
                     : "SELECT columns FROM table WHERE conditions"
                 }
                 className="font-mono text-sm flex-1 resize-none"

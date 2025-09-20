@@ -20,11 +20,20 @@ export interface WhereCondition {
 
 export function parseSimpleSQL(query: string): ParsedQuery {
   try {
+    if (!query || typeof query !== 'string') {
+      return {
+        tableName: '',
+        columns: [],
+        whereConditions: [],
+        isValid: false,
+        error: 'Empty or invalid query string.'
+      };
+    }
     // Clean up the query
     const cleanQuery = query.trim().replace(/\s+/g, ' ');
     
-    // Basic SELECT pattern – capture table allowing spaces and brackets/quotes
-    const selectMatch = cleanQuery.match(/^SELECT\s+(.+?)\s+FROM\s+(\[[^\]]+\]|"[^"]+"|`[^`]+`|\S+)(?:\s+WHERE\s+(.+))?$/i);
+    // Basic SELECT pattern – REQUIRE bracketed table name [Table Name]
+    const selectMatch = cleanQuery.match(/^SELECT\s+(.+?)\s+FROM\s+(\[[^\]]+\])(?:\s+WHERE\s+(.+))?$/i);
     
     if (!selectMatch) {
       return {
@@ -38,7 +47,7 @@ export function parseSimpleSQL(query: string): ParsedQuery {
 
     const [, columnsStr, rawTableName, whereClause] = selectMatch;
     
-    // Parse columns
+    // Parse columns (will throw if invalid)
     const columns = parseColumns(columnsStr);
     
     // Parse WHERE conditions
@@ -53,7 +62,7 @@ export function parseSimpleSQL(query: string): ParsedQuery {
         columns,
         whereConditions,
         isValid: false,
-        error: 'Invalid WHERE clause. Use column operators like =, !=, >, <, >=, <=, LIKE.'
+        error: 'Invalid WHERE clause. Columns must be bracketed like [Column Name] and use operators (=, !=, >, <, >=, <=, LIKE).'
       };
     }
 
@@ -84,11 +93,14 @@ function parseColumns(columnsStr: string): string[] {
     return ['*'];
   }
   
-  // Handle column list
-  return trimmed
-    .split(',')
-    .map(col => col.trim().replace(/^\[|\]$/g, '')) // Remove optional brackets
-    .filter(col => col.length > 0);
+  // Handle column list – REQUIRE each column to be bracketed: [Column]
+  const tokens = trimmed.split(',').map(col => col.trim());
+  if (tokens.length === 0) return [];
+  const invalid = tokens.find(t => !/^\[[^\]]+\]$/.test(t));
+  if (invalid) {
+    throw new Error(`Invalid column selector "${invalid}". Columns must be written as [Column Name] or use *.`);
+  }
+  return tokens.map(t => t.replace(/^\[|\]$/g, ''));
 }
 
 function parseWhereClause(whereClause: string): WhereCondition[] {
@@ -115,9 +127,8 @@ function parseWhereClause(whereClause: string): WhereCondition[] {
 }
 
 function parseCondition(conditionStr: string): WhereCondition | null {
-  // Match: column (supports [brackets], "quotes", `backticks`, or bare word) operator value
-  // Allow bare column names to include hyphens and dots (e.g., test-3, user.name)
-  const match = conditionStr.match(/^(?:\[([^\]]+)\]|"([^"]+)"|`([^`]+)`|([\w.-]+))\s*(=|!=|>=|<=|>|<|LIKE|NOT\s+LIKE)\s*(.+)$/i);
+  // REQUIRE bracketed column identifiers: [Column Name]
+  const match = conditionStr.match(/^\[([^\]]+)\]\s*(=|!=|>=|<=|>|<|LIKE|NOT\s+LIKE)\s*(.+)$/i);
 
   if (!match) {
     return null;
