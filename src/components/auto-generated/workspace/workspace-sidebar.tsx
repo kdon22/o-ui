@@ -250,7 +250,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
             ) : (
               <div className="space-y-2">
                 {/* Matching Categories */}
-                {filteredCategories.map((category: any) => (
+                {filteredCategories
+                  .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                  .map((category: any) => (
                   <button
                     key={category.id}
                     className="w-full text-left px-2 py-1 rounded text-sm transition-colors group hover:bg-accent"
@@ -282,7 +284,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                 ))}
                 
                 {/* Matching Tables */}
-                {filteredTables.map((table: any) => {
+                {filteredTables
+                  .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                  .map((table: any) => {
                   const parentCategory = categories.find((cat: any) => cat.id === table.categoryId);
                   return (
                     <button
@@ -338,7 +342,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               
               {starredItems.length > 0 ? (
                 <div className="space-y-1 ml-6">
-                  {starredItems.map((item: any) => (
+                  {starredItems
+                    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                    .map((item: any) => (
                     <button
                       key={item.id}
                       onClick={() => item.icon === '📊' && onTableSelect?.(item.id)}
@@ -376,7 +382,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         {/* Root Tables */}
         {rootTables.length > 0 && (
           <div className="space-y-1">
-            {rootTables.map((table: any) => (
+            {rootTables
+              .sort((a: any, b: any) => a.name.localeCompare(b.name))
+              .map((table: any) => (
               <button
                 key={table.id}
                 onClick={() => onTableSelect?.(table.id)}
@@ -482,7 +490,34 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
               {isExpanded && (
                 <div className="ml-6 mt-1 space-y-1">
-                  {categoryTables.map((table: any) => (
+                  {/* Inline creation for this category - appears at top */}
+                  {creatingItem?.type === 'table' && creatingItem.parentCategoryId === category.id && (
+                    <div className="px-2 py-1 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-2 p-2 border border-primary/50 rounded-md bg-primary/5">
+                        <span className="text-xs">📊</span>
+                        <Input
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          onKeyDown={handleKeyPress}
+                          onBlur={() => {
+                            if (newItemName.trim()) {
+                              handleCreateItem();
+                            } else {
+                              cancelCreating();
+                            }
+                          }}
+                          placeholder="Table name"
+                          className="h-6 text-sm border-0 bg-transparent focus:ring-0 p-0"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Tables list - sorted alphabetically */}
+                  {categoryTables
+                    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                    .map((table: any) => (
                     <div
                       key={table.id}
                       onClick={() => onTableSelect?.(table.id)}
@@ -517,28 +552,6 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                     </div>
                   ))}
                   
-                  {/* Inline creation for this category */}
-                  {creatingItem?.type === 'table' && creatingItem.parentCategoryId === category.id && (
-                    <div className="px-2 py-1 animate-in fade-in-50 slide-in-from-top-2 duration-200">
-                      <div className="flex items-center gap-2 p-2 border border-primary/50 rounded-md bg-primary/5">
-                        <span className="text-xs">📊</span>
-                        <Input
-                          value={newItemName}
-                          onChange={(e) => setNewItemName(e.target.value)}
-                          onKeyDown={handleKeyPress}
-                          onBlur={() => {
-                            if (!newItemName.trim()) {
-                              cancelCreating();
-                            }
-                          }}
-                          placeholder="Table name"
-                          className="h-6 text-sm border-0 bg-transparent focus:ring-0 p-0"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
                   {categoryTables.length === 0 && !creatingItem && (
                     <div className="px-2 py-1 text-xs text-muted-foreground">
                       No tables in this category
@@ -563,7 +576,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={handleKeyPress}
                 onBlur={() => {
-                  if (!newItemName.trim()) {
+                  if (newItemName.trim()) {
+                    handleCreateItem();
+                  } else {
                     cancelCreating();
                   }
                 }}
