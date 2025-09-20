@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Star
 } from 'lucide-react';
+import TableActionsMenu from './table-actions-menu';
 
 interface Table {
   id: string;
@@ -110,17 +111,14 @@ export const TableItem: React.FC<TableItemProps> = ({
         )}
         
         {/* Actions */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6 ml-1"
-          onClick={(e) => {
-            e.stopPropagation();
-            // TODO: Open table context menu
-          }}
-        >
-          <MoreHorizontal className="w-3 h-3" />
-        </Button>
+        <TableActionsMenu
+          table={table}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6 ml-1 flex-shrink-0"
+          useSpanTrigger={true}
+          onRenamed={() => {}}
+          onDuplicated={() => {}}
+          onDeleted={() => {}}
+        />
       </Button>
     </div>
   );

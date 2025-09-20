@@ -110,6 +110,7 @@ const AutoDataTableUI: React.FC = () => {
     rows,
     baseRows,
     tableSchema,
+    tableName,
     state,
     eventHandlers,
     keyboard,
@@ -138,8 +139,11 @@ const AutoDataTableUI: React.FC = () => {
     );
   }
 
-  // Get current table info from schema
-  const table = { name: 'Data Table', description: '' }; // TODO: Get from tableSchema
+  // Get current table info from context/schema
+  const table = { 
+    name: tableName || (tableSchema as any)?.name || (tableSchema as any)?.title || 'Data Table', 
+    description: (tableSchema as any)?.description || '' 
+  };
 
   return (
     <div className="w-full bg-white">
@@ -193,6 +197,21 @@ const AutoDataTableUI: React.FC = () => {
                   onColumnDelete={() => eventHandlers.handleDeleteColumn(columnIndex)}
                   onColumnDuplicate={() => eventHandlers.handleDuplicateColumn(columnIndex)}
                   onInsertColumn={(position) => eventHandlers.handleInsertColumn(columnIndex, position)}
+                  draggable
+                  onDragStart={(e: React.DragEvent<HTMLTableCellElement>) => {
+                    e.dataTransfer.setData('text/col-index', String(columnIndex));
+                  }}
+                  onDragOver={(e: React.DragEvent<HTMLTableCellElement>) => {
+                    e.preventDefault();
+                  }}
+                  onDrop={(e: React.DragEvent<HTMLTableCellElement>) => {
+                    e.preventDefault();
+                    const from = parseInt(e.dataTransfer.getData('text/col-index'), 10);
+                    const to = columnIndex;
+                    if (!Number.isNaN(from)) {
+                      eventHandlers.handleReorderColumns(from, to);
+                    }
+                  }}
                 />
               ))}
               
@@ -392,6 +411,7 @@ export const AutoDataTable: React.FC<AutoDataTableProps> = ({
         rows={tableData.baseRows} // TODO: Apply row changes from state
         baseRows={tableData.baseRows}
         tableSchema={tableData.tableSchema}
+        tableName={(tableData.table?.name) || (tableData.tableSchema as any)?.name}
         isLoading={tableData.isLoading}
         isError={tableData.isError}
       >

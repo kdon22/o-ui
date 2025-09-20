@@ -1,17 +1,15 @@
 /**
- * Column Header - Refactored to use focused sub-components
+ * Column Header - Composed from focused sub-components
  * 
  * Composed from:
  * - ColumnTitle (double-click edit)
  * - ColumnSortIndicator (sort arrows)
  * - ColumnDropdownTrigger (chevron menu)
- * 
- * Reduced from 185 lines to ~100 lines by using focused components
  */
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils/generalUtils';
 
 // Components
@@ -26,12 +24,12 @@ import {
   ColumnOperationCallbacks
 } from '../types';
 
-export interface ColumnHeaderRefactoredProps extends ColumnOperationCallbacks {
+export interface ColumnHeaderCellProps extends ColumnOperationCallbacks {
   column: TableColumn;
   sortDirection?: SortDirection;
 }
 
-export const ColumnHeaderRefactored: React.FC<ColumnHeaderRefactoredProps> = ({
+export const ColumnHeaderCell: React.FC<ColumnHeaderCellProps> = ({
   column,
   sortDirection,
   onSort,
@@ -129,7 +127,7 @@ export const ColumnHeaderRefactored: React.FC<ColumnHeaderRefactoredProps> = ({
             onColumnUpdate={handleColumnUpdate}
             className="flex items-center gap-2 min-w-0"
           />
-
+          
           {/* Sort Direction Indicator */}
           <ColumnSortIndicator 
             sortDirection={sortDirection}
@@ -156,3 +154,5 @@ export const ColumnHeaderRefactored: React.FC<ColumnHeaderRefactoredProps> = ({
     </th>
   );
 };
+
+

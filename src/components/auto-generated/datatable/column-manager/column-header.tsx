@@ -32,6 +32,11 @@ import { COLUMN_TYPE_ICONS } from '../types';
 interface ColumnHeaderProps extends ColumnOperationCallbacks {
   column: TableColumn;
   sortDirection?: SortDirection;
+  // Optional DnD handlers for reordering columns
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent<HTMLTableCellElement>) => void;
+  onDragOver?: (e: React.DragEvent<HTMLTableCellElement>) => void;
+  onDrop?: (e: React.DragEvent<HTMLTableCellElement>) => void;
 }
 
 export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
@@ -41,7 +46,11 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   onColumnUpdate,
   onColumnDelete,
   onColumnDuplicate,
-  onInsertColumn
+  onInsertColumn,
+  draggable,
+  onDragStart,
+  onDragOver,
+  onDrop
 }) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   // Initialize from persisted width if available
@@ -164,6 +173,10 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
           width: width ? `${width}px` : column.width ? `${column.width}px` : undefined
         }}
         onClick={handleSort}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
       >
         <div className="flex items-center justify-between">
           {/* Left cluster: icon, title, sort */}
@@ -177,8 +190,8 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
             {sortDirection === 'desc' && <ArrowDown className="w-4 h-4 text-blue-600 flex-shrink-0" />}
           </div>
           
-          {/* Right cluster: dropdown pinned to cell edge */}
-          <div className="flex-shrink-0 pl-2" onClick={(e) => e.stopPropagation()}>
+          {/* Right cluster: dropdown pinned to cell edge (only visible on hover) */}
+          <div className="flex-shrink-0 pl-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
             <ColumnHeaderDropdown
               column={column}
               onEditField={handleEditField}

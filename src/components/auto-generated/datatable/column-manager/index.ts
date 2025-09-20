@@ -16,4 +16,4 @@ export { InlineColumnEditor } from './inline-column-editor';
 export { ColumnTitle } from './column-title';
 export { ColumnSortIndicator } from './column-sort-indicator';
 export { ColumnDropdownTrigger } from './column-dropdown-trigger';
-export { ColumnHeaderRefactored } from './column-header-refactored';
+export { ColumnHeaderCell } from './column-header-cell';

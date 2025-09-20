@@ -24,6 +24,7 @@ import {
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
 import { useBranchContextWithLoading } from '@/lib/context/branch-context';
 import { useTableInitializer } from '@/lib/data-tables/table-initializer';
+import TableActionsMenu from './table-actions-menu';
 
 interface WorkspaceSidebarProps {
   className?: string;
@@ -308,22 +309,31 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                             </Badge>
                           )}
                         </div>
-                        <button
+                        <div className="flex items-center gap-1">
+                          <TableActionsMenu
+                            table={table}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6"
+                            onRenamed={() => {}}
+                            onDuplicated={(newId) => onTableSelect?.(newId)}
+                            onDeleted={() => {}}
+                          />
+                          <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleToggleStar(table.id);
                           }}
-                          className="opacity-0 group-hover:opacity-100"
-                        >
-                          <Star 
-                            className={cn(
-                              "w-3 h-3",
-                              starredIds.has(table.id) 
-                                ? "fill-yellow-500 text-yellow-500" 
-                                : "text-muted-foreground"
-                            )} 
-                          />
-                        </button>
+                            className="opacity-0 group-hover:opacity-100"
+                          >
+                            <Star 
+                              className={cn(
+                                "w-3 h-3",
+                                starredIds.has(table.id) 
+                                  ? "fill-yellow-500 text-yellow-500" 
+                                  : "text-muted-foreground"
+                              )} 
+                            />
+                          </button>
+                        </div>
                       </div>
                     </button>
                   );
@@ -399,22 +409,31 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                     <span className="text-xs">📊</span>
                     <span className="truncate">{table.name}</span>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleStar(table.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100"
-                  >
-                    <Star 
-                      className={cn(
-                        "w-3 h-3",
-                        starredIds.has(table.id) 
-                          ? "fill-yellow-500 text-yellow-500" 
-                          : "text-muted-foreground"
-                      )} 
+                  <div className="flex items-center gap-1">
+                    <TableActionsMenu
+                      table={table}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6"
+                      onRenamed={() => {}}
+                      onDuplicated={(newId) => onTableSelect?.(newId)}
+                      onDeleted={() => {}}
                     />
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleStar(table.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100"
+                    >
+                      <Star 
+                        className={cn(
+                          "w-3 h-3",
+                          starredIds.has(table.id) 
+                            ? "fill-yellow-500 text-yellow-500" 
+                            : "text-muted-foreground"
+                        )} 
+                      />
+                    </button>
+                  </div>
                 </div>
               </button>
             ))}

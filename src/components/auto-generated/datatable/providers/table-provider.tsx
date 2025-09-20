@@ -30,6 +30,7 @@ export interface TableContextValue {
   rows: TableDataRow[];
   baseRows: TableDataRow[];
   tableSchema: TableSchema;
+  tableName?: string;
   
   // State from useTableState
   state: ReturnType<typeof useTableState>;
@@ -62,6 +63,7 @@ export interface TableProviderProps {
   rows: TableDataRow[];
   baseRows: TableDataRow[];
   tableSchema: TableSchema;
+  tableName?: string;
   
   // Optional props
   isLoading?: boolean;
@@ -101,6 +103,7 @@ export const TableProvider: React.FC<TableProviderProps> = ({
   rows,
   baseRows,
   tableSchema,
+  tableName,
   isLoading = false,
   isError = false,
   error,
@@ -180,6 +183,7 @@ export const TableProvider: React.FC<TableProviderProps> = ({
     rows,
     baseRows,
     tableSchema,
+    tableName,
     
     // Hook instances
     state,
@@ -201,6 +205,7 @@ export const TableProvider: React.FC<TableProviderProps> = ({
     rows,
     baseRows,
     tableSchema,
+    tableName,
     state,
     mutations,
     eventHandlers,

@@ -49,6 +49,7 @@ export interface TableEventHandlers {
   handleDeleteColumn: (columnIndex: number) => Promise<void>;
   handleDuplicateColumn: (columnIndex: number) => Promise<void>;
   handleInsertColumn: (columnIndex: number, position: 'left' | 'right') => Promise<void>;
+  handleReorderColumns: (fromIndex: number, toIndex: number) => Promise<void>;
   
   // Sorting
   handleSort: (columnName: string, direction: 'asc' | 'desc' | null) => void;
@@ -248,6 +249,16 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
     await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
+  const handleReorderColumns = useCallback(async (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= columns.length || toIndex >= columns.length) {
+      return;
+    }
+    const updated = [...columns];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    await mutations.updateTableSchema({ columns: updated });
+  }, [columns, mutations]);
+
   // ============================================================================
   // SORTING EVENT HANDLERS
   // ============================================================================
@@ -276,6 +287,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
     handleDeleteColumn,
     handleDuplicateColumn,
     handleInsertColumn,
+    handleReorderColumns,
     
     // Sorting
     handleSort,

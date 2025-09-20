@@ -53,7 +53,7 @@ export const ColumnDropdownTrigger: React.FC<ColumnDropdownTriggerProps> = ({
 
   return (
     <div 
-      className="flex-shrink-0"
+      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
       onClick={(e) => {
         // Prevent header sort when clicking dropdown
         e.stopPropagation();
