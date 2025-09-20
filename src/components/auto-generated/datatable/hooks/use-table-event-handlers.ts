@@ -14,6 +14,8 @@ import { UseTableDataReturn } from './use-table-data';
 import type { TableColumn, TableDataRow } from '../types';
 
 export interface TableEventHandlerOptions {
+  // Table context
+  tableId: string;
   // Data
   rows: TableDataRow[];
   baseRows: TableDataRow[];
@@ -53,7 +55,7 @@ export interface TableEventHandlers {
 }
 
 export function useTableEventHandlers(options: TableEventHandlerOptions): TableEventHandlers {
-  const { rows, baseRows, columns, tableState, mutations, onCellFocus, onRowEnter, onRowExit } = options;
+  const { tableId, rows, baseRows, columns, tableState, mutations, onCellFocus, onRowEnter, onRowExit } = options;
 
   // ============================================================================
   // CELL EVENT HANDLERS
@@ -165,10 +167,10 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
 
     // Create the row (this will handle optimistic updates)
     await mutations.createRowMutation.mutateAsync({
-      tableId: '', // TODO: Pass tableId from options
+      tableId: tableId,
       data: emptyData
     });
-  }, [columns, mutations]);
+  }, [columns, mutations, tableId]);
 
   // ============================================================================
   // COLUMN EVENT HANDLERS

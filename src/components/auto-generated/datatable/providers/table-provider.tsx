@@ -137,6 +137,7 @@ export const TableProvider: React.FC<TableProviderProps> = ({
 
   // 3. Event handlers
   const eventHandlers = useTableEventHandlers({
+    tableId,
     rows,
     baseRows,
     columns,
@@ -333,7 +334,7 @@ export const useMutationLoadingStates = () => {
     isCreating: mutations.createRowMutation.isPending,
     isDeleting: mutations.deleteRowMutation.isPending,
     isBulkDeleting: false, // No bulk delete in new system
-    isUpdatingSchema: mutations.updateTableSchemaMutation.isPending,
-    isAnyMutationPending: mutations.updateRowMutation.isPending || mutations.createRowMutation.isPending || mutations.deleteRowMutation.isPending || mutations.updateTableSchemaMutation.isPending,
+    isUpdatingSchema: false,
+    isAnyMutationPending: mutations.updateRowMutation.isPending || mutations.createRowMutation.isPending || mutations.deleteRowMutation.isPending,
   };
 };

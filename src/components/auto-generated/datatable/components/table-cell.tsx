@@ -239,7 +239,7 @@ export const TableCell: React.FC<ExtendedTableCellProps> = ({
             </div>
           );
         }
-        return <span className="text-gray-400">—</span>;
+        return null;
 
       case 'date':
         if (value) {
@@ -249,16 +249,16 @@ export const TableCell: React.FC<ExtendedTableCellProps> = ({
             return value;
           }
         }
-        return <span className="text-gray-400">—</span>;
+        return null;
 
       case 'number':
         if (value !== null && value !== undefined && value !== '') {
           return typeof value === 'number' ? value.toLocaleString() : value;
         }
-        return <span className="text-gray-400">—</span>;
+        return null;
 
       default:
-        return value || <span className="text-gray-400">—</span>;
+        return value || null;
     }
   };
 

@@ -266,7 +266,8 @@ const AutoDataTableUI: React.FC = () => {
                   {/* Data cells */}
                   {columns.map((column) => {
                     const isEditing = state.editingCell?.rowId === row.id && state.editingCell?.column === column.name;
-                    const value = row.data[column.name];
+                    const pendingChange = state.rowChanges[row.id]?.[column.name];
+                    const value = pendingChange !== undefined ? pendingChange : row.data[column.name];
                     
                     return (
                       <td

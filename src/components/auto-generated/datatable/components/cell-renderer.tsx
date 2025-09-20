@@ -215,9 +215,9 @@ export const CellRenderer: React.FC<CellRendererProps> = ({
   // DISPLAY MODE RENDERING
   // ============================================================================
 
-  // Handle empty/null values
+  // Handle empty/null values → render blank cell (no placeholder)
   if (value === null || value === undefined || value === '') {
-    return <span className="text-gray-400">—</span>;
+    return null;
   }
 
   switch (column.type) {
