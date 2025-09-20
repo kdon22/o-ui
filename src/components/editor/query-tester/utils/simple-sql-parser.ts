@@ -134,8 +134,9 @@ function parseCondition(conditionStr: string): WhereCondition | null {
     return null;
   }
 
-  const [, bracketed, dquoted, bquoted, bare, operator, valueStr] = match;
-  const columnRaw = bracketed || dquoted || bquoted || bare || '';
+  // Regex captures: [1] column name (inside brackets), [2] operator, [3] value string
+  const [, columnName, operator, valueStr] = match;
+  const columnRaw = columnName || '';
   const value = parseValue(valueStr.trim());
 
   return {

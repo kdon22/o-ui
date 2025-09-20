@@ -15,8 +15,6 @@ export type { ThreePanelQueryInterfaceProps } from './components/three-panel-que
 export type { IntegratedQueryInterfaceProps } from './components/integrated-query-interface';
 
 // Export components for advanced customization
-export { QueryBuilderPane } from './components/query-builder-pane';
-export { ResultsPane } from './components/results-pane';
 export { SmartExamplesPanel } from './components/smart-examples-panel';
 export { ResultsModal } from './components/results-modal';
 export { TableTreeSelector } from './components/table-tree-selector';
@@ -33,5 +31,4 @@ export const SAMPLE_QUERY_SYNTAX = {
   confirmedBookings: 'SELECT customerName, destination, amount FROM [Booking Data] WHERE status = "confirmed" AND amount > 700'
 };
 
-// Export examples
-export { IntegratedUsageExample, QueryBuilderExamples } from './examples/integrated-usage-example';
+// Examples removed (legacy); no re-exports
