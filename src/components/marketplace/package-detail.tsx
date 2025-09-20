@@ -13,7 +13,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useActionMutation } from '@/hooks/use-action-api';
 import { 
   ArrowLeft, Star, Download, Users, Tag, Play, Code, 
   Database, Workflow, Settings, Shield, Clock, CheckCircle,
@@ -88,16 +89,8 @@ export function PackageDetail({ packageId, onBack }: PackageDetailProps) {
   });
 
   // Package installation mutation
-  const installPackageMutation = useMutation({
-    mutationFn: async (request: InstallationRequest) => {
-      const response = await fetch('/api/marketplace/install', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
-      });
-      if (!response.ok) throw new Error('Installation failed');
-      return response.json();
-    },
+  const installPackageMutation = useActionMutation('marketplace.installPackage', {
+    ...( { skipCache: true } as any ),
     onSuccess: () => {
       toast({
         title: 'Package Installed',
@@ -115,16 +108,8 @@ export function PackageDetail({ packageId, onBack }: PackageDetailProps) {
   });
 
   // Review submission mutation
-  const submitReviewMutation = useMutation({
-    mutationFn: async (review: { rating: number; title: string; content: string }) => {
-      const response = await fetch(`/api/marketplace/packages/${packageId}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(review),
-      });
-      if (!response.ok) throw new Error('Failed to submit review');
-      return response.json();
-    },
+  const submitReviewMutation = useActionMutation('marketplace.submitReview', {
+    ...( { skipCache: true } as any ),
     onSuccess: () => {
       toast({
         title: 'Review Submitted',

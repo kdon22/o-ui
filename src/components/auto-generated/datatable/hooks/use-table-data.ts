@@ -193,7 +193,12 @@ export function useTableData({
 
     return baseMutations.updateTableSchema.mutateAsync({
       id: tableId,                        // ✅ CRITICAL: Include table ID for update
-      columns: variables.columns,         // Pass columns directly to mutation
+      // Store columns inside the JSON config object
+      // Merge with existing config to avoid overwriting other settings
+      config: {
+        ...(currentTable?.config || {}),
+        columns: variables.columns
+      },
       name: currentTable?.name,           // Include existing name
       tableName: currentTable?.tableName // Include existing tableName
     });

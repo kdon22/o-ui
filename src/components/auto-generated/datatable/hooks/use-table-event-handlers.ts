@@ -176,19 +176,19 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
 
   const handleAddColumn = useCallback(async (column: TableColumn) => {
     const updatedColumns = [...columns, column];
-    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
+    await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleUpdateColumn = useCallback(async (columnIndex: number, updatedColumn: TableColumn) => {
     const updatedColumns = columns.map((col, index) => 
       index === columnIndex ? updatedColumn : col
     );
-    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
+    await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleDeleteColumn = useCallback(async (columnIndex: number) => {
     const updatedColumns = columns.filter((_, index) => index !== columnIndex);
-    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
+    await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
   // Convert whitespace-separated words to camelCase; leaves non-space separators intact
@@ -217,7 +217,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
       duplicatedColumn,
       ...columns.slice(columnIndex + 1)
     ];
-    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
+    await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleInsertColumn = useCallback(async (columnIndex: number, position: 'left' | 'right') => {
@@ -234,7 +234,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
       newColumn,
       ...columns.slice(insertIndex)
     ];
-    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
+    await mutations.updateTableSchema({ columns: updatedColumns });
   }, [columns, mutations]);
 
   // ============================================================================

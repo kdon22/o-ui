@@ -19,8 +19,7 @@ import {
 } from './form-utils';
 import { cn } from '@/lib/utils/generalUtils';
 import { useSession } from 'next-auth/react';
-import { useMutation } from '@tanstack/react-query';
-import { getActionClient } from '@/lib/action-client';
+import { useActionMutation } from '@/hooks/use-action-api';
 import { useBranchContextWithLoading } from '@/lib/context/branch-context';
 import { generateCompleteDefaultValues } from '../modal/utils';
 import { FormDebugComponent } from './form-debug';
@@ -229,9 +228,8 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
   // 🚨 DEBUG: Log all available context at form initialization
   console.log('🚨 [AutoForm] CONTEXT DEBUG AT INITIALIZATION:', {
     schema: {
-      name: schema.name,
       actionPrefix: schema.actionPrefix,
-      type: schema.type
+      databaseKey: (schema as any)?.databaseKey
     },
     session: {
       exists: !!session,
@@ -267,83 +265,27 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
   // This prevents double mutation when used inside AutoModal
   const shouldUseInternalMutation = !onSubmit;
   
-  const createMutation = useMutation({
-    enabled: shouldUseInternalMutation, // Only enable if no parent callback
-    mutationFn: async (data: Record<string, any>) => {
-      console.log('🔍 [AutoForm] Mutation starting - Branch context check:', {
-        hasBranchContext: !!branchContext,
-        branchContext: branchContext,
-        branchContextType: typeof branchContext,
-        branchContextKeys: branchContext ? Object.keys(branchContext) : [],
-        tenantId: branchContext?.tenantId,
-        currentBranchId: branchContext?.currentBranchId,
-        sessionStatus: session?.user ? 'has-user' : 'no-user',
-        sessionTenantId: session?.user?.tenantId,
-        sessionBranchContext: session?.user?.branchContext,
+  const createMutation = useActionMutation(`${schema.actionPrefix}.create`, {
+    // Pass navigation context via options (typed as any to avoid polluting data)
+    ...( { navigationContext: mergedNavigationContext } as any ),
+    onSuccess: (result: any) => {
+      console.log('🎉 [AutoForm] Contextual creation completed', {
+        entityType: schema.actionPrefix,
+        entityId: result.data?.id,
+        hasJunctions: !!(result as any)?.junctions,
+        junctionCount: (result as any)?.junctions ? Object.keys((result as any).junctions).length : 0,
         timestamp: new Date().toISOString()
-      });
-      
-      // ✅ GUARD: Ensure branch context is ready before executing
-      if (!branchContext) {
-        const errorDetails = {
-          sessionStatus: session?.user ? 'has-user' : 'no-user',
-          sessionTenantId: session?.user?.tenantId,
-          sessionBranchContext: session?.user?.branchContext,
-          hasSession: !!session,
-          timestamp: new Date().toISOString()
-        };
-        console.error('🔥 [AutoForm] Branch context is null - detailed context:', errorDetails);
-        throw new Error('Branch context not ready - cannot execute action');
-      }
-      
-      console.log('🎯 [AutoForm] Creating action client with:', {
-        tenantId: branchContext.tenantId,
-        currentBranchId: branchContext.currentBranchId,
-        action: `${schema.actionPrefix}.create`,
-        dataKeys: Object.keys(data),
-        navigationContextKeys: Object.keys(mergedNavigationContext),
-        timestamp: new Date().toISOString()
-      });
-      
-      const actionClient = getActionClient(branchContext.tenantId, branchContext);
-      // Include navigation context in the data for automatic junction creation
-      const dataWithContext = {
-        ...data,
-        ...mergedNavigationContext // Navigation context enables automatic junction creation
-      };
-      if (!mergedNavigationContext || Object.keys(mergedNavigationContext).length === 0) {
-        console.warn('⚠️ [AutoForm] No navigationContext provided for create - junction auto-creation will be skipped', {
-          action: `${schema.actionPrefix}.create`
-        });
-      }
-      return actionClient.executeAction({
-        action: `${schema.actionPrefix}.create`,
-        data: data, // Keep data clean - don't mix in navigation context
-        options: {
-          navigationContext: mergedNavigationContext // ✅ FIX: Pass navigation context in options
-        },
-        branchContext: branchContext // ✅ FIX: Pass branchContext in request
       });
     },
-          onSuccess: (result) => {
-        console.log('🎉 [AutoForm] Contextual creation completed', {
-          entityType: schema.actionPrefix,
-          entityId: result.data?.id, // ✅ FIX: Correct path to entity ID
-          hasJunctions: !!result.junctions,
-          junctionCount: result.junctions ? Object.keys(result.junctions).length : 0,
-          timestamp: new Date().toISOString()
-        });
-      },
-      onError: (error) => {
-        console.error('❌ [AutoForm] Contextual creation failed', {
-          entityType: schema.actionPrefix,
-          error: error.message,
-          timestamp: new Date().toISOString()
-        });
-        onError?.(error);
-      }
+    onError: (error: Error) => {
+      console.error('❌ [AutoForm] Contextual creation failed', {
+        entityType: schema.actionPrefix,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      onError?.(error);
     }
-  );
+  });
 
   // 🔍 MOVED DEBUG TO FORM SUBMISSION - No more render loop!
 
@@ -467,29 +409,14 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
         // Use contextual create mutation (handles entity + junction)
         const result = await createMutation.mutateAsync(submissionData);
         
-        console.log('🎉 [AutoForm] Contextual create completed successfully', {
-          result,
-          timestamp: new Date().toISOString()
-        });
+        console.log('🎉 [AutoForm] Contextual create completed successfully', { timestamp: new Date().toISOString() });
 
         // 🔥 CRITICAL FIX: Always call onSubmit to notify parent (modal) of success
         // Extract just the entity data for the modal's mutation (not the full contextual result)
-        console.log('🔍 [AutoForm] Contextual result structure analysis:', {
-          result,
-          hasEntity: !!result?.entity,
-          hasData: !!result?.data,
-          resultKeys: Object.keys(result || {}),
-          timestamp: new Date().toISOString()
-        });
-        
-        // Extract the actual entity data from the contextual result
-        // The contextual result has structure: { entity: { data: actualProcessData, success: true, ... }, junction: {...} }
-        // We need to extract the actual process data from result.entity.data
-        const entityActionResult = result?.entity || result?.data || result;
-        const actualEntityData = entityActionResult?.data || entityActionResult;
+        // Extract the actual entity data from the standard ActionResponse
+        const actualEntityData = (result as any)?.data ?? result;
         
         console.log('🎯 [AutoForm] Extracted entity data for modal:', {
-          entityActionResult,
           actualEntityData,
           actualEntityDataKeys: Object.keys(actualEntityData || {}),
           hasId: !!actualEntityData?.id,
@@ -497,7 +424,10 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
         });
         
         // 🔥 CRITICAL FIX: Pass the actual process data (not the action result wrapper)
-        await onSubmit(actualEntityData);
+        const notifyParent = (onSubmit as unknown as ((data: any) => Promise<void>) | undefined);
+        if (notifyParent) {
+          await notifyParent(actualEntityData);
+        }
         
       } else {
         console.log('🔥 [AutoForm] Using parent onSubmit callback (NOT internal mutation)', {

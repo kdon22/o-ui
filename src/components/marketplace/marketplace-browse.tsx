@@ -13,7 +13,8 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useActionMutation } from '@/hooks/use-action-api';
 import { 
   Search, Filter, Grid, List, Star, Download, Users, Tag, 
   Play, Eye, Heart, Zap, TrendingUp, Award, Shield, 
@@ -99,15 +100,10 @@ export function MarketplaceBrowse({
   const [installationOptions, setInstallationOptions] = useState<any>(null);
 
   // Star/unstar mutation
-  const starMutation = useMutation({
-    mutationFn: async ({ packageId, starred }: { packageId: string; starred: boolean }) => {
-      const response = await fetch(`/api/marketplace/packages/${packageId}/star`, {
-        method: starred ? 'POST' : 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to update star status');
-      return response.json();
-    },
-    onSuccess: (_, { starred }) => {
+  const starMutation = useActionMutation('marketplace.toggleStar', {
+    ...( { skipCache: true } as any ),
+    onSuccess: (_res: any, variables: any) => {
+      const starred = Boolean(variables?.starred);
       queryClient.invalidateQueries({ queryKey: ['marketplace-packages'] });
       queryClient.invalidateQueries({ queryKey: ['marketplace-discovery'] });
       queryClient.invalidateQueries({ queryKey: ['marketplace-starred'] });

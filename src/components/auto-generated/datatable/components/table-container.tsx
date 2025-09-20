@@ -16,8 +16,7 @@ import { Plus, Trash2 } from 'lucide-react';
 
 // Action System
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { getActionClient } from '@/lib/action-client';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Components
 import { TableHeader } from './table-header';
@@ -126,84 +125,27 @@ export const TableContainer: React.FC<AutoDataTableProps> = ({
   // MUTATIONS
   // ============================================================================
 
-  // Update row mutation
-  const updateRowMutation = useMutation({
-    mutationFn: async (variables: { id: string; data: Record<string, any> }) => {
-      const validTenantId = tenantId || enterpriseSession?.user?.tenantId;
-      if (!validTenantId) throw new Error('Tenant ID not available');
-
-      const actionClient = getActionClient(validTenantId, branchContext);
-
-      return actionClient.executeAction({
-        action: 'tableData.update',
-        data: variables,
-        options: { serverOnly: true, skipCache: true },
-        branchContext: branchContext || undefined
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tableData.list'] });
+  // Update row mutation (action-system)
+  const updateRowMutation = useActionMutation('tableData.update', {
+    onError: (error: Error) => {
+      console.error('❌ Table row update failed:', error);
     }
   });
 
-  // Delete row mutation
-  const deleteRowMutation = useMutation({
-    mutationFn: async (variables: { id: string }) => {
-      const validTenantId = tenantId || enterpriseSession?.user?.tenantId;
-      if (!validTenantId) throw new Error('Tenant ID not available');
-
-      const actionClient = getActionClient(validTenantId, branchContext);
-
-      return actionClient.executeAction({
-        action: 'tableData.delete',
-        data: variables,
-        options: { serverOnly: true, skipCache: true },
-        branchContext: branchContext || undefined
-      });
-    },
-    onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ['tableData.list'] });
-      const previousData = queryClient.getQueryData(['tableData.list']);
-
-      // Optimistically remove row
-      queryClient.setQueryData(['tableData.list'], (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.filter((row: any) => row.id !== variables.id)
-        };
-      });
-
-      return { previousData };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previousData) {
-        queryClient.setQueryData(['tableData.list'], ctx.previousData);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tableData.list'] });
+  // Delete row mutation (action-system). Let family invalidation handle refetch.
+  const deleteRowMutation = useActionMutation('tableData.delete', {
+    onError: (error: Error) => {
+      console.error('❌ Table row delete failed:', error);
     }
   });
 
-  // Create row mutation
-  const createRowMutation = useMutation({
-    mutationFn: async (variables: { tableId: string; data: Record<string, any> }) => {
-      const validTenantId = tenantId || enterpriseSession?.user?.tenantId;
-      if (!validTenantId) throw new Error('Tenant ID not available');
-
-      const actionClient = getActionClient(validTenantId, branchContext);
-      
-      return actionClient.executeAction({
-        action: 'tableData.create',
-        data: variables,
-        options: { serverOnly: true, skipCache: true },
-        branchContext: branchContext || undefined
-      });
-    },
+  // Create row mutation (action-system)
+  const createRowMutation = useActionMutation('tableData.create', {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tableData.list'] });
       onRowAdd?.();
+    },
+    onError: (error: Error) => {
+      console.error('❌ Table row create failed:', error);
     }
   });
 
@@ -280,9 +222,7 @@ export const TableContainer: React.FC<AutoDataTableProps> = ({
   const handleBulkDelete = useCallback(async () => {
     try {
       const rowsToDelete = Array.from(tableState.selectedRowIds);
-      await Promise.all(
-        rowsToDelete.map(rowId => deleteRowMutation.mutateAsync({ id: rowId }))
-      );
+      await Promise.all(rowsToDelete.map(rowId => deleteRowMutation.mutateAsync({ id: rowId })));
       
       setTableState(prev => ({ ...prev, selectedRowIds: new Set() }));
       onRowDelete?.(rowsToDelete);

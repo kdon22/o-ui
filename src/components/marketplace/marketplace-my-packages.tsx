@@ -11,7 +11,7 @@
 'use client';
 
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Package, Download, Star, Settings, Trash2, 
   CheckCircle, AlertCircle, Clock, Search
@@ -44,27 +44,10 @@ export function MarketplaceMyPackages({ onPackageSelect }: MarketplaceMyPackages
     },
   });
 
-  // Star/unstar mutation
-  const starMutation = useMutation({
-    mutationFn: async ({ packageId, starred }: { packageId: string; starred: boolean }) => {
-      const response = await fetch(`/api/marketplace/packages/${packageId}/star`, {
-        method: starred ? 'POST' : 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to update star status');
-      return response.json();
-    },
-    onSuccess: (_, { starred }) => {
-      queryClient.invalidateQueries({ queryKey: ['installed-packages'] });
-      toast({
-        title: starred ? 'Package starred' : 'Package unstarred',
-        description: starred ? 'Added to your starred packages' : 'Removed from starred packages',
-      });
-    },
-  });
+  // Star/unstar via shared hook (action-system under the hood)
+  const { handleStar } = require('./shared/use-package-star');
 
-  const handleStar = (packageId: string, currentlyStarred: boolean) => {
-    starMutation.mutate({ packageId, starred: !currentlyStarred });
-  };
+  // handleStar provided by shared hook
 
   const renderPackageRow = (installation: PackageInstallation) => {
     const pkg = installation.package;

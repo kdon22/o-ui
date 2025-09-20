@@ -12,7 +12,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useActionMutation } from '@/hooks/use-action-api';
 import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, 
   DialogHeader, DialogTitle 
@@ -91,46 +92,26 @@ export function UninstallConfirmationModal({
     reason: ''
   });
 
-  // Uninstall mutation
-  const uninstallMutation = useMutation({
-    mutationFn: async (options: UninstallOptions): Promise<UninstallResult> => {
-      if (!packageId) throw new Error('No package ID provided');
-      
-      const response = await fetch(`/api/marketplace/packages/${packageId}/uninstall`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          branchId,
-          ...options
-        }),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error?.message || 'Uninstallation failed');
-      }
-      
-      return result;
-    },
+  // Uninstall mutation via action-system
+  const uninstallMutation = useActionMutation('marketplace.uninstallPackage', {
+    ...( { skipCache: true } as any ),
     onMutate: () => {
       setStep('progress');
     },
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       setStep('result');
       
-      if (result.success) {
+      if (result?.success) {
         toast({
           title: 'Package Uninstalled',
           description: `${packageName || 'Package'} has been successfully removed.`,
         });
-        
         // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: ['installed-packages'] });
         queryClient.invalidateQueries({ queryKey: ['marketplace-package', packageId] });
       }
       
-      onUninstall?.(result);
+      onUninstall?.(result as any);
     },
     onError: (error: Error) => {
       setStep('result');
@@ -143,8 +124,13 @@ export function UninstallConfirmationModal({
   });
 
   const handleUninstall = useCallback(() => {
-    uninstallMutation.mutate(uninstallOptions);
-  }, [uninstallMutation, uninstallOptions]);
+    if (!packageId) return;
+    uninstallMutation.mutate({
+      packageId,
+      ...uninstallOptions,
+      branchId
+    } as any);
+  }, [uninstallMutation, uninstallOptions, packageId, branchId]);
 
   const handleClose = useCallback(() => {
     if (step !== 'progress') {
