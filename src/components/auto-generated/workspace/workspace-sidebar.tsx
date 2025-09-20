@@ -116,6 +116,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   const startCreating = (type: 'category' | 'table', parentCategoryId?: string) => {
     setCreatingItem({ type, parentCategoryId });
     setNewItemName('');
+    
+    // Auto-expand the category when adding a table to it
+    if (type === 'table' && parentCategoryId) {
+      setExpandedCategories(prev => new Set([...prev, parentCategoryId]));
+    }
   };
 
   const handleCreateItem = async () => {
@@ -185,18 +190,32 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           <h2 className="text-lg font-semibold">Workspace</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1 hover:bg-accent rounded transition-colors">
-                <Plus className="w-4 h-4" />
+              <button 
+                className={cn(
+                  "p-2 rounded-md transition-all duration-200",
+                  "hover:bg-primary/10 hover:scale-110",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  "border border-border/50 hover:border-primary/50"
+                )}
+                title="Add new item"
+              >
+                <Plus className="w-4 h-4 text-primary" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => startCreating('table')}>
-                <Table className="w-4 h-4 mr-2" />
-                New Table
+            <DropdownMenuContent align="end" className="w-48 mt-1">
+              <DropdownMenuItem onClick={() => startCreating('table')} className="gap-3">
+                <Table className="w-4 h-4 text-primary" />
+                <div className="flex flex-col">
+                  <span className="font-medium">New Table</span>
+                  <span className="text-xs text-muted-foreground">Create an Airtable-like datatable</span>
+                </div>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startCreating('category')}>
-                <Folder className="w-4 h-4 mr-2" />
-                New Category
+              <DropdownMenuItem onClick={() => startCreating('category')} className="gap-3">
+                <Folder className="w-4 h-4 text-orange-500" />
+                <div className="flex flex-col">
+                  <span className="font-medium">New Category</span>
+                  <span className="text-xs text-muted-foreground">Organize your tables</span>
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -401,48 +420,60 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           
           return (
             <div key={category.id}>
-              <div className="flex items-center justify-between group">
+              <div className="flex items-center group hover:bg-accent/50 rounded-md transition-colors">
                 <button
                   onClick={() => toggleCategoryExpanded(category.id)}
-                  className="flex items-center gap-2 hover:bg-accent rounded p-1 transition-colors flex-1"
+                  className="flex items-center gap-2 p-2 transition-colors flex-1 min-w-0"
                 >
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   )}
                   <span className="text-xs">📁</span>
                   <span className="text-sm font-medium truncate">{category.name}</span>
-                  {categoryTables.length > 0 && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      {categoryTables.length}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 ml-auto">
+                    {categoryTables.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {categoryTables.length}
+                      </Badge>
+                    )}
+                  </div>
                 </button>
                 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                <div className="flex items-center pr-2">
+                  <button
                     onClick={() => startCreating('table', category.id)}
-                    className="h-6 w-6 p-0"
+                    className={cn(
+                      "p-1.5 rounded-md transition-all duration-200",
+                      "opacity-0 group-hover:opacity-100",
+                      "hover:bg-primary/10 hover:scale-110",
+                      "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    )}
                     title="Add table to category"
                   >
-                    <Plus className="w-3 h-3" />
-                  </Button>
+                    <Plus className="w-4 h-4 text-primary" />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleToggleStar(category.id);
                     }}
-                    className="p-1 hover:bg-accent rounded"
+                    className={cn(
+                      "p-1.5 rounded-md transition-all duration-200",
+                      starredIds.has(category.id) 
+                        ? "opacity-100" 
+                        : "opacity-0 group-hover:opacity-100",
+                      "hover:bg-yellow-500/10 hover:scale-110",
+                      "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                    )}
                   >
                     <Star 
                       className={cn(
-                        "w-3 h-3",
+                        "w-4 h-4 transition-colors",
                         starredIds.has(category.id) 
                           ? "fill-yellow-500 text-yellow-500" 
-                          : "text-muted-foreground"
+                          : "text-muted-foreground hover:text-yellow-500"
                       )} 
                     />
                   </button>
@@ -486,7 +517,29 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                     </div>
                   ))}
                   
-                  {categoryTables.length === 0 && (
+                  {/* Inline creation for this category */}
+                  {creatingItem?.type === 'table' && creatingItem.parentCategoryId === category.id && (
+                    <div className="px-2 py-1 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-2 p-2 border border-primary/50 rounded-md bg-primary/5">
+                        <span className="text-xs">📊</span>
+                        <Input
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          onKeyDown={handleKeyPress}
+                          onBlur={() => {
+                            if (!newItemName.trim()) {
+                              cancelCreating();
+                            }
+                          }}
+                          placeholder="Table name"
+                          className="h-6 text-sm border-0 bg-transparent focus:ring-0 p-0"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {categoryTables.length === 0 && !creatingItem && (
                     <div className="px-2 py-1 text-xs text-muted-foreground">
                       No tables in this category
                     </div>
@@ -500,22 +553,25 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           </>
         )}
 
-        {/* Inline creation */}
-        {creatingItem && (
-          <div className="px-2 py-1">
-            <Input
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={handleKeyPress}
-              onBlur={() => {
-                if (!newItemName.trim()) {
-                  cancelCreating();
-                }
-              }}
-              placeholder={`${creatingItem.type === 'category' ? 'Category' : 'Table'} name`}
-              className="h-6 text-sm"
-              autoFocus
-            />
+        {/* Inline creation - only for root-level items */}
+        {creatingItem && (creatingItem.type === 'category' || !creatingItem.parentCategoryId) && (
+          <div className="px-2 py-1 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-2 p-2 border border-primary/50 rounded-md bg-primary/5">
+              <span className="text-xs">{creatingItem.type === 'category' ? '📁' : '📊'}</span>
+              <Input
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={handleKeyPress}
+                onBlur={() => {
+                  if (!newItemName.trim()) {
+                    cancelCreating();
+                  }
+                }}
+                placeholder={`${creatingItem.type === 'category' ? 'Category' : 'Table'} name`}
+                className="h-6 text-sm border-0 bg-transparent focus:ring-0 p-0"
+                autoFocus
+              />
+            </div>
           </div>
         )}
       </div>
