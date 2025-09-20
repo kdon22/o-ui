@@ -10,7 +10,7 @@
 
 import { useCallback } from 'react';
 import { TableState, TableStateActions } from './use-table-state';
-import { TableMutationActions } from './use-table-mutations';
+import { UseTableDataReturn } from './use-table-data';
 import type { TableColumn, TableDataRow } from '../types';
 
 export interface TableEventHandlerOptions {
@@ -23,7 +23,7 @@ export interface TableEventHandlerOptions {
   tableState: TableState & TableStateActions;
   
   // Mutations
-  mutations: TableMutationActions;
+  mutations: UseTableDataReturn;
   
   // Callbacks
   onCellFocus?: (rowId: string, columnName: string) => void;
@@ -90,7 +90,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
       const { rowId, column } = tableState.editingCell;
       
       // Remove the specific change from row changes
-      tableState.setRowChanges(prev => {
+      tableState.setRowChanges((prev: Record<string, Record<string, any>>) => {
         const newChanges = { ...prev };
         if (newChanges[rowId]) {
           delete newChanges[rowId][column];
@@ -117,7 +117,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
         const updatedData = { ...row.data, ...changes };
         
         try {
-          await mutations.updateRow(rowId, updatedData);
+          await mutations.updateRowMutation.mutateAsync({ id: rowId, data: updatedData });
           
           // Clear changes after successful save
           tableState.clearRowChanges(rowId);
@@ -164,7 +164,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
     });
 
     // Create the row (this will handle optimistic updates)
-    mutations.createRow({
+    await mutations.createRowMutation.mutateAsync({
       tableId: '', // TODO: Pass tableId from options
       data: emptyData
     });
@@ -176,19 +176,19 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
 
   const handleAddColumn = useCallback(async (column: TableColumn) => {
     const updatedColumns = [...columns, column];
-    await mutations.updateTableSchema({ columns: updatedColumns });
+    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleUpdateColumn = useCallback(async (columnIndex: number, updatedColumn: TableColumn) => {
     const updatedColumns = columns.map((col, index) => 
       index === columnIndex ? updatedColumn : col
     );
-    await mutations.updateTableSchema({ columns: updatedColumns });
+    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleDeleteColumn = useCallback(async (columnIndex: number) => {
     const updatedColumns = columns.filter((_, index) => index !== columnIndex);
-    await mutations.updateTableSchema({ columns: updatedColumns });
+    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
   }, [columns, mutations]);
 
   // Convert whitespace-separated words to camelCase; leaves non-space separators intact
@@ -217,7 +217,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
       duplicatedColumn,
       ...columns.slice(columnIndex + 1)
     ];
-    await mutations.updateTableSchema({ columns: updatedColumns });
+    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
   }, [columns, mutations]);
 
   const handleInsertColumn = useCallback(async (columnIndex: number, position: 'left' | 'right') => {
@@ -234,7 +234,7 @@ export function useTableEventHandlers(options: TableEventHandlerOptions): TableE
       newColumn,
       ...columns.slice(insertIndex)
     ];
-    await mutations.updateTableSchema({ columns: updatedColumns });
+    await mutations.updateTableSchemaMutation.mutateAsync({ columns: updatedColumns });
   }, [columns, mutations]);
 
   // ============================================================================

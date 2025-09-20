@@ -39,7 +39,6 @@ export {
 
 // Focused hooks
 export { useTableState } from './hooks/use-table-state';
-export { useTableMutations } from './hooks/use-table-mutations';
 export { useTableEventHandlers } from './hooks/use-table-event-handlers';
 export { useKeyboardNavigation } from './hooks/use-keyboard-navigation';
 export { useTableSelection } from './hooks/use-table-selection';

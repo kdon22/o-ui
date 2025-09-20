@@ -53,7 +53,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   });
   
   const { data: tablesResponse } = useActionQuery('tables.list', {}, {
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 seconds for development
   });
 
   const createCategory = useActionMutation('tableCategory.create');

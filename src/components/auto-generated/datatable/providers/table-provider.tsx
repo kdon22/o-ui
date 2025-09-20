@@ -13,7 +13,7 @@
 
 import React, { createContext, useContext, useRef, useMemo } from 'react';
 import { useTableState } from '../hooks/use-table-state';
-import { useTableMutations } from '../hooks/use-table-mutations';
+import { useTableData } from '../hooks/use-table-data';
 import { useTableEventHandlers } from '../hooks/use-table-event-handlers';
 import { useKeyboardNavigation } from '../hooks/use-keyboard-navigation';
 import { useTableSelection } from '../hooks/use-table-selection';
@@ -34,8 +34,8 @@ export interface TableContextValue {
   // State from useTableState
   state: ReturnType<typeof useTableState>;
   
-  // Mutations from useTableMutations
-  mutations: ReturnType<typeof useTableMutations>;
+  // Mutations from useTableData
+  mutations: ReturnType<typeof useTableData>;
   
   // Event handlers from useTableEventHandlers
   eventHandlers: ReturnType<typeof useTableEventHandlers>;
@@ -124,13 +124,15 @@ export const TableProvider: React.FC<TableProviderProps> = ({
   // 1. State management
   const state = useTableState();
 
-  // 2. Mutations
-  const mutations = useTableMutations({
+  // 2. Data and mutations
+  const mutations = useTableData({
     tableId,
-    onRowCreated,
-    onRowUpdated,
-    onRowDeleted,
-    onSchemaUpdated,
+    onRowChanges: (rowId, changes) => {
+      onRowUpdated?.(rowId);
+    },
+    onRowChangesClear: (rowId) => {
+      // Handle row changes clear if needed
+    }
   });
 
   // 3. Event handlers
@@ -157,7 +159,12 @@ export const TableProvider: React.FC<TableProviderProps> = ({
   // 5. Selection
   const selection = useTableSelection({
     rows,
-    onBulkDelete: mutations.bulkDeleteRows,
+    onBulkDelete: async (rowIds: string[]) => {
+      // Use individual delete calls since useTableData doesn't have bulkDeleteRows
+      await Promise.all(rowIds.map(id => 
+        mutations.deleteRowMutation.mutateAsync({ id })
+      ));
+    },
     onSelectionChange,
   });
 
@@ -322,11 +329,11 @@ export const useCurrentSelectionState = () => {
 export const useMutationLoadingStates = () => {
   const { mutations } = useTableContext();
   return {
-    isUpdating: mutations.isUpdating,
-    isCreating: mutations.isCreating,
-    isDeleting: mutations.isDeleting,
-    isBulkDeleting: mutations.isBulkDeleting,
-    isUpdatingSchema: mutations.isUpdatingSchema,
-    isAnyMutationPending: mutations.isUpdating || mutations.isCreating || mutations.isDeleting || mutations.isBulkDeleting || mutations.isUpdatingSchema,
+    isUpdating: mutations.updateRowMutation.isPending,
+    isCreating: mutations.createRowMutation.isPending,
+    isDeleting: mutations.deleteRowMutation.isPending,
+    isBulkDeleting: false, // No bulk delete in new system
+    isUpdatingSchema: mutations.updateTableSchemaMutation.isPending,
+    isAnyMutationPending: mutations.updateRowMutation.isPending || mutations.createRowMutation.isPending || mutations.deleteRowMutation.isPending || mutations.updateTableSchemaMutation.isPending,
   };
 };

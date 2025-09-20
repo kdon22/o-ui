@@ -22,7 +22,7 @@ export interface TableStateActions {
   setEditingRow: (rowId: string | null) => void;
   
   // Row changes
-  setRowChanges: (changes: Record<string, Record<string, any>>) => void;
+  setRowChanges: (changes: Record<string, Record<string, any>> | ((prev: Record<string, Record<string, any>>) => Record<string, Record<string, any>>)) => void;
   updateRowChange: (rowId: string, columnName: string, value: any) => void;
   clearRowChanges: (rowId: string) => void;
   hasRowChanges: (rowId: string) => boolean;

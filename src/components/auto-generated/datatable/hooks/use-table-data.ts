@@ -7,12 +7,12 @@
  */
 
 import { useMemo, useCallback } from 'react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useDebouncedCallback } from 'use-debounce';
 
 // Action System - Pure Patterns
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
-import { useSession } from 'next-auth/react';
+// (no session needed — action-system hooks provide context)
 
 // Types
 import type { TableColumn } from '../types';
@@ -57,7 +57,7 @@ export interface UseTableDataReturn {
   debouncedSaveRow: (rowId: string, updatedData: Record<string, any>) => void;
   
   // Schema operations
-  updateTableSchemaMutation: ReturnType<typeof useMutation>;
+  updateTableSchema: (variables: { columns: TableColumn[] }) => Promise<ActionResponse<any>>;
   
   // Computed data
   mergeRowsWithChanges: (changes: Record<string, Record<string, any>>) => TableDataRow[];
@@ -68,12 +68,7 @@ export function useTableData({
   onRowChanges, 
   onRowChangesClear 
 }: UseTableDataProps): UseTableDataReturn {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
   
-  // Extract tenant and branch context from session (following action-system pattern)
-  const tenantId = session?.user?.tenantId;
-  const branchContext = null; // Branch context will be handled by action-system
 
   // ============================================================================
   // QUERIES - Pure Action System Patterns
@@ -142,43 +137,26 @@ export function useTableData({
 
   // Base mutations using action-system patterns with server-only options
   const baseMutations = {
+    // ✅ Invalidation is handled automatically by useActionMutation via resource-family strategy
     updateRow: useActionMutation('tableData.update', {
-      // ✅ Server-only options are handled by the action-system
-      // The TableData schema is configured with serverOnly: true
-      onSuccess: (data, variables) => {
-        console.log('✅ Row update successful:', (variables as any).id);
-        queryClient.invalidateQueries({ queryKey: ['tableData.list'] });
-      },
       onError: (error) => {
         console.error('❌ Row update failed:', error);
       }
     }),
     
     deleteRow: useActionMutation('tableData.delete', {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['tableData.list'] });
-      },
       onError: (error) => {
         console.error('❌ Row delete failed:', error);
       }
     }),
     
     createRow: useActionMutation('tableData.create', {
-      onSuccess: () => {
-        console.log('✅ Row created successfully');
-        queryClient.invalidateQueries({ queryKey: ['tableData.list'] });
-      },
       onError: (error) => {
         console.error('❌ Row create failed:', error);
       }
     }),
     
     updateTableSchema: useActionMutation('tables.update', {
-      onSuccess: () => {
-        console.log('✅ Table schema updated successfully');
-        // Invalidate table metadata queries  
-        queryClient.invalidateQueries({ queryKey: ['tables.read', { id: tableId }] });
-      },
       onError: (error) => {
         console.error('❌ Table schema update failed:', error);
       }
@@ -205,24 +183,16 @@ export function useTableData({
     2000 // 2 second debounce
   );
 
-  // Wrapper functions for better API compatibility
-  const createRow = useCallback(async (variables: { tableId: string; data: Record<string, any> }) => {
-    return baseMutations.createRow.mutateAsync(variables);
-  }, [baseMutations.createRow]);
-
-  const updateRow = useCallback(async (variables: { id: string; data: Record<string, any> }) => {
-    return baseMutations.updateRow.mutateAsync(variables);
-  }, [baseMutations.updateRow]);
-
-  const deleteRow = useCallback(async (variables: { id: string }) => {
-    return baseMutations.deleteRow.mutateAsync(variables);
-  }, [baseMutations.deleteRow]);
-
+  // ============================================================================
+  // ACTION SYSTEM WRAPPERS - Include required IDs for proper updates
+  // ============================================================================
+  
   const updateTableSchema = useCallback(async (variables: { columns: TableColumn[] }) => {
     // Get current table data to preserve existing name and tableName
     const currentTable = tableResult?.data;
 
     return baseMutations.updateTableSchema.mutateAsync({
+      id: tableId,                        // ✅ CRITICAL: Include table ID for update
       columns: variables.columns,         // Pass columns directly to mutation
       name: currentTable?.name,           // Include existing name
       tableName: currentTable?.tableName // Include existing tableName
@@ -240,14 +210,14 @@ export function useTableData({
     tableLoading,
     dataLoading,
     
-    // Row operations
+    // Row operations (pure action system)
     createRowMutation: baseMutations.createRow,
     updateRowMutation: baseMutations.updateRow,
     deleteRowMutation: baseMutations.deleteRow,
     debouncedSaveRow,
     
-    // Schema operations
-    updateTableSchemaMutation: baseMutations.updateTableSchema,
+    // Schema operations (wrapper includes table ID)
+    updateTableSchema,
     
     // Utilities
     mergeRowsWithChanges,
