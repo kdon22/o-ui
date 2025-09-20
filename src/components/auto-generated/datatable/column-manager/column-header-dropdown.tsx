@@ -36,12 +36,8 @@ import {
   Lock
 } from 'lucide-react';
 
-interface TableColumn {
-  name: string;
-  type: 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'boolean';
-  required?: boolean;
-  options?: string[];
-}
+// Types
+import type { TableColumn } from '../types';
 
 interface ColumnHeaderDropdownProps {
   column: TableColumn;

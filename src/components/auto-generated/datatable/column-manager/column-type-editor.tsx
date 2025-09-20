@@ -1,17 +1,18 @@
 /**
- * Column Type Editor Modal - Airtable-like field configuration
+ * Column Type Editor Modal - Enhanced with Smart Defaults and Better UX
  * 
  * Features:
- * - Field name editing
- * - Field type selection with icons
+ * - Field name editing with validation
+ * - Field type selection with icons (using shared types)
  * - Type-specific options (select options, formatting, etc.)
  * - Field description
- * - Rich text formatting toggle
+ * - Smart defaults based on column type
+ * - Better UX with focused form flow
  */
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,25 +29,15 @@ import {
   Switch,
   TextArea
 } from '@/components/ui';
-import { 
-  Type, 
-  Hash, 
-  Calendar, 
-  ToggleLeft, 
-  List,
-  Plus,
-  X
-} from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
-interface TableColumn {
-  name: string;
-  type: 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'boolean';
-  required?: boolean;
-  options?: string[];
-  format?: string;
-  description?: string;
-  richText?: boolean;
-}
+// Use shared types and constants
+import {
+  TableColumn,
+  ColumnFieldType,
+  FIELD_TYPES,
+  getColumnIcon
+} from '../types';
 
 interface ColumnTypeEditorProps {
   isOpen: boolean;
@@ -55,44 +46,7 @@ interface ColumnTypeEditorProps {
   onSave: (column: TableColumn) => void;
 }
 
-const FIELD_TYPES = [
-  {
-    value: 'text',
-    label: 'Single line text',
-    icon: Type,
-    description: 'Enter multiple lines of text.'
-  },
-  {
-    value: 'number',
-    label: 'Number',
-    icon: Hash,
-    description: 'A number with optional decimal places.'
-  },
-  {
-    value: 'select',
-    label: 'Single select',
-    icon: List,
-    description: 'Select one option from a list.'
-  },
-  {
-    value: 'multi_select',
-    label: 'Multiple select',
-    icon: List,
-    description: 'Select multiple options from a list.'
-  },
-  {
-    value: 'date',
-    label: 'Date',
-    icon: Calendar,
-    description: 'A date in MM/DD/YYYY format.'
-  },
-  {
-    value: 'boolean',
-    label: 'Checkbox',
-    icon: ToggleLeft,
-    description: 'Check or uncheck to indicate true/false.'
-  }
-];
+// Using shared FIELD_TYPES from types module - no duplicate definitions needed
 
 export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
   isOpen,
@@ -100,6 +54,7 @@ export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
   column,
   onSave
 }) => {
+  // Enhanced state management with validation
   const [formData, setFormData] = useState<TableColumn>({
     name: '',
     type: 'text',
@@ -110,6 +65,26 @@ export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
   });
 
   const [newOption, setNewOption] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Form validation
+  const validateForm = useMemo(() => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Field name is required';
+    }
+    
+    if ((formData.type === 'select' || formData.type === 'multi_select') && 
+        (!formData.options || formData.options.length === 0)) {
+      newErrors.options = 'At least one option is required for select fields';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const isFormValid = validateForm;
 
   // Initialize form when column changes
   useEffect(() => {
@@ -134,8 +109,9 @@ export const ColumnTypeEditor: React.FC<ColumnTypeEditorProps> = ({
     }
   }, [column]);
 
+  // Enhanced UX: Use shared field types and better icon handling
   const selectedFieldType = FIELD_TYPES.find(t => t.value === formData.type);
-  const Icon = selectedFieldType?.icon || Type;
+  const Icon = selectedFieldType?.icon || getColumnIcon(formData.type);
   const isNewField = !column || !(column.name && String(column.name).trim().length > 0);
 
   // Convert whitespace-separated words to camelCase; leave other characters intact

@@ -25,33 +25,14 @@ import {
 import { ColumnHeaderDropdown } from './column-header-dropdown';
 import { ColumnTypeEditor } from './column-type-editor';
 
-interface TableColumn {
-  name: string;
-  type: 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'boolean';
-  required?: boolean;
-  options?: string[];
-  format?: string;
-  description?: string;
-}
+// Types
+import type { TableColumn, SortDirection, ColumnOperationCallbacks } from '../types';
+import { COLUMN_TYPE_ICONS } from '../types';
 
-interface ColumnHeaderProps {
+interface ColumnHeaderProps extends ColumnOperationCallbacks {
   column: TableColumn;
-  sortDirection?: 'asc' | 'desc' | null;
-  onSort?: (direction: 'asc' | 'desc' | null) => void;
-  onColumnUpdate?: (column: TableColumn) => void;
-  onColumnDelete?: () => void;
-  onColumnDuplicate?: () => void;
-  onInsertColumn?: (position: 'left' | 'right') => void;
+  sortDirection?: SortDirection;
 }
-
-const COLUMN_TYPE_ICONS = {
-  text: Type,
-  number: Hash,
-  date: Calendar,
-  boolean: ToggleLeft,
-  select: List,
-  multi_select: List
-};
 
 export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   column,

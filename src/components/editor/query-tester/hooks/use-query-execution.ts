@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { useServerOnlyMutation, useServerOnlyQuery, type ServerOnlyOptions } from '@/hooks/use-server-only-action';
+import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
 import { parseSimpleSQL, applyWhereConditions } from '../utils/simple-sql-parser';
 
 interface DataTable {
@@ -33,8 +33,8 @@ export function useQueryExecution(selectedTable: DataTable | null) {
   // Note: Columns are now extracted dynamically from the data rows
   // No need to fetch table metadata separately
 
-  // Fetch selected table details to access configured column names
-  const { data: tableDetails } = useServerOnlyQuery(
+  // Fetch selected table details to access configured column names (cached in IndexedDB)
+  const { data: tableDetails } = useActionQuery(
     'tables.read',
     { id: selectedTable?.id || '' },
     {
@@ -42,8 +42,8 @@ export function useQueryExecution(selectedTable: DataTable | null) {
     }
   );
 
-  // Execute query using the existing tableData.list action
-  const { mutate: executeQueryMutation, isPending } = useServerOnlyMutation(
+  // Execute query using the existing tableData.list action (server-only, no IndexedDB caching)
+  const { mutate: executeQueryMutation, isPending } = useActionMutation(
     'tableData.list',
     {
       onSuccess: (result) => {
