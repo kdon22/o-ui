@@ -70,6 +70,23 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
     };
   }, []);
 
+  // Validation computer (pure) used in multiple places to avoid stale values
+  const computeValidation = useCallback((items: PromptLayoutItem[] | undefined, values: Record<string, any>) => {
+    const missingRequired: string[] = [];
+    const errors: Record<string, string> = {};
+    items?.forEach(item => {
+      const id = item.config?.componentId;
+      if (!id) return;
+      const isRequired = item.config?.required;
+      const value = values[id];
+      if (isRequired && (value === undefined || value === null || value === '')) {
+        missingRequired.push(id);
+        errors[id] = `${item.config?.label || item.label || 'Field'} is required`;
+      }
+    });
+    return { isValid: missingRequired.length === 0, missingRequired, errors } as FormValidation;
+  }, []);
+
   // Initialize defaults for select/radio (isDefault) if not already set
   React.useEffect(() => {
     const defaults: Record<string, any> = {};
@@ -85,18 +102,69 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
       }
     });
     if (Object.keys(defaults).length) {
-      setFormData(prev => ({ ...prev, ...defaults }));
+      const next = { ...formData, ...defaults };
+      setFormData(next);
       if (onChange) {
-        const dataWithValidation = {
-          ...formData,
-          ...defaults,
-          __validation: validation
-        };
+        const v = computeValidation(layout.items, next);
+        const dataWithValidation = { ...next, __validation: v } as any;
         setTimeout(() => onChange(dataWithValidation), 0);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout.items]);
+
+  // Initialize table defaults (selection from bindings) only once per component when missing
+  useEffect(() => {
+    const updates: Record<string, any> = {};
+    layout.items?.forEach(item => {
+      if (item.type !== 'table') return;
+      const id = item.config?.componentId || item.id;
+      if (!id) return;
+      if (formData[id] !== undefined) return;
+      const tableBinding = (bindings as any)?.[id] || {};
+      const selection = tableBinding?.selection || { mode: 'none' };
+      const mode: 'none' | 'single' | 'multi' = selection?.mode || 'none';
+      const preselected: number[] = Array.isArray(selection?.preselected) ? selection.preselected : [];
+      if (mode === 'single') {
+        updates[id] = preselected[0] ?? null;
+      } else if (mode === 'multi') {
+        updates[id] = preselected;
+      }
+    });
+    if (Object.keys(updates).length) {
+      const next = { ...formData, ...updates };
+      setFormData(next);
+      if (onChange) {
+        const v = computeValidation(layout.items, next);
+        const dataWithValidation = { ...next, __validation: v } as any;
+        setTimeout(() => onChange(dataWithValidation), 0);
+      }
+    }
+  }, [layout.items, bindings, formData, onChange, computeValidation]);
+
+  // Initialize table UI state (column order/widths) once per table component
+  useEffect(() => {
+    if (!layout.items?.length) return;
+    let changed = false;
+    const nextState: Record<string, { order: number[]; widths: Record<number, number> }> = { ...tableState };
+    layout.items.forEach(item => {
+      if (item.type !== 'table') return;
+      const id = item.config?.componentId || item.id;
+      if (!id) return;
+      if (nextState[id]) return;
+      const columns = Array.isArray((item as any)?.config?.columns) ? (item as any).config.columns : [];
+      const rows: any[] = Array.isArray((bindings as any)?.[id]?.rows) ? (bindings as any)[id].rows : [];
+      const columnCount = columns.length || (rows[0]?.length || 0);
+      const initialOrder = Array.from({ length: columnCount }, (_, i) => i);
+      const initialWidths: Record<number, number> = {};
+      columns.forEach((col: any, idx: number) => {
+        if (typeof col?.width === 'number') initialWidths[idx] = col.width;
+      });
+      nextState[id] = { order: initialOrder, widths: initialWidths };
+      changed = true;
+    });
+    if (changed) setTableState(nextState);
+  }, [layout.items, bindings, tableState]);
 
   // Memoized radio groups mapping
   const radioGroups = useMemo(() => {
@@ -116,29 +184,7 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
   }, [layout.items]);
 
   // Form validation
-  const validation = useMemo((): FormValidation => {
-    const missingRequired: string[] = [];
-    const errors: Record<string, string> = {};
-
-    layout.items?.forEach(item => {
-      const id = item.config?.componentId;
-      if (!id) return;
-
-      const isRequired = item.config.required;
-      const value = formData[id];
-
-      if (isRequired && (value === undefined || value === null || value === '')) {
-        missingRequired.push(id);
-        errors[id] = `${item.config.label || item.label || 'Field'} is required`;
-      }
-    });
-
-    return {
-      isValid: missingRequired.length === 0,
-      missingRequired,
-      errors
-    };
-  }, [layout.items, formData]);
+  const validation = useMemo((): FormValidation => computeValidation(layout.items, formData), [layout.items, formData, computeValidation]);
 
   // Handle field changes with debounced callback
   const handleFieldChange = useCallback((id: string, value: any) => {
@@ -149,16 +195,14 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
       
       // Notify parent with validation included
       if (onChange) {
-        const dataWithValidation = {
-          ...{ [id]: value },
-          __validation: validation
-        };
+        const v = computeValidation(layout.items, newData);
+        const dataWithValidation = { ...{ [id]: value }, __validation: v };
         onChange(dataWithValidation);
       }
       
       return newData;
     });
-  }, [readOnly, onChange, validation]);
+  }, [readOnly, onChange, layout.items, computeValidation]);
 
   // Handle radio group changes
   const handleRadioChange = useCallback((groupName: string, value: string) => {
@@ -384,53 +428,24 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
         const mode: 'none' | 'single' | 'multi' = selection?.mode || 'none';
         const preselected: number[] = Array.isArray(selection?.preselected) ? selection.preselected : [];
 
-        // Initialize selected rows from preselected if no current value
-        const current = value;
-        const initialSelected = current !== undefined ? current : (mode === 'single' ? (preselected[0] ?? null) : preselected);
-        if (current === undefined && (preselected.length > 0 || mode !== 'none')) {
-          setFormData(prev => ({ ...prev, [id]: initialSelected }));
-          if (onChange) {
-            const dataWithValidation = {
-              ...formData,
-              [id]: initialSelected,
-              __validation: validation
-            } as any;
-            setTimeout(() => onChange(dataWithValidation), 0);
-          }
-        }
-
         const handleSelect = (rowIndex: number) => {
           if (readOnly || mode === 'none') return;
-          setFormData(prev => {
-            if (mode === 'single') {
-              return { ...prev, [id]: rowIndex };
-            }
-            const currentSel: number[] = Array.isArray(prev[id]) ? (prev[id] as number[]) : [];
-            const exists = currentSel.includes(rowIndex);
-            const nextSel = exists ? currentSel.filter(i => i !== rowIndex) : [...currentSel, rowIndex];
-            return { ...prev, [id]: nextSel };
-          });
+          if (mode === 'single') {
+            handleFieldChange(id, rowIndex);
+            return;
+          }
+          const currentSel: number[] = Array.isArray(value) ? (value as number[]) : [];
+          const exists = currentSel.includes(rowIndex);
+          const nextSel = exists ? currentSel.filter(i => i !== rowIndex) : [...currentSel, rowIndex];
+          handleFieldChange(id, nextSel);
         };
 
-        const selectedSingle: number | null = typeof value === 'number' ? value : (mode === 'single' ? null : null);
+        const selectedSingle: number | null = typeof value === 'number' ? value : (mode === 'single' ? (preselected[0] ?? null) : null);
         const selectedMulti: number[] = Array.isArray(value) ? (value as number[]) : [];
 
         const columns = Array.isArray((config as any)?.columns) ? (config as any).columns : [];
         const columnCount = columns.length || (rows[0]?.length || 0);
 
-        // Initialize table state (order, widths) once per component id
-        const ensureTableState = (compId: string) => {
-          setTableState(prev => {
-            if (prev[compId]) return prev;
-            const initialOrder = Array.from({ length: columnCount }, (_, i) => i);
-            const initialWidths: Record<number, number> = {};
-            columns.forEach((col: any, idx: number) => {
-              if (typeof col?.width === 'number') initialWidths[idx] = col.width;
-            });
-            return { ...prev, [compId]: { order: initialOrder, widths: initialWidths } };
-          });
-        };
-        ensureTableState(id);
         const order = tableState[id]?.order || Array.from({ length: columnCount }, (_, i) => i);
         const widths = tableState[id]?.widths || {};
 
@@ -495,7 +510,7 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {(rows.length ? rows.slice(0, 1) : [Array.from({ length: columnCount })]).map((r: any, rIdx: number) => {
+                  {(rows.length ? rows : [Array.from({ length: columnCount })]).map((r: any, rIdx: number) => {
                     const isSelected = mode === 'single'
                       ? selectedSingle === rIdx
                       : selectedMulti.includes(rIdx);

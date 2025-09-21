@@ -162,6 +162,23 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
             const value = cleanedData[id] === true;
             return { ...base, value, isAnswered: cleanedData[id] !== undefined };
           }
+          case 'table': {
+            const tableBinding = ((execution.inputData as any)?.bindings?.[prompt.promptName]?.[id]) || {};
+            const rows: any[] = Array.isArray(tableBinding?.rows) ? tableBinding.rows : [];
+            const selection = tableBinding?.selection || { mode: 'none' };
+            const mode: 'none' | 'single' | 'multi' = selection?.mode || 'none';
+            let selectedRows: any[] = [];
+            let selectedIndices: number[] = [];
+            const raw = cleanedData[id];
+            if (mode === 'single' && typeof raw === 'number') {
+              selectedRows = rows[raw] ? [rows[raw]] : [];
+              selectedIndices = Number.isInteger(raw) ? [raw] : [];
+            } else if (mode === 'multi' && Array.isArray(raw)) {
+              selectedRows = (raw as number[]).map((i) => rows[i]).filter(Boolean);
+              selectedIndices = (raw as number[]).filter((i) => Number.isInteger(i));
+            }
+            return { ...base, isAnswerable: mode !== 'none', value: selectedRows, selectedIndices };
+          }
           default:
             return base;
         }
