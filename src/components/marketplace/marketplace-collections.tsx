@@ -10,7 +10,8 @@
 'use client';
 
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
 import { 
   Star, Heart, Package, Plus, Eye, 
   Users, Award, Search, Grid
@@ -32,39 +33,24 @@ export function MarketplaceCollections({ onPackageSelect }: MarketplaceCollectio
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch starred packages
-  const { data: starredPackages, isLoading: loadingStarred } = useQuery({
-    queryKey: ['marketplace-starred'],
-    queryFn: async (): Promise<MarketplacePackageWithDetails[]> => {
-      const response = await fetch('/api/marketplace/starred');
-      if (!response.ok) throw new Error('Failed to fetch starred packages');
-      const result = await response.json();
-      return result.data || [];
-    },
-  });
+  // Fetch starred packages via list + filter
+  const { data: starredResponse, isActuallyLoading: loadingStarred } = useActionQuery<MarketplacePackageWithDetails[]>(
+    'marketplacePackages.list',
+    { filters: { isStarred: true }, limit: 500 },
+    { skipCache: true }
+  );
+  const starredPackages = (starredResponse?.data as any[]) || [];
 
-  // Fetch user collections
-  const { data: collections, isLoading: loadingCollections } = useQuery({
-    queryKey: ['package-collections'],
-    queryFn: async (): Promise<PackageCollection[]> => {
-      const response = await fetch('/api/marketplace/collections');
-      if (!response.ok) throw new Error('Failed to fetch collections');
-      const result = await response.json();
-      return result.data || [];
-    },
-  });
+  // Fetch user collections via list (if defined in schema; placeholder empty for now)
+  const collections: PackageCollection[] = [];
 
-  // Star/unstar mutation
-  const starMutation = useMutation({
-    mutationFn: async ({ packageId, starred }: { packageId: string; starred: boolean }) => {
-      const response = await fetch(`/api/marketplace/packages/${packageId}/star`, {
-        method: starred ? 'POST' : 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to update star status');
-      return response.json();
-    },
-    onSuccess: (_, { starred }) => {
+  // Star/unstar via standard update
+  const starMutation = useActionMutation('marketplacePackages.update', {
+    ...( { skipCache: true } as any ),
+    onSuccess: (_res: any, variables: any) => {
+      const starred = Boolean((variables as any)?.isStarred);
       queryClient.invalidateQueries({ queryKey: ['marketplace-starred'] });
+      queryClient.invalidateQueries({ queryKey: ['marketplace-packages'] });
       toast({
         title: starred ? 'Package starred' : 'Package unstarred',
         description: starred ? 'Added to your starred packages' : 'Removed from starred packages',
@@ -73,7 +59,7 @@ export function MarketplaceCollections({ onPackageSelect }: MarketplaceCollectio
   });
 
   const handleStar = (packageId: string, currentlyStarred: boolean) => {
-    starMutation.mutate({ packageId, starred: !currentlyStarred });
+    (starMutation as any).mutate({ id: packageId, isStarred: !currentlyStarred } as any);
   };
 
   const renderStarredPackage = (pkg: MarketplacePackageWithDetails) => {
@@ -186,7 +172,7 @@ export function MarketplaceCollections({ onPackageSelect }: MarketplaceCollectio
     );
   };
 
-  if (loadingStarred && loadingCollections) {
+  if (loadingStarred) {
     return (
       <div className="space-y-6">
         <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />

@@ -60,6 +60,8 @@ export interface CreateExecutionRequest {
   ruleName: string;
   promptNames: string[] | string; // Can be array or single string
   sessionId?: string;
+  // Optional runtime input: supports table data bindings, etc.
+  inputData?: Record<string, any>;
 }
 
 export interface CreateExecutionResponse {

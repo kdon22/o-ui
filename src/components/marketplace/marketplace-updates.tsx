@@ -11,7 +11,8 @@
 'use client';
 
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useActionQuery } from '@/hooks/use-action-api';
 import { 
   Download, Package, CheckCircle, Clock, 
   RefreshCw, Star, AlertCircle
@@ -32,27 +33,21 @@ export function MarketplaceUpdates({ onPackageSelect }: MarketplaceUpdatesProps)
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch available updates
-  const { data: availableUpdates, isLoading: loadingUpdates } = useQuery({
-    queryKey: ['marketplace-updates'],
-    queryFn: async (): Promise<PackageInstallation[]> => {
-      const response = await fetch('/api/marketplace/updates');
-      if (!response.ok) throw new Error('Failed to fetch updates');
-      const result = await response.json();
-      return result.data || [];
-    },
-  });
+  // Fetch available updates via action-system (requires marketplace.updates action)
+  const { data: updatesResponse, isActuallyLoading: loadingUpdates } = useActionQuery<PackageInstallation[]>(
+    'marketplace.updates',
+    {},
+    { skipCache: true }
+  );
+  const availableUpdates = updatesResponse?.data || [];
 
-  // Fetch recently updated packages
-  const { data: recentlyUpdated, isLoading: loadingRecent } = useQuery({
-    queryKey: ['marketplace-recently-updated'],
-    queryFn: async (): Promise<PackageInstallation[]> => {
-      const response = await fetch('/api/marketplace/installations?recentlyUpdated=true&limit=5');
-      if (!response.ok) throw new Error('Failed to fetch recently updated');
-      const result = await response.json();
-      return result.data || [];
-    },
-  });
+  // Fetch recently updated installations via action-system
+  const { data: recentResponse, isActuallyLoading: loadingRecent } = useActionQuery<PackageInstallation[]>(
+    'packageInstallations.list',
+    { filters: { recentlyUpdated: true }, limit: 5 },
+    { skipCache: true }
+  );
+  const recentlyUpdated = recentResponse?.data || [];
 
   // Star/unstar via shared hook (action-system under the hood)
   const { handleStar } = require('./shared/use-package-star');

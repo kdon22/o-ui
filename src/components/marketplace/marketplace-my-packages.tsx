@@ -11,7 +11,6 @@
 'use client';
 
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Package, Download, Star, Settings, Trash2, 
   CheckCircle, AlertCircle, Clock, Search
@@ -24,6 +23,7 @@ import {
   PackageInstallation,
   PackageInstallationStatus
 } from '@/features/marketplace/types/enhanced';
+import { useActionQuery } from '@/hooks/use-action-api';
 
 interface MarketplaceMyPackagesProps {
   onPackageSelect?: (packageId: string) => void;
@@ -31,18 +31,14 @@ interface MarketplaceMyPackagesProps {
 
 export function MarketplaceMyPackages({ onPackageSelect }: MarketplaceMyPackagesProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Fetch installed packages
-  const { data: installedPackages, isLoading } = useQuery({
-    queryKey: ['installed-packages'],
-    queryFn: async (): Promise<PackageInstallation[]> => {
-      const response = await fetch('/api/marketplace/installations');
-      if (!response.ok) throw new Error('Failed to fetch installations');
-      const result = await response.json();
-      return result.data || [];
-    },
-  });
+  // Fetch installed packages via action-system (DB-only)
+  const { data: installationsResponse, isActuallyLoading: isLoading } = useActionQuery<PackageInstallation[]>(
+    'packageInstallations.list',
+    { filters: {} },
+    { skipCache: true }
+  );
+  const installedPackages = installationsResponse?.data || [];
 
   // Star/unstar via shared hook (action-system under the hood)
   const { handleStar } = require('./shared/use-package-star');

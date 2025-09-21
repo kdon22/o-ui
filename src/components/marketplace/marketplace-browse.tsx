@@ -13,8 +13,8 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useActionMutation } from '@/hooks/use-action-api';
+import { useQueryClient } from '@tanstack/react-query';
+import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
 import { 
   Search, Filter, Grid, List, Star, Download, Users, Tag, 
   Play, Eye, Heart, Zap, TrendingUp, Award, Shield, 
@@ -99,11 +99,11 @@ export function MarketplaceBrowse({
   const [installPackageId, setInstallPackageId] = useState<string | null>(null);
   const [installationOptions, setInstallationOptions] = useState<any>(null);
 
-  // Star/unstar mutation
-  const starMutation = useActionMutation('marketplace.toggleStar', {
+  // Star/unstar via standard update action
+  const starMutation = useActionMutation('marketplacePackages.update', {
     ...( { skipCache: true } as any ),
     onSuccess: (_res: any, variables: any) => {
-      const starred = Boolean(variables?.starred);
+      const starred = Boolean(variables?.isStarred);
       queryClient.invalidateQueries({ queryKey: ['marketplace-packages'] });
       queryClient.invalidateQueries({ queryKey: ['marketplace-discovery'] });
       queryClient.invalidateQueries({ queryKey: ['marketplace-starred'] });
@@ -114,46 +114,58 @@ export function MarketplaceBrowse({
     },
   });
 
-  // Fetch discovery sections
-  const { data: discoverySections, isLoading: loadingDiscovery } = useQuery({
-    queryKey: ['marketplace-discovery', selectedCategories],
-    queryFn: async (): Promise<DiscoverySection[]> => {
-      const categoryParam = selectedCategories.length > 0 ? selectedCategories.join(',') : 'all';
-      const response = await fetch(`/api/marketplace/discovery?category=${categoryParam}`);
-      if (!response.ok) throw new Error('Failed to fetch discovery sections');
-      const result = await response.json();
-      return result.data || [];
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // Derive discovery sections from packages list (no custom action required)
+  let discoverySections: DiscoverySection[] = [];
+  let loadingDiscovery = false;
 
-  // Fetch marketplace packages with enhanced data
-  const { data: packages, isLoading, error } = useQuery({
-    queryKey: ['marketplace-packages', searchTerm, selectedCategories, selectedLicenseTypes, showPublicOnly],
-    queryFn: async (): Promise<MarketplacePackageWithDetails[]> => {
-      const params = new URLSearchParams();
-      
-      if (searchTerm) params.set('search', searchTerm);
-      if (selectedCategories.length > 0) {
-        selectedCategories.forEach(cat => params.append('categories', cat));
-      }
-      if (selectedLicenseTypes.length > 0) {
-        selectedLicenseTypes.forEach(type => params.append('licenseTypes', type));
-      }
-      if (showPublicOnly) params.set('showPublicOnly', 'true');
-      params.set('includeAnalytics', 'true');
-      params.set('includeReviews', 'true');
-      params.set('includeInstallations', 'true');
-      
-      const response = await fetch(`/api/marketplace/packages?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch packages');
-      
-      const result = await response.json();
-      // Handle the new API response structure
-      return result.data?.packages || result.data || [];
+  // Fetch marketplace packages via action-system
+  const { data: packagesResponse, isActuallyLoading: isLoading, error } = useActionQuery<MarketplacePackageWithDetails[]>(
+    'marketplacePackages.list',
+    {
+      filters: {
+        search: searchTerm || undefined,
+        categories: selectedCategories,
+        licenseTypes: selectedLicenseTypes,
+        showPublicOnly: showPublicOnly ? true : undefined
+      },
+      include: { analytics: true, reviews: true, installations: true },
+      limit: 500
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
+    { skipCache: true, staleTime: 2 * 60 * 1000 }
+  );
+  const packages = (packagesResponse?.data as any[]) || [];
+
+  // Build simple discovery sections locally
+  if (!searchTerm && Array.isArray(packages) && packages.length > 0) {
+    const topN = (arr: any[], n: number) => arr.slice(0, Math.min(arr.length, n));
+
+    const featured = topN(
+      [...packages].filter((p: any) => p.isActive && (p.analytics?.averageRating || 0) >= 4)
+        .sort((a: any, b: any) => (b.analytics?.averageRating || 0) - (a.analytics?.averageRating || 0)),
+      6
+    );
+
+    const trending = topN(
+      [...packages].filter((p: any) => p.isActive && (p.analytics?.weeklyDownloads || 0) > 0)
+        .sort((a: any, b: any) => (b.analytics?.weeklyDownloads || 0) - (a.analytics?.weeklyDownloads || 0)),
+      6
+    );
+
+    const newly = topN(
+      [...packages].filter((p: any) => p.isActive)
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+      6
+    );
+
+    const recommended: any[] = [];
+
+    discoverySections = [
+      { id: 'featured', title: 'Featured Packages', description: 'Hand-picked packages recommended by our team', type: 'featured', packages: featured, metadata: { totalCount: featured.length, displayCount: featured.length, refreshedAt: new Date().toISOString() } },
+      { id: 'trending', title: 'Trending This Week', description: 'Popular packages gaining momentum', type: 'trending', packages: trending, metadata: { totalCount: trending.length, displayCount: trending.length, refreshedAt: new Date().toISOString() } },
+      { id: 'recommended', title: 'Recommended for You', description: 'Based on your installed packages', type: 'recommended', packages: recommended, metadata: { totalCount: recommended.length, displayCount: recommended.length, refreshedAt: new Date().toISOString() } },
+      { id: 'new', title: 'New Releases', description: 'Recently published packages', type: 'new', packages: newly, metadata: { totalCount: newly.length, displayCount: newly.length, refreshedAt: new Date().toISOString() } }
+    ];
+  }
 
 
   // Filter and sort packages
@@ -210,7 +222,7 @@ export function MarketplaceBrowse({
   }, [queryClient]);
 
   const handleStar = useCallback((packageId: string, currentlyStarred: boolean) => {
-    starMutation.mutate({ packageId, starred: !currentlyStarred });
+    starMutation.mutate({ id: packageId, isStarred: !currentlyStarred } as any);
   }, [starMutation]);
 
   const renderPackageCard = (pkg: MarketplacePackageWithDetails) => {

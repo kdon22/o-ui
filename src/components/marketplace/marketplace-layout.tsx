@@ -11,7 +11,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useActionQuery } from '@/hooks/use-action-api';
 import { 
   Home, Search, Package, Download, Heart, Grid, 
   ChevronLeft, Menu, Bell, Settings, Star
@@ -71,20 +71,16 @@ export function MarketplaceLayout({ initialView = 'dashboard' }: MarketplaceLayo
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch update count for badge using consolidated dashboard API
-  const { data: dashboardData } = useQuery({
-    queryKey: ['marketplace-dashboard'],
-    queryFn: async () => {
-      const response = await fetch('/api/marketplace/dashboard');
-      if (!response.ok) throw new Error('Failed to fetch dashboard data');
-      const result = await response.json();
-      return result.data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
-  });
+  // Fetch active installations and compute update count via action system
+  const { data: installationsResponse } = useActionQuery(
+    'packageInstallations.list',
+    { filters: { status: 'active' }, limit: 1000 },
+    { skipCache: true, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000 }
+  );
 
-  const updateCount = dashboardData?.updateCount || 0;
+  const updateCount = Array.isArray(installationsResponse?.data)
+    ? (installationsResponse?.data as any[]).filter((inst: any) => inst.package?.hasUpdates).length
+    : 0;
 
   const handlePackageSelect = (packageId: string) => {
     setSelectedPackageId(packageId);

@@ -33,3 +33,21 @@ Execution:
 - For live runtime execution pages, see `components/prompt/prompt-execution-page.tsx`; it fetches execution via `/api/prompt/executions/:id`, renders prompts with `PromptRenderer`, collects `responsePayload`, and POSTs results.
 
 
+Runtime data injection:
+- Executions can receive `inputData` at creation time (POST `/api/prompt/execute`). Use `inputData.bindings` to pre-populate components per prompt/component.
+- Table example:
+```json
+{
+  "bindings": {
+    "pr1": {
+      "peopleTable": {
+        "type": "table",
+        "rows": [["john smith", "45", "12/23/2016"]],
+        "selection": { "mode": "multi", "preselected": [0] }
+      }
+    }
+  }
+}
+```
+
+

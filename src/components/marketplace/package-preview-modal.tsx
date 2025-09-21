@@ -13,7 +13,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useActionQuery } from '@/hooks/use-action-api';
 import { 
   X, Play, Code, Image, Video, Download, Eye, 
   ChevronLeft, ChevronRight, Maximize2, Copy,
@@ -56,19 +56,13 @@ export function PackagePreviewModal({
   const [showFullscreenImage, setShowFullscreenImage] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // Fetch package details with preview data
-  const { data: packageData, isLoading } = useQuery({
-    queryKey: ['marketplace-package-preview', packageId],
-    queryFn: async (): Promise<MarketplacePackageWithDetails> => {
-      if (!packageId) throw new Error('No package ID provided');
-      
-      const response = await fetch(`/api/marketplace/packages/${packageId}?includePreview=true`);
-      if (!response.ok) throw new Error('Failed to fetch package preview');
-      const result = await response.json();
-      return result.data;
-    },
-    enabled: !!packageId && isOpen,
-  });
+  // Fetch package details with preview data via action-system (DB-only)
+  const { data: packageResponse, isActuallyLoading: isLoading } = useActionQuery<MarketplacePackageWithDetails>(
+    'marketplacePackages.read',
+    { id: packageId, include: { preview: true } },
+    { enabled: !!packageId && isOpen, skipCache: true }
+  );
+  const packageData = packageResponse?.data as MarketplacePackageWithDetails | undefined;
 
   const handleCopyCode = useCallback((code: string, id: string) => {
     navigator.clipboard.writeText(code).then(() => {

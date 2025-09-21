@@ -147,15 +147,17 @@ export function InstallationProgressModal({
     });
 
     try {
-      const response = await fetch(`/api/marketplace/packages/${packageId}/install`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(installationOptions),
-      });
-
-      const installationResult: InstallationResult = await response.json();
-      
-      if (!response.ok) {
+      // Execute installation via action-system
+      const actionResult: any = await (await import('@/hooks/use-action-api'));
+      const { getActionClient } = await import('@/lib/action-client');
+      const client = getActionClient(undefined as any);
+      const installationResponse = await client.executeAction({
+        action: 'marketplace.install',
+        data: { packageId, ...installationOptions },
+        options: { skipCache: true }
+      } as any);
+      const installationResult: InstallationResult = installationResponse?.data || { success: false, error: { type: 'unknown', message: 'No response' } } as any;
+      if (!installationResponse?.success) {
         throw new Error(installationResult.error?.message || 'Installation failed');
       }
 

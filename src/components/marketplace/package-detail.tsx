@@ -13,8 +13,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useActionMutation } from '@/hooks/use-action-api';
+import { useQueryClient } from '@tanstack/react-query';
+import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
 import { 
   ArrowLeft, Star, Download, Users, Tag, Play, Code, 
   Database, Workflow, Settings, Shield, Clock, CheckCircle,
@@ -66,27 +66,21 @@ export function PackageDetail({ packageId, onBack }: PackageDetailProps) {
   const [showDependencies, setShowDependencies] = useState(false);
   const [previewMode, setPreviewMode] = useState<'code' | 'demo' | 'screenshots'>('screenshots');
 
-  // Fetch package details
-  const { data: packageData, isLoading } = useQuery({
-    queryKey: ['marketplace-package', packageId],
-    queryFn: async (): Promise<MarketplacePackageWithDetails> => {
-      const response = await fetch(`/api/marketplace/packages/${packageId}?includeAll=true`);
-      if (!response.ok) throw new Error('Failed to fetch package details');
-      const result = await response.json();
-      return result.data;
-    },
-  });
+  // Fetch package details via action-system
+  const { data: packageResponse, isActuallyLoading: isLoading } = useActionQuery<MarketplacePackageWithDetails>(
+    'marketplacePackages.read',
+    { id: packageId, include: { all: true } },
+    { skipCache: true }
+  );
+  const packageData = packageResponse?.data as MarketplacePackageWithDetails | undefined;
 
-  // Fetch package reviews
-  const { data: reviews } = useQuery({
-    queryKey: ['package-reviews', packageId],
-    queryFn: async (): Promise<PackageReview[]> => {
-      const response = await fetch(`/api/marketplace/packages/${packageId}/reviews`);
-      if (!response.ok) throw new Error('Failed to fetch reviews');
-      const result = await response.json();
-      return result.data || [];
-    },
-  });
+  // Fetch package reviews via action-system
+  const { data: reviewsResponse } = useActionQuery<PackageReview[]>(
+    'packageReviews.list',
+    { filters: { packageId, isApproved: true, isPublic: true } },
+    { skipCache: true }
+  );
+  const reviews = reviewsResponse?.data || [];
 
   // Package installation mutation
   const installPackageMutation = useActionMutation('marketplace.installPackage', {

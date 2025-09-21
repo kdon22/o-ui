@@ -314,7 +314,8 @@ export const PromptExecutionPage: React.FC<PromptExecutionPageProps> = ({ execut
           <CardContent className="p-0">
             <PromptRenderer
               layout={prompt.layout}
-              data={execution.inputData || {}}
+              data={{}}
+              bindings={(execution.inputData as any)?.bindings?.[prompt.promptName] || {}}
               onChange={handleFormChange}
               readOnly={isReadOnly}
             />

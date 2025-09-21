@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateExecutionRequest = await request.json();
-    const { ruleName, promptNames, sessionId } = body;
+    const { ruleName, promptNames, sessionId, inputData } = body;
     
 
     // Convert single prompt to array and normalize input (trim, collapse empties)
@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
         createdById: userId,
         executionUrl: `/prompt/execute/{id}`, // Will be updated with actual ID
+        inputData: inputData ? (inputData as any) : undefined,
         expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes from now
       }
     });

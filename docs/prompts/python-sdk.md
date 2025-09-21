@@ -9,25 +9,8 @@ The Python SDK provides **incredibly simple** prompt execution - just 4 lines of
 from prompt_renderer import prompt
 
 response = prompt.display(
-    prompts=["unusedTickets", "pr2"],
-    rule_name="test-rule",
-    bindings={
-        "unusedTickets": {
-            "peopleTable": {
-                "type": "table",
-                "rows": [
-                    ["DL", "SMITH/JOHN MR", "0068921982712", "23-Mar-25", "23-Mar-26", "E", "False"],
-                    ["AA", "JOHNSON/SARAH MS", "0071234567890", "15-Apr-25", "15-Apr-26", "M", "True"],
-                    ["UA", "BROWN/MICHAEL MR", "0089876543210", "02-May-25", "02-May-26", "E", "False"],
-                    ["SW", "DAVIS/JENNIFER MS", "0055432109876", "18-Jun-25", "18-Jun-26", "M", "True"],
-                    ["BA", "WILSON/ROBERT MR", "0012345678901", "30-Jul-25", "30-Jul-26", "E", "False"]
-                ],
-                "selection": {"mode": "multi", "preselected": [0]}
-            }
-        },
-        "pr2": {}
-    }
-)
+    prompts=["ads", "next"],
+    rule_name="Booking Validation Rule")
 
 print(response)
 ```
@@ -82,33 +65,11 @@ values_by_prompt = {entry["prompt"]: entry["values"] for entry in response}
 
 ## 📋 **Method Reference**
 
-### `prompt.display(prompts, rule_name, bindings=None, options=None)`
+### `prompt.display(prompts, rule_name)`
 
 **Parameters:**
 - `prompts` (str | list): Single prompt name or list of prompt names
 - `rule_name` (str): Name of the rule containing the prompts
-- `bindings` (dict | None): Optional runtime input data mapped by prompt and component. Use this to populate tables and other components at render time.
-  - Example (table):
-    ```python
-    resp = prompt.display(
-        prompts=["unusedTickets", "pr2"],
-        rule_name="test-rule",
-        bindings={
-            "unusedTickets": {
-                "peopleTable": {
-                    "type": "table",
-                    "rows": [
-                        ["DL", "SMITH/JOHN MR", "0068921982712", "23-Mar-25", "23-Mar-26", "E", "False"],
-                        ["AA", "JOHNSON/SARAH MS", "0071234567890", "15-Apr-25", "15-Apr-26", "M", "True"]
-                    ],
-                    "selection": {"mode": "multi", "preselected": [0]}
-                }
-            },
-            "pr2": {}
-        }
-    )
-    ```
-- `options` (dict | None): Optional execution options
 
 **Returns:**
 - `list[dict]`: One entry per prompt with stable `values` dict

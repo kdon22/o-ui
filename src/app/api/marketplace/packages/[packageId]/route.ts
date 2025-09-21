@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Get the package
     const packageResult = await actionClient.executeAction({
-      action: 'marketplacePackages.getById',
+      action: 'marketplacePackages.read',
       data: { id: params.packageId },
       branchContext
     });
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Get the existing package to check permissions
     const existingPackage = await actionClient.executeAction({
-      action: 'marketplacePackages.getById',
+      action: 'marketplacePackages.read',
       data: { id: params.packageId },
       branchContext
     });
@@ -197,7 +197,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Get the existing package to check permissions
     const existingPackage = await actionClient.executeAction({
-      action: 'marketplacePackages.getById',
+      action: 'marketplacePackages.read',
       data: { id: params.packageId },
       branchContext
     });

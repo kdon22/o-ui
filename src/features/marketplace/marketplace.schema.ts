@@ -25,6 +25,14 @@ export const MARKETPLACE_PACKAGE_SCHEMA: ResourceSchema = {
   actionPrefix: 'marketplacePackages',
 
   // ============================================================================
+  // CACHING / STORAGE STRATEGY
+  // ============================================================================
+  // Server-only: packages are global and not branch-scoped; bypass IndexedDB writes
+  serverOnly: true,
+  // Explicitly disable IndexedDB key generation so storage helpers skip writes
+  indexedDBKey: null,
+
+  // ============================================================================
   // UI DISPLAY CONFIGURATION
   // ============================================================================
   display: {

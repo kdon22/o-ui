@@ -27,6 +27,8 @@ interface PromptRendererProps {
   readOnly?: boolean;
   className?: string;
   fixedWidth?: number; // For consistent width across multiple prompts
+  // Runtime bindings per component (e.g., tables)
+  bindings?: Record<string, any>;
 }
 
 export const PromptRenderer: React.FC<PromptRendererProps> = ({
@@ -35,7 +37,8 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
   onChange,
   readOnly = false,
   className,
-  fixedWidth
+  fixedWidth,
+  bindings = {}
 }) => {
   // State management with stable initial value
   const [formData, setFormData] = useState<Record<string, any>>(() => ({ ...data }));
@@ -347,10 +350,117 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
         );
       }
 
+      case 'table': {
+        const tableBinding = bindings?.[id] || {};
+        const rows: any[] = Array.isArray(tableBinding?.rows) ? tableBinding.rows : [];
+        const selection = tableBinding?.selection || { mode: 'none' };
+        const mode: 'none' | 'single' | 'multi' = selection?.mode || 'none';
+        const preselected: number[] = Array.isArray(selection?.preselected) ? selection.preselected : [];
+
+        // Initialize selected rows from preselected if no current value
+        const current = value;
+        const initialSelected = current !== undefined ? current : (mode === 'single' ? (preselected[0] ?? null) : preselected);
+        if (current === undefined && (preselected.length > 0 || mode !== 'none')) {
+          setFormData(prev => ({ ...prev, [id]: initialSelected }));
+          if (onChange) {
+            const dataWithValidation = {
+              ...formData,
+              [id]: initialSelected,
+              __validation: validation
+            } as any;
+            setTimeout(() => onChange(dataWithValidation), 0);
+          }
+        }
+
+        const handleSelect = (rowIndex: number) => {
+          if (readOnly || mode === 'none') return;
+          setFormData(prev => {
+            if (mode === 'single') {
+              return { ...prev, [id]: rowIndex };
+            }
+            const currentSel: number[] = Array.isArray(prev[id]) ? (prev[id] as number[]) : [];
+            const exists = currentSel.includes(rowIndex);
+            const nextSel = exists ? currentSel.filter(i => i !== rowIndex) : [...currentSel, rowIndex];
+            return { ...prev, [id]: nextSel };
+          });
+        };
+
+        const selectedSingle: number | null = typeof value === 'number' ? value : (mode === 'single' ? null : null);
+        const selectedMulti: number[] = Array.isArray(value) ? (value as number[]) : [];
+
+        const columns = Array.isArray((config as any)?.columns) ? (config as any).columns : [];
+        const columnCount = columns.length || (rows[0]?.length || 0);
+
+        return (
+          <div key={item.id} style={{ ...baseStyle }}>
+            <div className="border rounded-md overflow-hidden">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {mode !== 'none' && <th className="px-2 py-1 w-8"></th>}
+                    {columns.length > 0
+                      ? columns.map((col: any, idx: number) => (
+                          <th key={idx} className="px-3 py-1 text-left font-medium text-gray-700">
+                            {col?.label ?? `Col ${idx + 1}`}
+                          </th>
+                        ))
+                      : Array.from({ length: columnCount }).map((_, idx) => (
+                          <th key={idx} className="px-3 py-1 text-left font-medium text-gray-700">
+                            {`Col ${idx + 1}`}
+                          </th>
+                        ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r: any[], rIdx: number) => {
+                    const isSelected = mode === 'single'
+                      ? selectedSingle === rIdx
+                      : selectedMulti.includes(rIdx);
+                    return (
+                      <tr key={rIdx} className={cn(isSelected && 'bg-blue-50')}>
+                        {mode !== 'none' && (
+                          <td className="px-2 py-1 align-top">
+                            {mode === 'single' ? (
+                              <input
+                                type="radio"
+                                name={id}
+                                checked={isSelected}
+                                onChange={() => handleSelect(rIdx)}
+                                disabled={readOnly}
+                              />
+                            ) : (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleSelect(rIdx)}
+                                disabled={readOnly}
+                              />
+                            )}
+                          </td>
+                        )}
+                        {(columns.length ? columns.map((_: any, cIdx: number) => cIdx) : r.map((_: any, cIdx: number) => cIdx))
+                          .map((cIdx: number) => (
+                            <td key={cIdx} className="px-3 py-1 align-top">
+                              {Array.isArray(r) ? r[cIdx] : String(r)}
+                            </td>
+                          ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {hasError && (
+              <div className="text-xs text-red-600 mt-1">{hasError}</div>
+            )}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
-  }, [formData, validation, readOnly, handleFieldChange, handleRadioChange]);
+  }, [formData, validation, readOnly, handleFieldChange, handleRadioChange, bindings, onChange]);
 
   // Use explicit canvas size from layout (exact sizing)
   const canvasWidth = Math.max(layout.canvasWidth || 800, 200);

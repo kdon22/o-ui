@@ -17,10 +17,10 @@ export function usePackageStar(options: UsePackageStarOptions = {}) {
     const queryClient = useQueryClient();
     const { additionalInvalidationKeys = [] } = options;
 
-    const starMutation = useActionMutation('marketplace.toggleStar', {
+    const starMutation = useActionMutation('marketplacePackages.update', {
         ...( { skipCache: true } as any ),
         onSuccess: (_result: any, variables: any) => {
-            const starred = Boolean(variables?.starred);
+            const starred = Boolean((variables as any)?.isStarred);
             // Standard invalidations that all components need
             queryClient.invalidateQueries({ queryKey: ['marketplace-starred'] });
             queryClient.invalidateQueries({ queryKey: ['marketplace-packages'] });
@@ -48,7 +48,7 @@ export function usePackageStar(options: UsePackageStarOptions = {}) {
     });
 
     const handleStar = (packageId: string, currentlyStarred: boolean) => {
-        starMutation.mutate({ packageId, starred: !currentlyStarred } as any);
+        starMutation.mutate({ id: packageId, isStarred: !currentlyStarred } as any);
     };
 
     return {

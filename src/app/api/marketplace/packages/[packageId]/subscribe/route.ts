@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Get the package details
     const packageResult = await actionClient.executeAction({
-      action: 'marketplacePackages.getById',
+      action: 'marketplacePackages.read',
       data: { id: params.packageId },
       branchContext
     });

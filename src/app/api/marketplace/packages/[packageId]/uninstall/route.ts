@@ -130,7 +130,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Get package details for component information
     const packageResult = await actionClient.executeAction({
-      action: 'marketplacePackages.getById',
+      action: 'marketplacePackages.read',
       data: { id: params.packageId },
       branchContext: {
         ...branchContext,
@@ -347,7 +347,7 @@ async function findDependentPackages(
       for (const installation of installationsResult.data) {
         // Get package details
         const pkgResult = await actionClient.executeAction({
-          action: 'marketplacePackages.getById',
+          action: 'marketplacePackages.read',
           data: { id: installation.packageId },
           branchContext: {
             ...branchContext,
