@@ -36,7 +36,7 @@ export function TableOptionsSection({ type, config, onConfigChange }: TableOptio
 
       <div className="space-y-2">
         <label className="text-xs text-gray-600 font-medium">Mode</label>
-        <Select onValueChange={(v) => setSelectionMode(v as any)} defaultValue={selectionMode}>
+        <Select onValueChange={(v) => setSelectionMode(v as any)} value={selectionMode}>
           <SelectTrigger className="h-8 text-sm">
             <SelectValue placeholder="Display" />
           </SelectTrigger>
