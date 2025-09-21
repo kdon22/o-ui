@@ -18,7 +18,9 @@ const STYLING_OPTIONS = {
   'radio': { useBackground: true, useBorder: true, useLabelPosition: true },
   'label': { useFont: true },
   'button': { useFont: true, useBackground: true, useBorder: true },
-  'divider': { useDivider: true }
+  'divider': { useDivider: true },
+  // Table styling: grid lines controls
+  'table': { useTableGrid: true }
 }
 
 export function StylingSection({ 
@@ -257,6 +259,36 @@ export function StylingSection({
                   max={200}
                 />
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Table Styling */}
+      {'useTableGrid' in options && (options as any).useTableGrid && (
+        <div className="space-y-3">
+          <h5 className="text-xs font-medium text-gray-600 uppercase tracking-wide">Table</h5>
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-gray-500">Show Grid Lines</label>
+            <input
+              type="checkbox"
+              checked={Boolean(config.showGridLines)}
+              onChange={(e) => onConfigChange('showGridLines', e.target.checked)}
+            />
+          </div>
+          {config.showGridLines && (
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500">Grid Line Style</label>
+              <Select onValueChange={(value) => onConfigChange('gridLineStyle', value)} defaultValue={config.gridLineStyle || 'solid'}>
+                <SelectTrigger className="w-full h-8 text-sm border border-gray-300 rounded px-2">
+                  <SelectValue placeholder="Select a style" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="solid">Solid</SelectItem>
+                  <SelectItem value="dashed">Dashed</SelectItem>
+                  <SelectItem value="dotted">Dotted</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

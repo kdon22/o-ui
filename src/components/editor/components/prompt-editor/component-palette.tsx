@@ -3,7 +3,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Type, CheckSquare, Circle, List, Square, MousePointer, Minus } from 'lucide-react'
+import { Type, CheckSquare, Circle, List, Square, MousePointer, Minus, Table } from 'lucide-react'
 import type { ComponentType, DragItem } from './types'
 
 interface ComponentPaletteProps {
@@ -59,6 +59,13 @@ const COMPONENT_ITEMS: Array<{
     label: 'Divider',
     icon: Minus,
     description: 'Horizontal divider line'
+  }
+  ,
+  {
+    type: 'table',
+    label: 'Table',
+    icon: Table,
+    description: 'Tabular data with selectable rows'
   }
 ]
 

@@ -1,6 +1,6 @@
 // Shared types for the unified prompt editor system
 
-export type ComponentType = 'label' | 'radio' | 'text-input' | 'select' | 'checkbox' | 'button' | 'divider'
+export type ComponentType = 'label' | 'radio' | 'text-input' | 'select' | 'checkbox' | 'button' | 'divider' | 'table'
 
 export interface ComponentConfig {
   label?: string
@@ -32,6 +32,12 @@ export interface ComponentConfig {
   // Divider specific
   thickness?: number
   style?: 'solid' | 'dashed' | 'dotted'
+
+  // Table specific (optional; ignored by other components)
+  columns?: Array<{ label?: string; width?: number }>
+  selection?: { mode?: 'none' | 'single' | 'multi'; preselected?: number[] }
+  showGridLines?: boolean
+  gridLineStyle?: 'solid' | 'dashed' | 'dotted'
 }
 
 export interface ComponentItem {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,33 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
 }) => {
   // State management with stable initial value
   const [formData, setFormData] = useState<Record<string, any>>(() => ({ ...data }));
+
+  // Table per-component UI state (column order and widths) keyed by component id
+  const [tableState, setTableState] = useState<Record<string, { order: number[]; widths: Record<number, number> }>>({});
+  const resizingRef = useRef<{ id: string; origIdx: number; startX: number; startWidth: number } | null>(null);
+
+  // Global mouse handlers for column resizing
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!resizingRef.current) return;
+      const { id, origIdx, startX, startWidth } = resizingRef.current;
+      const delta = e.clientX - startX;
+      const nextWidth = Math.max(40, startWidth + delta);
+      setTableState(prev => {
+        const existing = prev[id] || { order: [], widths: {} };
+        return { ...prev, [id]: { order: existing.order, widths: { ...existing.widths, [origIdx]: nextWidth } } };
+      });
+    }
+    function onMouseUp() {
+      resizingRef.current = null;
+    }
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   // Initialize defaults for select/radio (isDefault) if not already set
   React.useEffect(() => {
@@ -391,24 +418,79 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
         const columns = Array.isArray((config as any)?.columns) ? (config as any).columns : [];
         const columnCount = columns.length || (rows[0]?.length || 0);
 
+        // Initialize table state (order, widths) once per component id
+        const ensureTableState = (compId: string) => {
+          setTableState(prev => {
+            if (prev[compId]) return prev;
+            const initialOrder = Array.from({ length: columnCount }, (_, i) => i);
+            const initialWidths: Record<number, number> = {};
+            columns.forEach((col: any, idx: number) => {
+              if (typeof col?.width === 'number') initialWidths[idx] = col.width;
+            });
+            return { ...prev, [compId]: { order: initialOrder, widths: initialWidths } };
+          });
+        };
+        ensureTableState(id);
+        const order = tableState[id]?.order || Array.from({ length: columnCount }, (_, i) => i);
+        const widths = tableState[id]?.widths || {};
+
+        // Grid lines controls
+        const showGridLines = Boolean((config as any)?.showGridLines);
+        const gridLineStyle: 'solid' | 'dashed' | 'dotted' = (config as any)?.gridLineStyle || 'solid';
+        const borderClass = showGridLines ? 'border' : '';
+        const borderStyleClass = showGridLines && gridLineStyle === 'dashed' ? 'border-dashed' : showGridLines && gridLineStyle === 'dotted' ? 'border-dotted' : '';
+
         return (
           <div key={item.id} style={{ ...baseStyle }}>
-            <div className="border rounded-md overflow-hidden">
-              <table className="min-w-full text-sm">
+            <div className={`rounded-md overflow-hidden ${borderClass} ${borderStyleClass}`}>
+              <table className="min-w-full text-sm select-none">
                 <thead className="bg-gray-50">
                   <tr>
-                    {mode !== 'none' && <th className="px-2 py-1 w-8"></th>}
-                    {columns.length > 0
-                      ? columns.map((col: any, idx: number) => (
-                          <th key={idx} className="px-3 py-1 text-left font-medium text-gray-700">
-                            {col?.label ?? `Col ${idx + 1}`}
-                          </th>
-                        ))
-                      : Array.from({ length: columnCount }).map((_, idx) => (
-                          <th key={idx} className="px-3 py-1 text-left font-medium text-gray-700">
-                            {`Col ${idx + 1}`}
-                          </th>
-                        ))}
+                    {mode !== 'none' && <th className={`px-2 py-1 w-8 ${showGridLines ? `border-b ${borderStyleClass}` : ''}`}></th>}
+                    {(columns.length ? order : Array.from({ length: columnCount }, (_, i) => i)).map((idx: number) => (
+                      <th key={idx}
+                          className={`px-1 py-1 text-left font-medium text-gray-700 relative ${showGridLines ? `border-b ${borderStyleClass}` : ''}`}
+                          style={{ width: (widths[idx] ?? columns[idx]?.width) ? `${widths[idx] ?? columns[idx]?.width}px` : undefined }}
+                          draggable={!readOnly}
+                          onDragStart={(e) => {
+                            if (readOnly) return;
+                            e.dataTransfer.setData('text/plain', String(idx));
+                          }}
+                          onDragOver={(e) => { if (!readOnly) e.preventDefault(); }}
+                          onDrop={(e) => {
+                            if (readOnly) return;
+                            const from = Number(e.dataTransfer.getData('text/plain'));
+                            const to = idx;
+                            if (Number.isNaN(from) || Number.isNaN(to) || from === to) return;
+                            setTableState(prev => {
+                              const existing = prev[id] || { order: [], widths: {} };
+                              const nextOrder = existing.order.slice();
+                              const fromPos = nextOrder.indexOf(from);
+                              const toPos = nextOrder.indexOf(to);
+                              if (fromPos < 0 || toPos < 0) return prev;
+                              nextOrder.splice(toPos, 0, nextOrder.splice(fromPos, 1)[0]);
+                              return { ...prev, [id]: { order: nextOrder, widths: existing.widths } };
+                            });
+                          }}
+                      >
+                        <div className="px-2 py-0.5">
+                          {columns[idx]?.label ?? `Col ${idx + 1}`}
+                        </div>
+                        {!readOnly && (
+                          <div
+                            onMouseDown={(e) => {
+                              const th = (e.currentTarget.parentElement as HTMLElement);
+                              const startWidth = th.getBoundingClientRect().width;
+                              resizingRef.current = { id, origIdx: idx, startX: e.clientX, startWidth };
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            className="absolute top-0 right-0 h-full w-1 cursor-col-resize"
+                            style={{ userSelect: 'none' }}
+                          />
+                        )}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -417,9 +499,9 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
                       ? selectedSingle === rIdx
                       : selectedMulti.includes(rIdx);
                     return (
-                      <tr key={rIdx} className={cn(isSelected && 'bg-blue-50')}>
+                      <tr key={rIdx} className={cn((rIdx % 2 === 1) && 'bg-gray-50', isSelected && 'bg-blue-50')}>
                         {mode !== 'none' && (
-                          <td className="px-2 py-1 align-top">
+                          <td className={`px-2 py-1 align-top ${showGridLines ? `border-t ${borderStyleClass}` : ''}`}>
                             {mode === 'single' ? (
                               <input
                                 type="radio"
@@ -438,9 +520,11 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
                             )}
                           </td>
                         )}
-                        {(columns.length ? columns.map((_: any, cIdx: number) => cIdx) : r.map((_: any, cIdx: number) => cIdx))
+                        {(columns.length ? order : Array.from({ length: columnCount }, (_, i) => i))
                           .map((cIdx: number) => (
-                            <td key={cIdx} className="px-3 py-1 align-top">
+                            <td key={cIdx}
+                                className={`px-3 py-1 align-top ${showGridLines ? `border-t ${borderStyleClass}` : ''}`}
+                                style={{ width: (widths[cIdx] ?? columns[cIdx]?.width) ? `${widths[cIdx] ?? columns[cIdx]?.width}px` : undefined }}>
                               {Array.isArray(r) ? r[cIdx] : String(r)}
                             </td>
                           ))}

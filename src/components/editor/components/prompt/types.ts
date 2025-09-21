@@ -2,7 +2,7 @@ export interface PromptLayoutItem {
   x: number;
   y: number;
   id: string;
-  type: 'label' | 'text-input' | 'select' | 'checkbox' | 'radio' | 'divider';
+  type: 'label' | 'text-input' | 'select' | 'checkbox' | 'radio' | 'divider' | 'table';
   label?: string;
   config: {
     componentId: string;
@@ -30,6 +30,12 @@ export interface PromptLayoutItem {
     // Divider specific
     style?: 'solid' | 'dashed' | 'dotted';
     thickness?: number;
+
+    // Table specific (optional; ignored by other components)
+    columns?: Array<{ label?: string; width?: number }>;
+    selection?: { mode?: 'none' | 'single' | 'multi'; preselected?: number[] };
+    showGridLines?: boolean;
+    gridLineStyle?: 'solid' | 'dashed' | 'dotted';
   };
 }
 
