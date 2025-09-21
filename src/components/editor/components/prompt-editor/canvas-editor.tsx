@@ -47,7 +47,19 @@ export function CanvasEditor({
       radio: { label: 'Radio Option', labelPosition: 'right' as const, orientation: 'vertical' as const, options: [{ label: 'Option 1', value: 'opt1', isDefault: true }] },
       checkbox: { defaultChecked: false },
       button: { label: 'Button', color: '#3b82f6', backgroundColor: '#3b82f6' },
-      divider: { thickness: 1, color: '#e5e7eb', width: 200, style: 'solid' as const }
+      divider: { thickness: 1, color: '#e5e7eb', width: 200, style: 'solid' as const },
+      table: {
+        width: 420,
+        height: 140,
+        columns: [
+          { label: 'Col 1', width: 140 },
+          { label: 'Col 2', width: 140 },
+          { label: 'Col 3', width: 140 }
+        ],
+        selection: { mode: 'none' as const },
+        showGridLines: false,
+        gridLineStyle: 'solid' as const
+      }
     }
     return configs[type as keyof typeof configs] || { label: 'Component' }
   }
@@ -461,6 +473,67 @@ export function CanvasEditor({
             />
           </div>
         )
+
+      case 'table': {
+        const cols = Array.isArray((config as any)?.columns) ? (config as any).columns : [{ label: 'Col 1' }, { label: 'Col 2' }, { label: 'Col 3' }]
+        const showGrid = Boolean((config as any)?.showGridLines)
+        const gridStyle = (config as any)?.gridLineStyle || 'solid'
+        const headerBorder = showGrid ? `1px ${gridStyle} #e5e7eb` : '0'
+        const cellBorder = showGrid ? `1px ${gridStyle} #e5e7eb` : '0'
+        const widthPx = (config as any)?.width ? `${(config as any).width}px` : undefined
+        const heightPx = (config as any)?.height ? `${(config as any).height}px` : undefined
+
+        return (
+          <div
+            key={component.id}
+            style={baseStyle}
+            className={`${selectionStyle}`}
+            onClick={(e) => handleComponentClick(e, component)}
+            onMouseDown={(e) => handleGroupMouseDown(e, component)}
+            onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
+            onDragStart={(e) => handleComponentDragStart(e, component)}
+          >
+            <div
+              className="rounded bg-white pointer-events-none"
+              style={{
+                width: widthPx,
+                height: heightPx,
+                border: `1px ${gridStyle} #d1d5db`,
+                overflow: 'hidden'
+              }}
+            >
+              <div className="flex bg-gray-50" style={{ borderBottom: headerBorder }}>
+                {cols.map((c: any, i: number) => (
+                  <div
+                    key={i}
+                    className="text-[12px] text-gray-700 px-2 py-1 truncate"
+                    style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? headerBorder : '0' }}
+                  >
+                    {c?.label || `Col ${i + 1}`}
+                  </div>
+                ))}
+              </div>
+              {[0, 1].map((r) => (
+                <div key={r} className={`flex ${r % 2 === 1 ? 'bg-gray-50' : ''}`}>
+                  {cols.map((c: any, i: number) => (
+                    <div
+                      key={i}
+                      className="text-[12px] text-gray-500 px-2 py-1 truncate"
+                      style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? cellBorder : '0', borderTop: cellBorder }}
+                    >
+                      —
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div className="px-2 py-1 text-[10px] text-gray-400 border-t" style={{ borderTop: cellBorder }}>
+                Double‑click to edit columns
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       default:
         return (
