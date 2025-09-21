@@ -439,6 +439,7 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
         const gridLineStyle: 'solid' | 'dashed' | 'dotted' = (config as any)?.gridLineStyle || 'solid';
         const borderClass = showGridLines ? 'border' : '';
         const borderStyleClass = showGridLines && gridLineStyle === 'dashed' ? 'border-dashed' : showGridLines && gridLineStyle === 'dotted' ? 'border-dotted' : '';
+        const zebra = Boolean((config as any)?.zebraStriping);
 
         return (
           <div key={item.id} style={{ ...baseStyle }}>
@@ -494,12 +495,12 @@ export const PromptRenderer: React.FC<PromptRendererProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r: any[], rIdx: number) => {
+                  {(rows.length ? rows.slice(0, 1) : [Array.from({ length: columnCount })]).map((r: any, rIdx: number) => {
                     const isSelected = mode === 'single'
                       ? selectedSingle === rIdx
                       : selectedMulti.includes(rIdx);
                     return (
-                      <tr key={rIdx} className={cn((rIdx % 2 === 1) && 'bg-gray-50', isSelected && 'bg-blue-50')}>
+                      <tr key={rIdx} className={cn(zebra && (rIdx % 2 === 1) && 'bg-gray-50', isSelected && 'bg-blue-50')}>
                         {mode !== 'none' && (
                           <td className={`px-2 py-1 align-top ${showGridLines ? `border-t ${borderStyleClass}` : ''}`}>
                             {mode === 'single' ? (

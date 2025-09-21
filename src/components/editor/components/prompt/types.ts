@@ -36,6 +36,7 @@ export interface PromptLayoutItem {
     selection?: { mode?: 'none' | 'single' | 'multi'; preselected?: number[] };
     showGridLines?: boolean;
     gridLineStyle?: 'solid' | 'dashed' | 'dotted';
+    zebraStriping?: boolean;
   };
 }
 

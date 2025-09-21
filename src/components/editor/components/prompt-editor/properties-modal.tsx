@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
-import { BasicPropertiesSection, StylingSection, OptionsSection } from './components'
+import { BasicPropertiesSection, StylingSection, OptionsSection, TableOptionsSection } from './components'
 import type { ComponentItem } from './types'
 
 interface PropertiesModalProps {
@@ -120,6 +120,12 @@ export function PropertiesModal({
             />
 
             <OptionsSection
+              type={type}
+              config={localConfig}
+              onConfigChange={handleConfigChange}
+            />
+
+            <TableOptionsSection
               type={type}
               config={localConfig}
               onConfigChange={handleConfigChange}

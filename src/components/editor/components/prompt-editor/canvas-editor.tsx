@@ -2,7 +2,7 @@
 
 'use client'
 
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,6 +34,28 @@ export function CanvasEditor({
   const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null)
   const isGroupDraggingRef = useRef(false)
   const groupDragStartRef = useRef<{ startX: number, startY: number, positions: Record<string, { x: number, y: number }> } | null>(null)
+  const [editingHeader, setEditingHeader] = useState<{ id: string, col: number } | null>(null)
+  const tableResizeRef = useRef<{ id: string, col: number, startX: number, startWidth: number, shiftSnap: boolean } | null>(null)
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!tableResizeRef.current) return
+      const { id, col, startX, startWidth, shiftSnap } = tableResizeRef.current
+      const dx = e.clientX - startX
+      let width = Math.max(40, startWidth + dx)
+      if (shiftSnap) width = Math.round(width / 8) * 8
+      const comp = layout.items.find(it => it.id === id)
+      if (!comp) return
+      const cols = Array.isArray((comp.config as any)?.columns) ? (comp.config as any).columns.slice() : []
+      if (!cols[col]) return
+      cols[col] = { ...cols[col], width }
+      onComponentUpdate(id, { config: { ...(comp.config as any), columns: cols } })
+    }
+    function onUp() { tableResizeRef.current = null }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [layout, onComponentUpdate])
 
   // Generate unique ID for new components
   const generateId = () => `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -477,11 +499,37 @@ export function CanvasEditor({
       case 'table': {
         const cols = Array.isArray((config as any)?.columns) ? (config as any).columns : [{ label: 'Col 1' }, { label: 'Col 2' }, { label: 'Col 3' }]
         const showGrid = Boolean((config as any)?.showGridLines)
+        const zebra = Boolean((config as any)?.zebraStriping)
         const gridStyle = (config as any)?.gridLineStyle || 'solid'
         const headerBorder = showGrid ? `1px ${gridStyle} #e5e7eb` : '0'
         const cellBorder = showGrid ? `1px ${gridStyle} #e5e7eb` : '0'
         const widthPx = (config as any)?.width ? `${(config as any).width}px` : undefined
         const heightPx = (config as any)?.height ? `${(config as any).height}px` : undefined
+
+        const commitHeaderLabel = (colIdx: number, value: string) => {
+          const updated = cols.slice()
+          updated[colIdx] = { ...updated[colIdx], label: value || `Col ${colIdx + 1}` }
+          onComponentUpdate(component.id, { config: { ...(component.config as any), columns: updated } })
+          setEditingHeader(null)
+        }
+
+        const reorderColumns = (from: number, to: number) => {
+          const updated = cols.slice()
+          const [moved] = updated.splice(from, 1)
+          updated.splice(to, 0, moved)
+          onComponentUpdate(component.id, { config: { ...(component.config as any), columns: updated } })
+        }
+
+        const addColumn = () => {
+          const next = cols.concat([{ label: `Col ${cols.length + 1}`, width: 140 }])
+          onComponentUpdate(component.id, { config: { ...(component.config as any), columns: next } })
+        }
+
+        const deleteColumn = (idx: number) => {
+          if (cols.length <= 1) return
+          const next = cols.slice(); next.splice(idx, 1)
+          onComponentUpdate(component.id, { config: { ...(component.config as any), columns: next } })
+        }
 
         return (
           <div
@@ -491,11 +539,11 @@ export function CanvasEditor({
             onClick={(e) => handleComponentClick(e, component)}
             onMouseDown={(e) => handleGroupMouseDown(e, component)}
             onDoubleClick={(e) => handleComponentDoubleClick(e, component)}
-            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id))}
+            draggable={!(selectedIds?.length > 1 && selectedIds.includes(component.id)) && !(editingHeader && editingHeader.id === component.id)}
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <div
-              className="rounded bg-white pointer-events-none"
+              className="rounded bg-white"
               style={{
                 width: widthPx,
                 height: heightPx,
@@ -503,32 +551,51 @@ export function CanvasEditor({
                 overflow: 'hidden'
               }}
             >
-              <div className="flex bg-gray-50" style={{ borderBottom: headerBorder }}>
+              {/* Sticky header */}
+              <div className="flex bg-gray-50 sticky top-0 z-10" style={{ borderBottom: headerBorder }}>
                 {cols.map((c: any, i: number) => (
                   <div
                     key={i}
-                    className="text-[12px] text-gray-700 px-2 py-1 truncate"
+                    className="text-[12px] text-gray-700 px-2 py-1 truncate relative group"
                     style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? headerBorder : '0' }}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { const from = Number(e.dataTransfer.getData('text/plain')); if (!Number.isNaN(from) && from !== i) reorderColumns(from, i) }}
                   >
-                    {c?.label || `Col ${i + 1}`}
+                    {editingHeader && editingHeader.id === component.id && editingHeader.col === i ? (
+                      <input
+                        autoFocus
+                        defaultValue={c?.label || `Col ${i + 1}`}
+                        className="w-full h-5 text-[12px] border border-gray-300 rounded px-1"
+                        onBlur={(e) => commitHeaderLabel(i, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') commitHeaderLabel(i, (e.target as HTMLInputElement).value); if (e.key === 'Escape') setEditingHeader(null) }}
+                      />
+                    ) : (
+                      <div onDoubleClick={() => setEditingHeader({ id: component.id, col: i })}>{c?.label || `Col ${i + 1}`}</div>
+                    )}
+                    {cols.length > 1 && (
+                      <button
+                        title="Delete column"
+                        className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-white border text-[10px] opacity-0 group-hover:opacity-100"
+                        onClick={(e) => { e.stopPropagation(); deleteColumn(i) }}
+                      >×</button>
+                    )}
+                    <div
+                      onMouseDown={(e) => { const startWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width; tableResizeRef.current = { id: component.id, col: i, startX: e.clientX, startWidth, shiftSnap: e.shiftKey }; e.preventDefault(); e.stopPropagation() }}
+                      onDoubleClick={(e) => { const text = (cols[i]?.label || `Col ${i + 1}`) as string; const width = Math.max(40, Math.round((text.length * 8) / 8) * 8); const next = cols.slice(); next[i] = { ...next[i], width }; onComponentUpdate(component.id, { config: { ...(component.config as any), columns: next } }); e.preventDefault(); e.stopPropagation() }}
+                      className="absolute top-0 right-0 h-full w-1 cursor-col-resize"
+                      style={{ userSelect: 'none' }}
+                    />
                   </div>
                 ))}
+                <button className="px-2 py-1 text-[12px] text-gray-600 hover:text-blue-600" onClick={(e) => { e.stopPropagation(); addColumn() }} title="Add column">+ Add</button>
               </div>
-              {[0, 1].map((r) => (
-                <div key={r} className={`flex ${r % 2 === 1 ? 'bg-gray-50' : ''}`}>
-                  {cols.map((c: any, i: number) => (
-                    <div
-                      key={i}
-                      className="text-[12px] text-gray-500 px-2 py-1 truncate"
-                      style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? cellBorder : '0', borderTop: cellBorder }}
-                    >
-                      —
-                    </div>
-                  ))}
-                </div>
-              ))}
-              <div className="px-2 py-1 text-[10px] text-gray-400 border-t" style={{ borderTop: cellBorder }}>
-                Double‑click to edit columns
+              {/* One sample row only */}
+              <div className={`${zebra ? 'bg-gray-50' : ''} flex`}>
+                {cols.map((c: any, i: number) => (
+                  <div key={i} className="text-[12px] text-gray-500 px-2 py-1 truncate" style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? cellBorder : '0', borderTop: cellBorder }}>—</div>
+                ))}
               </div>
             </div>
           </div>

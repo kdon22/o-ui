@@ -8,3 +8,6 @@ export { SwitchField } from './switch-field'
 export { BasicPropertiesSection } from './basic-properties-section'
 export { StylingSection } from './styling-section'
 export { OptionsSection } from './options-section' 
+
+// Table-specific sections (to be added)
+export { TableOptionsSection } from './table-options-section'
