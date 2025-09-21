@@ -36,22 +36,38 @@ export function CanvasEditor({
   const groupDragStartRef = useRef<{ startX: number, startY: number, positions: Record<string, { x: number, y: number }> } | null>(null)
   const [editingHeader, setEditingHeader] = useState<{ id: string, col: number } | null>(null)
   const tableResizeRef = useRef<{ id: string, col: number, startX: number, startWidth: number, shiftSnap: boolean } | null>(null)
+  const tableBoxResizeRef = useRef<{ id: string, startX: number, startWidth: number, shiftSnap: boolean } | null>(null)
+  const [guidesActiveId, setGuidesActiveId] = useState<string | null>(null)
 
   useEffect(() => {
     function onMove(e: MouseEvent) {
-      if (!tableResizeRef.current) return
-      const { id, col, startX, startWidth, shiftSnap } = tableResizeRef.current
-      const dx = e.clientX - startX
-      let width = Math.max(40, startWidth + dx)
-      if (shiftSnap) width = Math.round(width / 8) * 8
-      const comp = layout.items.find(it => it.id === id)
-      if (!comp) return
-      const cols = Array.isArray((comp.config as any)?.columns) ? (comp.config as any).columns.slice() : []
-      if (!cols[col]) return
-      cols[col] = { ...cols[col], width }
-      onComponentUpdate(id, { config: { ...(comp.config as any), columns: cols } })
+      // Column resize
+      if (tableResizeRef.current) {
+        const { id, col, startX, startWidth, shiftSnap } = tableResizeRef.current
+        const dx = e.clientX - startX
+        let width = Math.max(40, startWidth + dx)
+        if (shiftSnap) width = Math.round(width / 8) * 8
+        const comp = layout.items.find(it => it.id === id)
+        if (!comp) return
+        const cols = Array.isArray((comp.config as any)?.columns) ? (comp.config as any).columns.slice() : []
+        if (!cols[col]) return
+        cols[col] = { ...cols[col], width }
+        onComponentUpdate(id, { config: { ...(comp.config as any), columns: cols } })
+        return
+      }
+      // Whole table width resize
+      if (tableBoxResizeRef.current) {
+        const { id, startX, startWidth, shiftSnap } = tableBoxResizeRef.current
+        const dx = e.clientX - startX
+        let width = Math.max(120, startWidth + dx)
+        if (shiftSnap) width = Math.round(width / 8) * 8
+        const comp = layout.items.find(it => it.id === id)
+        if (!comp) return
+        onComponentUpdate(id, { config: { ...(comp.config as any), width } })
+        return
+      }
     }
-    function onUp() { tableResizeRef.current = null }
+    function onUp() { tableResizeRef.current = null; tableBoxResizeRef.current = null }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
@@ -543,7 +559,7 @@ export function CanvasEditor({
             onDragStart={(e) => handleComponentDragStart(e, component)}
           >
             <div
-              className="rounded bg-white"
+              className="rounded bg-white relative"
               style={{
                 width: widthPx,
                 height: heightPx,
@@ -572,7 +588,7 @@ export function CanvasEditor({
                         onKeyDown={(e) => { if (e.key === 'Enter') commitHeaderLabel(i, (e.target as HTMLInputElement).value); if (e.key === 'Escape') setEditingHeader(null) }}
                       />
                     ) : (
-                      <div onDoubleClick={() => setEditingHeader({ id: component.id, col: i })}>{c?.label || `Col ${i + 1}`}</div>
+                      <div onDoubleClick={(e) => { e.stopPropagation(); setEditingHeader({ id: component.id, col: i }) }}>{c?.label || `Col ${i + 1}`}</div>
                     )}
                     {cols.length > 1 && (
                       <button
@@ -580,6 +596,10 @@ export function CanvasEditor({
                         className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-white border text-[10px] opacity-0 group-hover:opacity-100"
                         onClick={(e) => { e.stopPropagation(); deleteColumn(i) }}
                       >×</button>
+                    )}
+                    {/* always-visible vertical guideline to show boundary */}
+                    {i < cols.length - 1 && (
+                      <div className="absolute top-0 right-0 h-full w-px bg-gray-300" />
                     )}
                     <div
                       onMouseDown={(e) => { const startWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width; tableResizeRef.current = { id: component.id, col: i, startX: e.clientX, startWidth, shiftSnap: e.shiftKey }; e.preventDefault(); e.stopPropagation() }}
@@ -594,9 +614,23 @@ export function CanvasEditor({
               {/* One sample row only */}
               <div className={`${zebra ? 'bg-gray-50' : ''} flex`}>
                 {cols.map((c: any, i: number) => (
-                  <div key={i} className="text-[12px] text-gray-500 px-2 py-1 truncate" style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? cellBorder : '0', borderTop: cellBorder }}>—</div>
+                  <div key={i} className="text-[12px] text-gray-500 px-2 py-1 truncate relative" style={{ width: c?.width ? `${c.width}px` : undefined, borderRight: i < cols.length - 1 ? cellBorder : '0', borderTop: cellBorder }}>
+                    —
+                    {/* always-visible vertical guideline */}
+                    {i < cols.length - 1 && (
+                      <div className="absolute top-0 right-0 h-full w-px bg-gray-300" />
+                    )}
+                  </div>
                 ))}
               </div>
+
+              {/* whole-table width resizer */}
+              <div
+                className="absolute top-0 right-0 h-full w-1 cursor-col-resize"
+                onMouseDown={(e) => { const startWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width; tableBoxResizeRef.current = { id: component.id, startX: e.clientX, startWidth, shiftSnap: e.shiftKey }; e.preventDefault(); e.stopPropagation(); }}
+                title="Resize table width"
+                style={{ userSelect: 'none' }}
+              />
             </div>
           </div>
         )
