@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,9 @@ import { ArrowLeft, Save, Play, Download, X } from 'lucide-react';
 import { useActionQuery } from '@/hooks/use-action-api';
 import { useCleanBranchContext } from '@/hooks/use-clean-branch-context';
 import { WorkflowBuilder } from '@/features/workflows/components/workflow-builder';
+import { UnsavedChangesModal, useUnsavedChangesModal } from '@/features/workflows/components/workflow-builder/unsaved-changes-modal';
 import type { Workflow } from '@/features/workflows/workflows.schema';
+import type { ValidationError } from '@/features/workflows/utils/workflow-validator';
 
 export default function WorkflowBuilderPage() {
   const router = useRouter();
@@ -31,6 +33,17 @@ export default function WorkflowBuilderPage() {
   // State management
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const [canSaveWorkflow, setCanSaveWorkflow] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+
+  // Unsaved changes modal
+  const {
+    isOpen: isUnsavedModalOpen,
+    setIsOpen: setIsUnsavedModalOpen,
+    showModal: showUnsavedModal,
+    handleDiscard: handleDiscardChanges,
+    handleContinueEditing
+  } = useUnsavedChangesModal();
 
   // ============================================================================
   // DATA FETCHING - Uses existing action system with branch awareness
@@ -60,7 +73,7 @@ export default function WorkflowBuilderPage() {
   // EVENT HANDLERS
   // ============================================================================
 
-  const handleWorkflowSaved = (savedWorkflow: Workflow) => {
+  const handleWorkflowSaved = useCallback((savedWorkflow: Workflow) => {
     setWorkflow(savedWorkflow);
     setHasUnsavedChanges(false);
     
@@ -69,21 +82,34 @@ export default function WorkflowBuilderPage() {
       const newUrl = `/workflows/builder?id=${savedWorkflow.id}`;
       router.replace(newUrl);
     }
-  };
+  }, [isEditing, router]);
 
-  const handleUnsavedChanges = (hasChanges: boolean) => {
+  const handleUnsavedChanges = useCallback((hasChanges: boolean) => {
     setHasUnsavedChanges(hasChanges);
-  };
+  }, []);
+
+  const handleValidationChange = useCallback((isValid: boolean, errors: ValidationError[]) => {
+    setCanSaveWorkflow(isValid);
+    setValidationErrors(errors);
+  }, []);
 
   const handleBackToList = () => {
     if (hasUnsavedChanges) {
-      const confirmLeave = window.confirm(
-        'You have unsaved changes. Are you sure you want to leave?'
-      );
-      if (!confirmLeave) return;
+      showUnsavedModal(() => router.push('/workflows'));
+      return;
     }
     
     router.push('/workflows');
+  };
+
+  const handleSaveAndClose = async () => {
+    // For now, we can't trigger save from here since WorkflowBuilder handles its own saves
+    // This is a limitation that would need to be addressed by exposing a save method
+    // from WorkflowBuilder or changing the architecture
+    console.warn('Save from modal not yet implemented - WorkflowBuilder handles its own saving');
+    
+    // For now, just close the modal and let user manually save
+    // In a real implementation, we'd expose a save method from WorkflowBuilder
   };
 
   const handleTestWorkflow = () => {
@@ -217,9 +243,22 @@ export default function WorkflowBuilderPage() {
           workflow={workflow}
           onSaved={handleWorkflowSaved}
           onChange={handleUnsavedChanges}
+          onValidationChange={handleValidationChange}
           className="h-full"
         />
       </div>
+
+      {/* Unsaved Changes Modal */}
+      <UnsavedChangesModal
+        open={isUnsavedModalOpen}
+        onOpenChange={setIsUnsavedModalOpen}
+        canSave={false} // Temporarily disabled - would need WorkflowBuilder save method
+        validationErrors={validationErrors}
+        onSave={handleSaveAndClose}
+        onDiscard={handleDiscardChanges}
+        onContinueEditing={handleContinueEditing}
+        workflowName={workflow?.name || 'Untitled Workflow'}
+      />
 
     </div>
   );

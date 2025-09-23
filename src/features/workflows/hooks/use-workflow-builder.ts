@@ -27,7 +27,7 @@ import type {
 const createInitialState = (): WorkflowBuilderState => ({
   workflow: {
     id: nanoid(),
-    name: 'New Workflow',
+    name: 'Untitled Workflow',
     description: '',
     nodes: [
       // Always create a start node

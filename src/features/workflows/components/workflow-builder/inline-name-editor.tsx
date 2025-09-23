@@ -16,6 +16,7 @@ interface InlineNameEditorProps {
   onStartEdit: () => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function InlineNameEditor({
@@ -25,15 +26,18 @@ export function InlineNameEditor({
   onCancel,
   onStartEdit,
   placeholder = 'Enter workflow name...',
-  className = ''
+  className = '',
+  disabled = false
 }: InlineNameEditorProps) {
   const [editValue, setEditValue] = useState(name);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset edit value when name changes externally
+  // Reset edit value when name changes externally (only when not editing)
   useEffect(() => {
-    setEditValue(name);
-  }, [name]);
+    if (!isEditing) {
+      setEditValue(name);
+    }
+  }, [name, isEditing]);
 
   // Focus input when entering edit mode
   useEffect(() => {
@@ -86,8 +90,13 @@ export function InlineNameEditor({
         <button
           data-save-button="true"
           onClick={handleSave}
-          className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded"
-          title="Save name"
+          disabled={disabled || !editValue.trim() || editValue === name}
+          className={`p-1 rounded transition-colors ${
+            disabled || !editValue.trim() || editValue === name
+              ? 'text-gray-400 cursor-not-allowed' 
+              : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+          }`}
+          title={disabled ? "Fix validation errors before saving" : "Save name"}
         >
           <Check size={16} />
         </button>

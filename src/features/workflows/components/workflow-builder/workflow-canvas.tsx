@@ -14,7 +14,6 @@ import { useWorkflowBuilder } from '../../hooks/use-workflow-builder';
 import { WorkflowNodeRenderer } from './workflow-node-renderer';
 import { WorkflowConnectionRenderer } from './workflow-connection-renderer';
 import { WorkflowGrid } from './workflow-grid';
-import { ConnectionHelpOverlay, ConnectionStatusIndicator } from './connection-help-overlay';
 import type { WorkflowCanvasProps, Position, ProcessNode, WorkflowNode } from '../../types/workflow-builder';
 
 export function WorkflowCanvas({ 
@@ -425,23 +424,6 @@ export function WorkflowCanvas({
         <div>Connections: {state.workflow?.connections.length || 0}</div>
       </div>
 
-      {/* Connection Help Overlay */}
-      {!readOnly && (
-        <ConnectionHelpOverlay 
-          isConnecting={state.connectionState.isConnecting} 
-        />
-      )}
-
-      {/* Connection Status Indicator */}
-      {state.connectionState.isConnecting && state.connectionState.sourceNodeId && (
-        <ConnectionStatusIndicator
-          isConnecting={state.connectionState.isConnecting}
-          sourceNodeName={
-            state.workflow?.nodes.find(n => n.id === state.connectionState.sourceNodeId)?.label || 'Node'
-          }
-          sourcePort={state.connectionState.sourcePort}
-        />
-      )}
     </div>
   );
 }

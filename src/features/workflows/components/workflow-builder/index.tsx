@@ -14,8 +14,10 @@ import { Loader2 } from 'lucide-react';
 import { useActionMutation } from '@/hooks/use-action-api';
 import { WorkflowCanvas } from './workflow-canvas';
 import { ProcessLibraryPanel } from './process-library-panel';
-import { InlineNameEditor } from './inline-name-editor';
+import { ValidatedNameEditor } from '@/components/ui/validated-name-editor';
+import { useWorkflowNameValidation } from '@/hooks/use-name-validation';
 import { WorkflowSerializer } from '../../services/workflow-serializer';
+import { validateWorkflow, canWorkflowBeSaved, type ValidationResult, type ValidationError, type ValidationMode } from '../../utils/workflow-validator';
 import { useActionQuery } from '@/hooks/use-action-api';
 import type { 
   VisualWorkflow,
@@ -39,6 +41,9 @@ interface WorkflowBuilderProps {
   
   /** Called when workflow changes (for unsaved indicator) */
   onChange?: (hasChanges: boolean) => void;
+
+  /** Called when workflow validation status changes */
+  onValidationChange?: (isValid: boolean, errors: ValidationError[]) => void;
 }
 
 export function WorkflowBuilder({
@@ -46,7 +51,8 @@ export function WorkflowBuilder({
   readOnly = false,
   className,
   onSaved,
-  onChange
+  onChange,
+  onValidationChange
 }: WorkflowBuilderProps) {
 
   // ============================================================================
@@ -61,7 +67,7 @@ export function WorkflowBuilder({
     // Create new workflow with default start and end nodes immediately
     return {
       id: 'new',
-      name: 'New Workflow',
+      name: 'Untitled Workflow',
       description: '',
       nodes: [
         // Always create a start node
@@ -101,6 +107,9 @@ export function WorkflowBuilder({
   const [isEditingName, setIsEditingName] = useState<boolean>(!workflow);
   const [workflowName, setWorkflowName] = useState<string>(workflow?.name || 'New Workflow');
   const [hasChanges, setHasChanges] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult>(() => 
+    validateWorkflow(visualWorkflow, 'immediate')
+  );
   
   // Track processes already used in the workflow
   const [usedProcessIds, setUsedProcessIds] = useState<Set<string>>(() => {
@@ -133,12 +142,12 @@ export function WorkflowBuilder({
     },
     {
       staleTime: 300000, // 5 minutes
-      fallbackToCache: true
+      gcTime: 600000 // 10 minutes
     }
   );
 
   // Filter out processes already used in the workflow
-  const processes = (processesResult?.data || []).filter(process => 
+  const processes = (processesResult?.data || []).filter((process: any) => 
     !usedProcessIds.has(process.id)
   );
 
@@ -183,11 +192,11 @@ export function WorkflowBuilder({
             connections: [],
             variables: {}
           },
-          executionSettings: {
-            timeouts: { default: 30000 },
-            parallelLimits: 5,
-            errorHandling: 'STOP_ON_ERROR'
-          },
+          // executionSettings: {
+          //   timeouts: { default: 30000 },
+          //   parallelLimits: 5,
+          //   errorHandling: 'STOP_ON_ERROR'
+          // },
           isActive: true
         });
 
@@ -244,10 +253,33 @@ export function WorkflowBuilder({
       }
     });
     setUsedProcessIds(newUsedProcessIds);
+    
+    // Revalidate the workflow (immediate mode - only critical errors)
+    setValidationResult(validateWorkflow(newVisualWorkflow, 'immediate'));
   }, [onChange]);
+
+  // Revalidate when workflow name changes (immediate mode - only critical errors)
+  useEffect(() => {
+    const updatedWorkflow = { ...visualWorkflow, name: workflowName };
+    setValidationResult(validateWorkflow(updatedWorkflow, 'immediate'));
+  }, [visualWorkflow, workflowName]);
+
+  // Notify parent about validation changes (send full validation for close decisions)
+  useEffect(() => {
+    const fullValidation = validateWorkflow({ ...visualWorkflow, name: workflowName }, 'on-close');
+    onValidationChange?.(fullValidation.isValid, fullValidation.errors);
+  }, [validationResult, visualWorkflow, workflowName]); // Removed onValidationChange from deps since it's memoized
 
   const handleSave = useCallback(async () => {
     if (!visualWorkflow || !workflow) return;
+    
+    // For auto-save, only validate immediate issues (like empty name)
+    // Full validation only happens on manual close
+    const currentValidation = validateWorkflow({ ...visualWorkflow, name: workflowName }, 'immediate');
+    if (!currentValidation.isValid) {
+      console.warn('Skipping auto-save due to validation errors:', currentValidation.errors);
+      return;
+    }
     
     const schemaData = WorkflowSerializer.toSchema(visualWorkflow);
     
@@ -274,11 +306,11 @@ export function WorkflowBuilder({
           complexity: 1
         }
       },
-      executionSettings: schemaData.executionSettings || {
-        timeouts: { default: 30000 },
-        parallelLimits: 5,
-        errorHandling: 'STOP_ON_ERROR'
-      }
+      // executionSettings: schemaData.executionSettings || {
+      //   timeouts: { default: 30000 },
+      //   parallelLimits: 5,
+      //   errorHandling: 'STOP_ON_ERROR'
+      // }
     });
   }, [visualWorkflow, workflow, updateWorkflowMutation]);
 
@@ -369,7 +401,7 @@ export function WorkflowBuilder({
           <div className="flex items-center gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <InlineNameEditor
+                <ValidatedNameEditor
                   name={workflowName}
                   isEditing={isEditingName}
                   onSave={handleNameSave}
@@ -378,7 +410,11 @@ export function WorkflowBuilder({
                     setWorkflowName(workflow?.name || visualWorkflow.name);
                   }}
                   onStartEdit={() => setIsEditingName(true)}
+                  useValidation={useWorkflowNameValidation}
+                  currentEntityId={workflow?.id}
                   placeholder="Enter workflow name..."
+                  disabled={!validationResult.isValid}
+                  showSuggestions={true}
                 />
                 {hasChanges && (
                   <span className="text-sm text-amber-600 dark:text-amber-400">
@@ -416,6 +452,34 @@ export function WorkflowBuilder({
               Auto-save failed: {(saveWorkflowMutation.error || updateWorkflowMutation.error)?.message}
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Validation Errors */}
+        {!validationResult.isValid && (
+          <div className="m-4 space-y-2">
+            {validationResult.errors.map((error) => (
+              <Alert key={error.id} variant="destructive">
+                <AlertDescription>
+                  <strong>{error.message}</strong>
+                  {error.description && <div className="text-sm mt-1">{error.description}</div>}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
+
+        {/* Validation Warnings */}
+        {validationResult.warnings.length > 0 && (
+          <div className="m-4 space-y-2">
+            {validationResult.warnings.map((warning) => (
+              <Alert key={warning.id} variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <strong>{warning.message}</strong>
+                  {warning.description && <div className="text-sm mt-1">{warning.description}</div>}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
         )}
 
         {/* Canvas - Full Width */}
