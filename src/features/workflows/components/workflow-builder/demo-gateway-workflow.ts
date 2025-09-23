@@ -5,7 +5,7 @@
  * level2 process → success → Parallel Gateway → UTR Processing + Level3 Processing
  */
 
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
 import type { VisualWorkflow } from '../../types/workflow-builder';
 
 export const DEMO_GATEWAY_WORKFLOW: VisualWorkflow = {

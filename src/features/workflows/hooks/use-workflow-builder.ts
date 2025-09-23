@@ -8,7 +8,7 @@
 'use client';
 
 import { useReducer, useCallback, useMemo } from 'react';
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
 import { SmartGatewayCreator } from '../components/workflow-builder/smart-gateway-creator';
 import type { 
   WorkflowBuilderState,
@@ -39,11 +39,11 @@ const createInitialState = (): WorkflowBuilderState => ({
         label: 'Start',
         trigger: { type: 'manual' }
       },
-      // Always create an end node
+      // Always create an end node positioned at the end of the canvas
       {
         id: 'end-node',
         type: 'end',
-        position: { x: 500, y: 200 },
+        position: { x: 1040, y: 200 },
         size: { width: 60, height: 60 },
         label: 'End',
         action: { type: 'success' }

@@ -68,16 +68,16 @@ export function WorkflowBuilder({
         {
           id: 'start-node',
           type: 'start',
-          position: { x: 50, y: 200 },
+          position: { x: 100, y: 200 },
           size: { width: 60, height: 60 },
           label: 'Start',
           trigger: { type: 'manual' }
         },
-        // Always create an end node
+        // Always create an end node positioned at the end of the canvas
         {
           id: 'end-node',
           type: 'end',
-          position: { x: 800, y: 200 },
+          position: { x: 1040, y: 200 },
           size: { width: 60, height: 60 },
           label: 'End',
           action: { type: 'success' }

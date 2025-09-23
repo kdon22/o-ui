@@ -27,7 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils/generalUtils'
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
 import type { WorkflowNode, WorkflowNodeType, Position } from '../../types/workflow-builder';
 
 interface WorkflowToolbarProps {

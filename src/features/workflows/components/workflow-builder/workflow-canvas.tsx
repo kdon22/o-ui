@@ -8,7 +8,7 @@
 'use client';
 
 import { useRef, useCallback, useEffect } from 'react';
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
 import { cn } from '@/lib/utils/generalUtils'
 import { useWorkflowBuilder } from '../../hooks/use-workflow-builder';
 import { WorkflowNodeRenderer } from './workflow-node-renderer';

@@ -124,7 +124,7 @@ export class WorkflowSerializer {
         nodes.push({
           id: 'end-node',
           type: 'end',
-          position: { x: 500, y: 200 },
+          position: { x: 1040, y: 200 },
           size: { width: 60, height: 60 },
           label: 'End',
           action: { type: 'success' }
@@ -417,19 +417,15 @@ export class WorkflowSerializer {
       {
         id: 'end',
         type: 'end',
-        position: { x: 400, y: 200 },
+        position: { x: 1040, y: 200 },
         size: { width: 60, height: 60 },
         label: 'End'
       }
     ];
 
-    const connections: WorkflowConnection[] = [
-      {
-        id: 'start-to-end',
-        sourceNodeId: 'start',
-        targetNodeId: 'end'
-      }
-    ];
+    // Only create connections if there are more than just start and end nodes
+    // If it's just start and end, leave them unconnected
+    const connections: WorkflowConnection[] = [];
 
     return {
       id: workflow.id,
