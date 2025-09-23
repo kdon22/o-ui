@@ -257,9 +257,22 @@ export function WorkflowBuilder({
       name: schemaData.name || visualWorkflow.name,
       description: schemaData.description || visualWorkflow.description,
       steps: schemaData.definition || {
-        processes: visualWorkflow.nodes || [],
-        connections: visualWorkflow.connections || [],
-        variables: {}
+        visual: {
+          nodes: visualWorkflow.nodes || [],
+          connections: visualWorkflow.connections || [],
+          viewport: visualWorkflow.viewport || { x: 0, y: 0, zoom: 1 },
+          layout: visualWorkflow.layout || {
+            gridSize: 20,
+            snapToGrid: true,
+            showGrid: true
+          }
+        },
+        execution: {},
+        metadata: {
+          nodeCount: visualWorkflow.nodes?.length || 0,
+          connectionCount: visualWorkflow.connections?.length || 0,
+          complexity: 1
+        }
       },
       executionSettings: schemaData.executionSettings || {
         timeouts: { default: 30000 },
