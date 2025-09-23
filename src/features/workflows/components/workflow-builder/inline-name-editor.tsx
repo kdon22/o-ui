@@ -81,6 +81,7 @@ export function InlineNameEditor({
           placeholder={placeholder}
           className="h-8 text-lg font-semibold bg-white dark:bg-gray-800"
           style={{ minWidth: '200px', maxWidth: '400px' }}
+          showSuccessIndicator={false}
         />
         <button
           data-save-button="true"
