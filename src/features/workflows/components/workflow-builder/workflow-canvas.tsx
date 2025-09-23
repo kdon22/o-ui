@@ -14,7 +14,8 @@ import { useWorkflowBuilder } from '../../hooks/use-workflow-builder';
 import { WorkflowNodeRenderer } from './workflow-node-renderer';
 import { WorkflowConnectionRenderer } from './workflow-connection-renderer';
 import { WorkflowGrid } from './workflow-grid';
-import type { WorkflowCanvasProps, Position, ProcessNode } from '../../types/workflow-builder';
+import { ConnectionHelpOverlay, ConnectionStatusIndicator } from './connection-help-overlay';
+import type { WorkflowCanvasProps, Position, ProcessNode, WorkflowNode } from '../../types/workflow-builder';
 
 export function WorkflowCanvas({ 
   workflow, 
@@ -93,6 +94,12 @@ export function WorkflowCanvas({
     processType: string;
   }
 
+  interface GatewayDragData {
+    type: 'gateway';
+    gatewayType: 'parallel-gateway' | 'exclusive-gateway';
+    name: string;
+  }
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -112,37 +119,68 @@ export function WorkflowCanvas({
         return;
       }
 
-      const dragData: ProcessDragData = JSON.parse(dragDataString);
+      const dragData: ProcessDragData | GatewayDragData = JSON.parse(dragDataString);
       
-      // Validate the parsed data has required fields
-      if (!dragData.type || dragData.type !== 'process' || !dragData.processId) {
-        console.warn('Invalid drag data structure:', dragData);
-        return;
-      }
-
       // Get canvas coordinates
       const canvasPos = getCanvasCoordinates(e.clientX, e.clientY);
       if (!canvasPos) return;
 
-      // Create ProcessNode from dropped process, centered on drop location
-      const newProcessNode: ProcessNode = {
-        id: nanoid(),
-        type: 'process',
-        position: {
-          x: Math.max(0, canvasPos.x - 70), // Center node on cursor (half width)
-          y: Math.max(0, canvasPos.y - 40)  // Center node on cursor (half height)
-        },
-        size: { width: 140, height: 80 },
-        label: dragData.processName,
-        processId: dragData.processId,
-        processName: dragData.processName,
-        rules: [],
-        timeout: 30,
-        retryCount: 3
-      };
+      // Handle different drop types
+      if (dragData.type === 'process') {
+        // Validate process drag data
+        const processData = dragData as ProcessDragData;
+        if (!processData.processId) {
+          console.warn('Invalid process drag data:', processData);
+          return;
+        }
 
-      // Add node to workflow using the builder action
-      addNode(newProcessNode);
+        // Create ProcessNode from dropped process, centered on drop location
+        const newProcessNode: ProcessNode = {
+          id: nanoid(),
+          type: 'process',
+          position: {
+            x: Math.max(0, canvasPos.x - 70), // Center node on cursor (half width)
+            y: Math.max(0, canvasPos.y - 40)  // Center node on cursor (half height)
+          },
+          size: { width: 140, height: 80 },
+          label: processData.processName, // Clean process name only
+          processId: processData.processId,
+          processName: processData.processName,
+          processType: processData.processType,
+          rules: [],
+          timeout: 30,
+          retryCount: 3
+        };
+
+        // Add node to workflow using the builder action
+        addNode(newProcessNode);
+
+      } else if (dragData.type === 'gateway') {
+        // Handle gateway drop
+        const gatewayData = dragData as GatewayDragData;
+        
+        const gatewayNode: WorkflowNode = {
+          id: nanoid(),
+          type: gatewayData.gatewayType,
+          position: {
+            x: Math.max(0, canvasPos.x - 30), // Center gateway (half width)
+            y: Math.max(0, canvasPos.y - 30)  // Center gateway (half height)
+          },
+          size: { width: 60, height: 60 },
+          label: gatewayData.name,
+          ...(gatewayData.gatewayType === 'parallel-gateway' 
+            ? { executionMode: 'all' as const, maxConcurrent: undefined }
+            : { condition: undefined, defaultBranch: undefined }
+          )
+        } as any;
+
+        // Add gateway node to workflow
+        addNode(gatewayNode);
+
+      } else {
+        console.warn('Unknown drag data type:', (dragData as any).type || 'unknown');
+        return;
+      }
 
     } catch (error) {
       console.error('Failed to parse drag data:', error);
@@ -217,15 +255,34 @@ export function WorkflowCanvas({
       endDrag();
     }
     
-    // Cancel connection if not dropped on valid target
+    // Handle connection completion
     if (state.connectionState.isConnecting) {
-      cancelConnection();
+      // Check if we're dropping on a node's input port
+      const target = event.target as SVGElement;
+      const nodeElement = target.closest('[data-node-id]');
+      
+      if (nodeElement) {
+        const targetNodeId = nodeElement.getAttribute('data-node-id');
+        const isInputPort = target.getAttribute('data-port-type') === 'input';
+        
+        if (targetNodeId && isInputPort) {
+          // Complete the connection
+          endConnection(targetNodeId, 'input');
+        } else {
+          // Cancel connection if not dropped on input port
+          cancelConnection();
+        }
+      } else {
+        // Cancel connection if dropped on canvas
+        cancelConnection();
+      }
     }
   }, [
     readOnly,
     state.dragState.isDragging,
     state.connectionState.isConnecting,
     endDrag,
+    endConnection,
     cancelConnection
   ]);
 
@@ -367,6 +424,24 @@ export function WorkflowCanvas({
         <div>Processes: {state.workflow?.nodes.length || 0}</div>
         <div>Connections: {state.workflow?.connections.length || 0}</div>
       </div>
+
+      {/* Connection Help Overlay */}
+      {!readOnly && (
+        <ConnectionHelpOverlay 
+          isConnecting={state.connectionState.isConnecting} 
+        />
+      )}
+
+      {/* Connection Status Indicator */}
+      {state.connectionState.isConnecting && state.connectionState.sourceNodeId && (
+        <ConnectionStatusIndicator
+          isConnecting={state.connectionState.isConnecting}
+          sourceNodeName={
+            state.workflow?.nodes.find(n => n.id === state.connectionState.sourceNodeId)?.label || 'Node'
+          }
+          sourcePort={state.connectionState.sourcePort}
+        />
+      )}
     </div>
   );
 }

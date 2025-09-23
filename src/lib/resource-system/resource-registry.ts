@@ -48,7 +48,8 @@ import { QUEUE_CONFIG_SCHEMA, QUEUE_MESSAGE_SCHEMA, QUEUE_WORKER_SCHEMA } from '
 // Junction Schema Imports - Standalone Junction Tables
 import { PROCESS_RULE_SCHEMA, RULE_IGNORE_SCHEMA } from '@/features/rules/rules.schema';
 import { NODE_PROCESS_SCHEMA } from '@/features/processes/processes.schema';
-import { NODE_WORKFLOW_SCHEMA, WORKFLOW_PROCESS_SCHEMA, CUSTOMER_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
+// Queue-based workflow execution junction schema
+import { QUEUE_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
 
 // Junction table functionality is auto-discovered from entity schema relationships
 import { isJunctionTable, getUnifiedResourceRegistry } from './unified-resource-registry';
@@ -158,9 +159,7 @@ function initializeActionMappings(): Record<string, ActionMapping> {
       PROCESS_RULE_SCHEMA,
       RULE_IGNORE_SCHEMA,
       NODE_PROCESS_SCHEMA,
-      NODE_WORKFLOW_SCHEMA,
-      WORKFLOW_PROCESS_SCHEMA,
-      CUSTOMER_WORKFLOW_SCHEMA
+      QUEUE_WORKFLOW_SCHEMA
     ];
 
     STANDALONE_JUNCTION_SCHEMAS.forEach(junctionSchema => {
@@ -310,9 +309,7 @@ function initializeIndexedDBStores(): IndexedDBStoreConfig[] {
       PROCESS_RULE_SCHEMA,
       RULE_IGNORE_SCHEMA,
       NODE_PROCESS_SCHEMA,
-      NODE_WORKFLOW_SCHEMA,
-      WORKFLOW_PROCESS_SCHEMA,
-      CUSTOMER_WORKFLOW_SCHEMA
+      QUEUE_WORKFLOW_SCHEMA
     ];
     
     STANDALONE_JUNCTION_SCHEMAS.forEach(junctionSchema => {
@@ -399,9 +396,7 @@ function getStandaloneJunctionSchemas(): Array<ResourceSchema & { actionPrefix: 
     PROCESS_RULE_SCHEMA,
     RULE_IGNORE_SCHEMA,
     NODE_PROCESS_SCHEMA,
-    NODE_WORKFLOW_SCHEMA,
-    WORKFLOW_PROCESS_SCHEMA,
-    CUSTOMER_WORKFLOW_SCHEMA
+    QUEUE_WORKFLOW_SCHEMA
   ].filter(Boolean);
 }
 

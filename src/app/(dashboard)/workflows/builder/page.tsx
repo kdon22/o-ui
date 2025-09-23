@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Save, Play, Download, Upload, GitBranch } from 'lucide-react';
+import { ArrowLeft, Save, Play, Download, X } from 'lucide-react';
 import { useActionQuery } from '@/hooks/use-action-api';
 import { useCleanBranchContext } from '@/hooks/use-clean-branch-context';
 import { WorkflowBuilder } from '@/features/workflows/components/workflow-builder';
@@ -26,8 +26,7 @@ export default function WorkflowBuilderPage() {
   const workflowId = searchParams.get('id');
   const isEditing = Boolean(workflowId);
   
-  // Branch context for version control
-  const branchContext = useCleanBranchContext();
+  // Remove branch context requirement
   
   // State management
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -41,12 +40,14 @@ export default function WorkflowBuilderPage() {
     data: existingWorkflow,
     isLoading,
     error
-  } = useActionQuery({
-    action: 'workflow.read',
-    params: { id: workflowId },
-    enabled: isEditing && !!workflowId,
-    staleTime: 5 * 60 * 1000 // 5 minutes
-  });
+  } = useActionQuery(
+    'workflow.read',
+    { id: workflowId },
+    { 
+      enabled: isEditing && !!workflowId,
+      staleTime: 5 * 60 * 1000 // 5 minutes
+    }
+  );
 
   // Set workflow data when loaded
   useEffect(() => {
@@ -172,15 +173,6 @@ export default function WorkflowBuilderPage() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          
-          {/* Branch indicator - connected to your branching system */}
-          <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-full">
-            <GitBranch size={14} className="text-blue-600 dark:text-blue-400" />
-            <span className="text-sm text-blue-700 dark:text-blue-300">
-              {branchContext.currentBranchId}
-              {branchContext.isFeatureBranch && <span className="text-xs"> (feature)</span>}
-            </span>
-          </div>
 
           {workflow && (
             <>
@@ -207,16 +199,14 @@ export default function WorkflowBuilderPage() {
             </>
           )}
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="ghost"
             size="sm"
-            onClick={() => {
-              // TODO: Import workflow functionality
-              console.log('Importing workflow');
-            }}
+            onClick={handleBackToList}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            title="Close workflow builder"
           >
-            <Upload size={16} className="mr-2" />
-            Import
+            <X size={18} className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" />
           </Button>
         </div>
       </div>

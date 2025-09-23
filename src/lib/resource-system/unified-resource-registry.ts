@@ -102,7 +102,7 @@ export class UnifiedResourceRegistry {
     
     // Scan all entity schemas for relationship definitions
     ALL_SCHEMAS.forEach(schema => {
-      if (schema.relationships) {
+      if (schema && schema.relationships) {
         Object.values(schema.relationships).forEach(rel => {
           if (rel.type === 'many-to-many' && rel.junction?.tableName) {
             junctionTables.push(rel.junction.tableName);

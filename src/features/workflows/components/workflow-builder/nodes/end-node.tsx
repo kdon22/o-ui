@@ -70,7 +70,10 @@ export function EndNode({
   // ============================================================================
 
   return (
-    <g transform={`translate(${node.position.x}, ${node.position.y})`}>
+    <g 
+      transform={`translate(${node.position.x}, ${node.position.y})`}
+      data-node-id={node.id}
+    >
       
       {/* Main Circle */}
       <circle
@@ -143,8 +146,19 @@ export function EndNode({
         fill="white"
         stroke={style.fill}
         strokeWidth="2"
-        className="cursor-pointer hover:fill-gray-50 transition-colors"
+        className="cursor-pointer hover:fill-red-50 hover:stroke-red-600 transition-colors"
         onClick={handleInputClick}
+        data-port-type="input"
+        title="Connect final process here"
+      />
+      
+      {/* Input Port Indicator */}
+      <circle
+        cx={-6}
+        cy={radius}
+        r="3"
+        fill={style.fill}
+        className="pointer-events-none opacity-60"
       />
 
       {/* Input Port Label */}
@@ -169,7 +183,6 @@ export function EndNode({
           stroke="#3b82f6"
           strokeWidth="2"
           strokeDasharray="5,5"
-          className="animate-pulse"
         />
       )}
 

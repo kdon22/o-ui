@@ -3,7 +3,7 @@ import { PROCESS_SCHEMA } from '@/features/processes/processes.schema'
 import { RULE_SCHEMA } from '@/features/rules/rules.schema'
 import { useCleanBranchContext } from '@/hooks/use-clean-branch-context'
 
-export type TabType = 'processes' | 'offices' | 'workflows'
+export type TabType = 'processes' | 'offices'
 
 export interface TabConfig {
   resourceKey: string
@@ -57,11 +57,6 @@ export function useNodeTabs(nodeId: string): UseNodeTabsReturn {
       case 'offices':
         return {
           resourceKey: 'office',
-          filters: { nodeId }
-        }
-      case 'workflows':
-        return {
-          resourceKey: 'workflow',
           filters: { nodeId }
         }
       default:

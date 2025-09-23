@@ -14,6 +14,30 @@ import type {
 import type { Workflow, CreateWorkflow } from '../workflows.schema';
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Safely convert a date (Date object or string) to ISO string format
+ */
+function toISOStringSafe(date: string | Date | null | undefined): string {
+  if (!date) return new Date().toISOString();
+  
+  // If it's already a string, assume it's in ISO format
+  if (typeof date === 'string') {
+    return date;
+  }
+  
+  // If it's a Date object, convert it
+  if (date instanceof Date) {
+    return date.toISOString();
+  }
+  
+  // Fallback to current date
+  return new Date().toISOString();
+}
+
+// ============================================================================
 // VISUAL TO SCHEMA CONVERSION
 // ============================================================================
 
@@ -136,8 +160,8 @@ export class WorkflowSerializer {
   // ============================================================================
 
   private static detectWorkflowType(visual: VisualWorkflow): Workflow['workflowType'] {
-    const hasParallelNodes = visual.nodes.some(n => n.type === 'parallel');
-    const hasDecisionNodes = visual.nodes.some(n => n.type === 'decision');
+    const hasParallelNodes = visual.nodes.some(n => n.type === 'parallel' || n.type === 'parallel-gateway');
+    const hasDecisionNodes = visual.nodes.some(n => n.type === 'decision' || n.type === 'exclusive-gateway');
     const hasLoopConnections = WorkflowSerializer.hasLoops(visual);
     
     if (hasParallelNodes) return 'PARALLEL';
@@ -147,7 +171,7 @@ export class WorkflowSerializer {
   }
 
   private static detectExecutionMode(visual: VisualWorkflow): Workflow['executionMode'] {
-    const hasParallelNodes = visual.nodes.some(n => n.type === 'parallel');
+    const hasParallelNodes = visual.nodes.some(n => n.type === 'parallel' || n.type === 'parallel-gateway');
     const processNodes = visual.nodes.filter(n => n.type === 'process');
     
     if (hasParallelNodes) return 'MIXED';
@@ -222,6 +246,8 @@ export class WorkflowSerializer {
       switch (node.type) {
         case 'decision': complexity += 2; break;
         case 'parallel': complexity += 3; break;
+        case 'parallel-gateway': complexity += 4; break; // Higher complexity for gateway
+        case 'exclusive-gateway': complexity += 3; break;
         case 'merge': complexity += 2; break;
         case 'process': complexity += 1; break;
         default: break;
@@ -306,6 +332,18 @@ export class WorkflowSerializer {
       case 'merge':
         return {
           waitForAll: 'waitForAll' in node ? node.waitForAll : true
+        };
+      
+      case 'parallel-gateway':
+        return {
+          executionMode: 'executionMode' in node ? node.executionMode : 'all',
+          maxConcurrent: 'maxConcurrent' in node ? node.maxConcurrent : undefined
+        };
+      
+      case 'exclusive-gateway':
+        return {
+          condition: 'condition' in node ? node.condition : null,
+          defaultBranch: 'defaultBranch' in node ? node.defaultBranch : null
         };
       
       default:
@@ -406,8 +444,8 @@ export class WorkflowSerializer {
         showGrid: true
       },
       metadata: {
-        createdAt: workflow.createdAt.toISOString(),
-        updatedAt: workflow.updatedAt.toISOString(),
+        createdAt: toISOStringSafe(workflow.createdAt),
+        updatedAt: toISOStringSafe(workflow.updatedAt),
         version: workflow.version
       }
     };

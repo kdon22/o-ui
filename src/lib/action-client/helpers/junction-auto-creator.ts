@@ -20,7 +20,7 @@ import type { ActionResponse } from '@/lib/resource-system/schemas';
 import { RULE_SCHEMA, PROCESS_RULE_SCHEMA, RULE_IGNORE_SCHEMA } from '@/features/rules/rules.schema';
 import { NODE_SCHEMA } from '@/features/nodes/nodes.schema';
 import { PROCESS_SCHEMA, NODE_PROCESS_SCHEMA } from '@/features/processes/processes.schema';
-import { WORKFLOW_SCHEMA, WORKFLOW_PROCESS_SCHEMA, CUSTOMER_WORKFLOW_SCHEMA, NODE_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
+import { WORKFLOW_SCHEMA, QUEUE_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
 import { USER_SCHEMA, USER_GROUP_SCHEMA, USER_TENANT_SCHEMA, GROUP_PERMISSION_SCHEMA } from '@/features/users/users.schema';
 import { ALL_TAG_SCHEMAS } from '@/features/junctions/tag.schema';
 
@@ -86,11 +86,9 @@ class JunctionAutoCreatorFactory {
       
       // Node-related junctions
       NODE_PROCESS_SCHEMA,
-      NODE_WORKFLOW_SCHEMA,
       
-      // Workflow-related junctions
-      WORKFLOW_PROCESS_SCHEMA,
-      CUSTOMER_WORKFLOW_SCHEMA,
+      // Workflow-related junctions (queue-based system)
+      QUEUE_WORKFLOW_SCHEMA,
       
       // User-related junctions
       USER_GROUP_SCHEMA,
@@ -244,14 +242,8 @@ class JunctionAutoCreatorFactory {
     switch (databaseKey) {
       case 'nodeProcesses':
         return ['process.create']; // Only create when processes are created or explicitly attached
-      case 'nodeWorkflows':
-        return ['workflow.create'];
       case 'processRules':
         return ['rule.create'];
-      case 'workflowProcesses':
-        return ['workflow.create'];
-      case 'customerWorkflows':
-        return ['workflow.create'];
       case 'ruleIgnores':
         return ['rule.create'];
       default:

@@ -75,10 +75,10 @@ const RESOURCE_FAMILIES: Record<string, string[]> = {
   process: ['process', 'rule', 'processRules', 'nodeProcesses', 'node'],
   
   // Node family - includes all node-related resources
-  node: ['node', 'process', 'nodeProcesses', 'rule', 'workflow', 'nodeWorkflows'],
+  node: ['node', 'process', 'nodeProcesses', 'rule'],
   
   // Workflow family - includes workflow-related resources
-  workflow: ['workflow', 'workflowProcesses', 'process', 'node', 'nodeWorkflows'],
+  workflow: ['workflow'],
   
   // ============================================================================
   // JUNCTION TABLES - Always invalidate parent families
@@ -86,8 +86,6 @@ const RESOURCE_FAMILIES: Record<string, string[]> = {
   
   processRules: ['rule', 'process', 'processRules', 'node'],
   nodeProcesses: ['node', 'process', 'nodeProcesses', 'rule'],
-  nodeWorkflows: ['node', 'workflow', 'nodeWorkflows', 'process'],
-  workflowProcesses: ['workflow', 'process', 'workflowProcesses', 'node'],
   ruleIgnores: ['rule', 'node', 'ruleIgnores'],
   
   // ============================================================================

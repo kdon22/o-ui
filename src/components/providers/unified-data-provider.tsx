@@ -27,8 +27,6 @@ interface UnifiedDataContextValue {
   nodeProcesses: any[];
   processRules: any[];
   ruleIgnores: any[];
-  nodeWorkflows: any[];
-  workflowProcesses: any[];
   
   // Branch context
   currentBranchId: string;
@@ -65,8 +63,6 @@ export function UnifiedDataProvider({ children }: { children: React.ReactNode })
   const nodeProcesses: any[] = [];
   const processRules: any[] = [];
   const ruleIgnores: any[] = [];
-  const nodeWorkflows: any[] = [];
-  const workflowProcesses: any[] = [];
   
   // ✅ SIMPLIFIED: Return empty arrays - auto-table handles junction logic itself
   const getRulesForNode = (nodeId: string) => [];
@@ -85,8 +81,6 @@ export function UnifiedDataProvider({ children }: { children: React.ReactNode })
     nodeProcesses,
     processRules,
     ruleIgnores,
-    nodeWorkflows,
-    workflowProcesses,
     
     // Branch context
     currentBranchId: branchContext.currentBranchId,

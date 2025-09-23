@@ -552,7 +552,7 @@ rule: ['rule', 'process', 'processRules', 'ruleIgnores', 'node']
 ```typescript
 rule: ['rule', 'process', 'processRules', 'ruleIgnores', 'node'],
 process: ['process', 'rule', 'processRules', 'nodeProcesses', 'node'],
-node: ['node', 'process', 'nodeProcesses', 'rule', 'workflow', 'nodeWorkflows'],
+node: ['node', 'process', 'nodeProcesses', 'rule'],
 ```
 
 **✅ Simple Self-Contained Entities**:

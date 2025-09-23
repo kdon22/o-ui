@@ -188,12 +188,6 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
       createResource: 'office',
       filteringConfig: null, // No process-specific filtering for offices
       addButtonLabel: 'Add Office'
-    },
-    workflows: {
-      displayResource: 'workflow',
-      createResource: 'workflow',
-      filteringConfig: null, // No process-specific filtering for workflows
-      addButtonLabel: 'Add Workflow'
     }
   }), [ruleHierarchy.rules])
 
@@ -225,10 +219,6 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     enabled: activeTopLevelTab === 'offices'
   })
   
-  hookDebug('useActionQuery-workflows')
-  const { data: workflowsData } = useActionQuery('workflow.list', {}, {
-    enabled: activeTopLevelTab === 'workflows'
-  })
 
   hookDebug('useActionQuery-rules')
   // ✅ NEW: Add Rules and Classes data fetching (filtered by tenant/branch only, no nodeId)
@@ -243,13 +233,8 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
 
   hookDebug('useCallback-handleRowClick')
   const handleRowClick = useCallback((entity: any) => {
-    // Handle workflows specially - navigate to visual builder
-    if (activeTopLevelTab === 'workflows') {
-      router.push(`/workflows/builder?id=${entity.id}`)
-    } else {
-      // Handle other entity types as before
-      console.log('Row clicked:', entity)
-    }
+    // Handle entity row clicks
+    console.log('Row clicked:', entity)
   }, [activeTopLevelTab, router])
 
   hookDebug('useCallback-handleAttachClick')
@@ -331,12 +316,10 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
         return classesData?.data || []
       case 'offices':
         return officesData?.data || []
-      case 'workflows':
-        return workflowsData?.data || []
       default:
         return []
     }
-  }, [activeTopLevelTab, rulesData?.data, classesData?.data, officesData?.data, workflowsData?.data])
+  }, [activeTopLevelTab, rulesData?.data, classesData?.data, officesData?.data])
 
   hookDebug('useEffect-componentLifecycle')
   useEffect(() => {
@@ -394,19 +377,6 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
             return undefined
           })()}
           headerActions={(handleAdd) => {
-            // Special handling for workflows tab - navigate to builder instead of inline form
-            if (activeTopLevelTab === 'workflows') {
-              return (
-                <Button 
-                  onClick={() => router.push('/workflows/builder')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus size={16} className="mr-2" />
-                  Add Workflow
-                </Button>
-              );
-            }
-            
             // Special handling for processes tab - show dual split buttons
             if (activeTopLevelTab === 'processes') {
               const { AttachAndSplitAddActions } = createAutoTableHeaderActions(handleAdd);

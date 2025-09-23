@@ -11,6 +11,7 @@ import { useCallback } from 'react';
 import { ProcessNode } from './nodes/process-node';
 import { StartNode } from './nodes/start-node';
 import { EndNode } from './nodes/end-node';
+import { GatewayNodeRenderer } from './gateway-node-renderer';
 import type { WorkflowNodeProps } from '../../types/workflow-builder';
 
 export function WorkflowNodeRenderer({
@@ -90,6 +91,20 @@ export function WorkflowNodeRenderer({
       
       case 'process':
         return <ProcessNode {...commonProps} node={node as any} />;
+      
+      case 'parallel-gateway':
+      case 'exclusive-gateway':
+        return (
+          <GatewayNodeRenderer 
+            node={node as any}
+            selected={selected}
+            onUpdate={onUpdate}
+            onSelect={onSelect}
+            onStartConnection={onStartConnection}
+            onStartDrag={onStartDrag}
+            readOnly={readOnly}
+          />
+        );
       
       default:
         // Default fallback for unknown node types

@@ -13,17 +13,14 @@ export function getModelName(schema: ResourceSchema): string {
 
 /**
  * Convert Prisma model name to database key
- * Examples: NodeProcess -> nodeProcesses, CustomerWorkflow -> customerWorkflows  
+ * Examples: NodeProcess -> nodeProcesses, ProcessRule -> processRules  
  * Uses standardized camelCase naming for consistency with auto-discovery system
  */
 export function modelNameToDatabaseKey(modelName: string): string {
   // Handle common junction table name patterns (standardized camelCase)
   const conversions: Record<string, string> = {
     'NodeProcess': 'nodeProcesses',
-    'CustomerWorkflow': 'customerWorkflows',
-    'WorkflowProcess': 'workflowProcesses',
     'ProcessRule': 'processRules',
-    'NodeWorkflow': 'nodeWorkflows',
     'RuleIgnore': 'ruleIgnores',
     'UserTenant': 'userTenants',
     'UserGroup': 'userGroups',

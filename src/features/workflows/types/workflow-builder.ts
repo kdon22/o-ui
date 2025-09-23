@@ -31,7 +31,7 @@ export interface Viewport {
 // NODE TYPES
 // ============================================================================
 
-export type WorkflowNodeType = 'start' | 'end' | 'process' | 'decision' | 'parallel' | 'merge';
+export type WorkflowNodeType = 'start' | 'end' | 'process' | 'decision' | 'parallel' | 'merge' | 'parallel-gateway' | 'exclusive-gateway';
 
 export interface BaseWorkflowNode {
   id: string;
@@ -63,6 +63,7 @@ export interface ProcessNode extends BaseWorkflowNode {
   type: 'process';
   processId?: string;
   processName?: string;
+  processType?: string; // UTR, SCHEDULED, TICKETING, etc.
   rules?: string[]; // Rule IDs
   timeout?: number;
   retryCount?: number;
@@ -91,7 +92,23 @@ export interface MergeNode extends BaseWorkflowNode {
   waitForAll: boolean; // Wait for all parallel branches or just first
 }
 
-export type WorkflowNode = StartNode | EndNode | ProcessNode | DecisionNode | ParallelNode | MergeNode;
+export interface ParallelGatewayNode extends BaseWorkflowNode {
+  type: 'parallel-gateway';
+  executionMode: 'all' | 'first' | 'any'; // How to handle parallel branch execution
+  maxConcurrent?: number; // Optional limit on concurrent branches
+}
+
+export interface ExclusiveGatewayNode extends BaseWorkflowNode {
+  type: 'exclusive-gateway';
+  condition?: {
+    type: 'rule' | 'expression' | 'custom';
+    value: string;
+    ruleId?: string;
+  };
+  defaultBranch?: string; // Default output if no conditions match
+}
+
+export type WorkflowNode = StartNode | EndNode | ProcessNode | DecisionNode | ParallelNode | MergeNode | ParallelGatewayNode | ExclusiveGatewayNode;
 
 // ============================================================================
 // CONNECTION TYPES

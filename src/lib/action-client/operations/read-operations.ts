@@ -204,8 +204,8 @@ export class ReadOperations {
           }
           
         } else if (action.includes('workflow.list')) {
-          // Load junction tables for workflow queries - defensive loading
-          const junctionTables = ['nodeWorkflows', 'workflowProcesses'];
+          // Load junction tables for workflow queries - defensive loading  
+          const junctionTables: string[] = []; // No junction tables for workflows anymore
           
           for (const tableName of junctionTables) {
             try {
@@ -221,7 +221,7 @@ export class ReadOperations {
           
         } else if (action.includes('node.list')) {
           // Load all junction tables for node queries - defensive loading
-          const junctionTables = ['nodeProcesses', 'nodeWorkflows', 'ruleIgnores'];
+          const junctionTables = ['nodeProcesses', 'ruleIgnores'];
           
           for (const tableName of junctionTables) {
             try {

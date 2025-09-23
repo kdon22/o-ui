@@ -41,9 +41,8 @@ import { PACKAGE_SUBSCRIPTION_SCHEMA } from '@/features/marketplace/schemas/pack
 import { PROCESS_RULE_SCHEMA } from '@/features/rules/rules.schema';
 import { RULE_IGNORE_SCHEMA } from '@/features/rules/rules.schema';
 import { NODE_PROCESS_SCHEMA } from '@/features/processes/processes.schema';
-import { NODE_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
-import { WORKFLOW_PROCESS_SCHEMA } from '@/features/workflows/workflows.schema';
-import { CUSTOMER_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
+// Queue-based workflow execution junction schema
+import { QUEUE_WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
 
 /**
  * All resource schemas in a centralized registry
@@ -91,9 +90,7 @@ export const ALL_SCHEMAS = [
   PROCESS_RULE_SCHEMA,
   RULE_IGNORE_SCHEMA,
   NODE_PROCESS_SCHEMA,
-  NODE_WORKFLOW_SCHEMA,
-  WORKFLOW_PROCESS_SCHEMA,
-  CUSTOMER_WORKFLOW_SCHEMA,
+  QUEUE_WORKFLOW_SCHEMA
 ] as const;
 
 /**

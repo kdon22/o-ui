@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 import { useActionMutation } from '@/hooks/use-action-api';
 import { WorkflowCanvas } from './workflow-canvas';
 import { ProcessLibraryPanel } from './process-library-panel';
+import { InlineNameEditor } from './inline-name-editor';
 import { WorkflowSerializer } from '../../services/workflow-serializer';
 import { useActionQuery } from '@/hooks/use-action-api';
 import type { 
@@ -57,7 +58,7 @@ export function WorkflowBuilder({
       return WorkflowSerializer.fromSchema(workflow);
     }
     
-    // Create new workflow with default start and end nodes
+    // Create new workflow with default start and end nodes immediately
     return {
       id: 'new',
       name: 'New Workflow',
@@ -67,7 +68,7 @@ export function WorkflowBuilder({
         {
           id: 'start-node',
           type: 'start',
-          position: { x: 100, y: 200 },
+          position: { x: 50, y: 200 },
           size: { width: 60, height: 60 },
           label: 'Start',
           trigger: { type: 'manual' }
@@ -76,7 +77,7 @@ export function WorkflowBuilder({
         {
           id: 'end-node',
           type: 'end',
-          position: { x: 500, y: 200 },
+          position: { x: 800, y: 200 },
           size: { width: 60, height: 60 },
           label: 'End',
           action: { type: 'success' }
@@ -97,7 +98,22 @@ export function WorkflowBuilder({
     };
   });
 
+  const [isEditingName, setIsEditingName] = useState<boolean>(!workflow);
+  const [workflowName, setWorkflowName] = useState<string>(workflow?.name || 'New Workflow');
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Track processes already used in the workflow
+  const [usedProcessIds, setUsedProcessIds] = useState<Set<string>>(() => {
+    const used = new Set<string>();
+    if (visualWorkflow) {
+      visualWorkflow.nodes.forEach(node => {
+        if (node.type === 'process' && node.processId) {
+          used.add(node.processId);
+        }
+      });
+    }
+    return used;
+  });
 
   // ============================================================================
   // PROCESS LIBRARY DATA LOADING
@@ -121,14 +137,25 @@ export function WorkflowBuilder({
     }
   );
 
-  const processes = processesResult?.data || [];
+  // Filter out processes already used in the workflow
+  const processes = (processesResult?.data || []).filter(process => 
+    !usedProcessIds.has(process.id)
+  );
 
   // ============================================================================
   // ACTION INTEGRATION
   // ============================================================================
 
-  const saveWorkflowMutation = useActionMutation({
-    action: workflow ? 'workflow.update' : 'workflow.create',
+  const saveWorkflowMutation = useActionMutation('workflow.create', {
+    onSuccess: (result) => {
+      setHasChanges(false);
+      if (onSaved && result.data) {
+        onSaved(result.data as Workflow);
+      }
+    }
+  });
+
+  const updateWorkflowMutation = useActionMutation('workflow.update', {
     onSuccess: (result) => {
       setHasChanges(false);
       if (onSaved && result.data) {
@@ -141,26 +168,106 @@ export function WorkflowBuilder({
   // EVENT HANDLERS
   // ============================================================================
 
+  const handleNameSave = useCallback(async (name: string) => {
+    if (!name.trim()) return;
+
+    try {
+      if (!workflow) {
+        // Create new workflow in database
+        const result = await saveWorkflowMutation.mutateAsync({
+          name: name.trim(),
+          description: '',
+          type: 'SEQUENTIAL',
+          steps: {
+            processes: [],
+            connections: [],
+            variables: {}
+          },
+          executionSettings: {
+            timeouts: { default: 30000 },
+            parallelLimits: 5,
+            errorHandling: 'STOP_ON_ERROR'
+          },
+          isActive: true
+        });
+
+        if (result.data) {
+          // Update visual workflow with saved data
+          const updatedWorkflow = {
+            ...visualWorkflow,
+            id: result.data.id,
+            name: result.data.name,
+            metadata: {
+              ...visualWorkflow.metadata,
+              createdAt: result.data.createdAt,
+              updatedAt: result.data.updatedAt
+            }
+          };
+
+          setVisualWorkflow(updatedWorkflow);
+          setWorkflowName(result.data.name);
+          setIsEditingName(false);
+          
+          // Notify parent that workflow was created
+          if (onSaved) {
+            onSaved(result.data as Workflow);
+          }
+        }
+      } else {
+        // Update existing workflow name
+        await updateWorkflowMutation.mutateAsync({
+          id: workflow.id,
+          name: name.trim()
+        });
+        
+        // Update local state
+        const updatedWorkflow = { ...visualWorkflow, name: name.trim() };
+        setVisualWorkflow(updatedWorkflow);
+        setWorkflowName(name.trim());
+        setIsEditingName(false);
+      }
+    } catch (error) {
+      console.error('Failed to save workflow name:', error);
+    }
+  }, [visualWorkflow, workflow, saveWorkflowMutation, updateWorkflowMutation, onSaved]);
+
   const handleWorkflowChange = useCallback((newVisualWorkflow: VisualWorkflow) => {
     setVisualWorkflow(newVisualWorkflow);
     setHasChanges(true);
     onChange?.(true);
+    
+    // Update used process IDs based on current nodes
+    const newUsedProcessIds = new Set<string>();
+    newVisualWorkflow.nodes.forEach(node => {
+      if (node.type === 'process' && node.processId) {
+        newUsedProcessIds.add(node.processId);
+      }
+    });
+    setUsedProcessIds(newUsedProcessIds);
   }, [onChange]);
 
   const handleSave = useCallback(async () => {
+    if (!visualWorkflow || !workflow) return;
+    
     const schemaData = WorkflowSerializer.toSchema(visualWorkflow);
     
-    if (workflow) {
-      // Update existing workflow
-      await saveWorkflowMutation.mutateAsync({
-        workflowId: workflow.id,
-        updates: schemaData
-      });
-    } else {
-      // Create new workflow
-      await saveWorkflowMutation.mutateAsync(schemaData);
-    }
-  }, [visualWorkflow, workflow, saveWorkflowMutation]);
+    // For existing workflows, always update - use correct field names
+    await updateWorkflowMutation.mutateAsync({
+      id: workflow.id,
+      name: schemaData.name || visualWorkflow.name,
+      description: schemaData.description || visualWorkflow.description,
+      steps: schemaData.definition || {
+        processes: visualWorkflow.nodes || [],
+        connections: visualWorkflow.connections || [],
+        variables: {}
+      },
+      executionSettings: schemaData.executionSettings || {
+        timeouts: { default: 30000 },
+        parallelLimits: 5,
+        errorHandling: 'STOP_ON_ERROR'
+      }
+    });
+  }, [visualWorkflow, workflow, updateWorkflowMutation]);
 
   const handleProcessDrag = useCallback((process: any, event: React.DragEvent) => {
     // Check if dataTransfer is available
@@ -199,14 +306,14 @@ export function WorkflowBuilder({
 
   // Auto-save when workflow changes (debounced)
   useEffect(() => {
-    if (!hasChanges || !visualWorkflow || visualWorkflow.id === 'new') return;
+    if (!hasChanges || !visualWorkflow || visualWorkflow.id === 'new' || !workflow) return;
 
     const autoSaveTimer = setTimeout(() => {
       handleSave();
     }, 2000); // Auto-save after 2 seconds of no changes
 
     return () => clearTimeout(autoSaveTimer);
-  }, [hasChanges, visualWorkflow, handleSave]);
+  }, [hasChanges, visualWorkflow, workflow, handleSave]);
 
   // ============================================================================
   // EFFECTS
@@ -216,9 +323,18 @@ export function WorkflowBuilder({
     onChange?.(hasChanges);
   }, [hasChanges, onChange]);
 
+  // Sync workflow name with visual workflow name
+  useEffect(() => {
+    if (visualWorkflow.name !== workflowName && !isEditingName) {
+      setWorkflowName(visualWorkflow.name);
+    }
+  }, [visualWorkflow.name, workflowName, isEditingName]);
+
   // ============================================================================
   // RENDER
   // ============================================================================
+
+  // Always show the canvas - no separate name form screen
 
   return (
     <div className={`flex h-full ${className || ''}`}>
@@ -237,24 +353,41 @@ export function WorkflowBuilder({
         
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {visualWorkflow.name}
-              {hasChanges && (
-                <span className="ml-2 text-sm text-amber-600 dark:text-amber-400">
-                  (auto-saving...)
-                </span>
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <InlineNameEditor
+                  name={workflowName}
+                  isEditing={isEditingName}
+                  onSave={handleNameSave}
+                  onCancel={() => {
+                    setIsEditingName(false);
+                    setWorkflowName(workflow?.name || visualWorkflow.name);
+                  }}
+                  onStartEdit={() => setIsEditingName(true)}
+                  placeholder="Enter workflow name..."
+                />
+                {hasChanges && (
+                  <span className="text-sm text-amber-600 dark:text-amber-400">
+                    (auto-saving...)
+                  </span>
+                )}
+                {!workflow && !isEditingName && (
+                  <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                    Click to name
+                  </span>
+                )}
+              </div>
+              {visualWorkflow.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {visualWorkflow.description}
+                </p>
               )}
-            </h1>
-            {visualWorkflow.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {visualWorkflow.description}
-              </p>
-            )}
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {saveWorkflowMutation.isPending && (
+            {(saveWorkflowMutation.isPending || updateWorkflowMutation.isPending) && (
               <Loader2 size={16} className="animate-spin text-blue-600" />
             )}
             <span className="text-sm text-gray-500">
@@ -264,10 +397,10 @@ export function WorkflowBuilder({
         </div>
 
         {/* Error Display */}
-        {saveWorkflowMutation.error && (
+        {(saveWorkflowMutation.error || updateWorkflowMutation.error) && (
           <Alert className="m-4" variant="destructive">
             <AlertDescription>
-              Auto-save failed: {saveWorkflowMutation.error.message}
+              Auto-save failed: {(saveWorkflowMutation.error || updateWorkflowMutation.error)?.message}
             </AlertDescription>
           </Alert>
         )}

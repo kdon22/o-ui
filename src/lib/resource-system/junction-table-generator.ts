@@ -103,7 +103,7 @@ export function extractJunctionMetadataFromRelationship(
  */
 function determineAuditFields(junctionName: string): boolean {
   // Simple junctions without audit fields (can be configured)
-  const simpleJunctions = ['nodeProcesses', 'workflowProcesses', 'userGroups', 'groupPermissions', 'customerWorkflows'];
+  const simpleJunctions = ['nodeProcesses', 'userGroups', 'groupPermissions'];
   return !simpleJunctions.includes(junctionName);
 }
 

@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Zap, Users, FileText, Settings, Code2, Table, ShoppingCart } from 'lucide-react'
+import { Zap, Users, FileText, Settings, Code2, Table, ShoppingCart, ChevronDown, Shield, Cog } from 'lucide-react'
 import { HeaderBreadcrumb } from './header-breadcrumb'
 import { SearchTrigger } from '@/components/search'
 import { HeaderTenantSwitcher } from './header-tenant-switcher'
 import { HeaderBranchSwitcher } from './header-branch-switcher'
 import { BranchManagementPanel } from '@/components/branching/branch-management-panel'
-import { TabBar } from '@/components/ui'
+import { TabBar, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Button } from '@/components/ui'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 import type { BranchInfo } from '@/lib/utils/branch-utils'
 import { getBranchDisplayName } from '@/lib/utils/branch-utils'
@@ -38,6 +39,7 @@ export function MainHeader({
   topLevelTabOptions
 }: MainHeaderProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   
   // ✅ BULLETPROOF: Persist branch panel state across component remounts
   const [showBranchManagement, setShowBranchManagement] = useState(() => {
@@ -123,9 +125,7 @@ export function MainHeader({
     { key: 'processes', label: 'Processes', icon: Zap },
     { key: 'rules', label: 'Rules', icon: Code2 },
     { key: 'offices', label: 'Offices', icon: Users },
-    { key: 'workflows', label: 'Workflows', icon: FileText },
     { key: 'tables', label: 'Tables', icon: Table },
-    { key: 'settings', label: 'Settings', icon: Settings },
     { key: 'queues', label: 'Queues', icon: ShoppingCart },
     { key: 'marketplace', label: 'Marketplace', icon: ShoppingCart }
   ]
@@ -138,9 +138,7 @@ export function MainHeader({
         icon: option.value === 'processes' ? Zap :
               option.value === 'rules' ? Code2 :
               option.value === 'offices' ? Users :
-              option.value === 'workflows' ? FileText :
               option.value === 'tables' ? Table :
-              option.value === 'settings' ? Settings :
               option.value === 'queues' ? ShoppingCart :
               option.value === 'marketplace' ? ShoppingCart :
               FileText // Default icon
@@ -186,7 +184,7 @@ export function MainHeader({
 
       {/* Optional: Top Level Navigation */}
       {showTopLevelTabs && (
-        <div className="h-12 flex items-center px-6 bg-slate-50/50 border-t border-slate-200/50">
+        <div className="h-12 flex items-center justify-between px-6 bg-slate-50/50 border-t border-slate-200/50">
           <TabBar
             tabs={topLevelTabs}
             activeTab={activeTopLevelTab}
@@ -197,8 +195,51 @@ export function MainHeader({
             showIcons={true}
             showCounts={false}
             animate={true}
-            className="w-full"
+            className="flex-1"
           />
+          
+          {/* Settings Dropdown */}
+          <div className="flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 rounded transition-colors"
+                >
+                  <Settings size={16} />
+                </button>
+              </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem 
+                onClick={() => router.push('/workflows')}
+                className="flex items-center gap-2"
+              >
+                <FileText size={16} />
+                Workflows
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => router.push('/preferences')}
+                className="flex items-center gap-2"
+              >
+                <Users size={16} />
+                User Preferences
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => router.push('/security')}
+                className="flex items-center gap-2"
+              >
+                <Shield size={16} />
+                Security
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => router.push('/system-settings')}
+                className="flex items-center gap-2"
+              >
+                <Cog size={16} />
+                System Settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
       

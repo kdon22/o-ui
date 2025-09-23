@@ -9,6 +9,7 @@
 
 import { useReducer, useCallback, useMemo } from 'react';
 import { nanoid } from 'nanoid';
+import { SmartGatewayCreator } from '../components/workflow-builder/smart-gateway-creator';
 import type { 
   WorkflowBuilderState,
   WorkflowBuilderAction,
@@ -307,12 +308,57 @@ const workflowBuilderReducer = (
         return state;
       }
 
+      const sourceNodeId = state.connectionState.sourceNodeId;
+      const targetNodeId = action.payload.targetNodeId;
+      const sourcePort = state.connectionState.sourcePort;
+      const targetPort = action.payload.targetPort;
+
+      // Check if we should suggest a gateway
+      const gatewaySuggestion = SmartGatewayCreator.shouldSuggestGateway(
+        state.workflow,
+        sourceNodeId,
+        sourcePort
+      );
+
+      if (gatewaySuggestion.suggest) {
+        // Auto-create gateway for parallel execution
+        try {
+          const result = SmartGatewayCreator.convertToGateway(
+            state.workflow,
+            sourceNodeId,
+            targetNodeId,
+            sourcePort
+          );
+
+          return {
+            ...state,
+            workflow: {
+              ...result.workflow,
+              metadata: {
+                ...result.workflow.metadata,
+                updatedAt: new Date().toISOString()
+              }
+            },
+            connectionState: {
+              isConnecting: false
+            },
+            history: {
+              past: [...state.history.past, state.workflow],
+              future: []
+            }
+          };
+        } catch (error) {
+          console.warn('Gateway auto-creation failed, falling back to direct connection:', error);
+        }
+      }
+
+      // Fallback: Create normal connection
       const newConnection: WorkflowConnection = {
         id: nanoid(),
-        sourceNodeId: state.connectionState.sourceNodeId,
-        targetNodeId: action.payload.targetNodeId,
-        sourcePort: state.connectionState.sourcePort,
-        targetPort: action.payload.targetPort
+        sourceNodeId,
+        targetNodeId,
+        sourcePort,
+        targetPort
       };
 
       const newState = workflowBuilderReducer(state, {
@@ -460,7 +506,65 @@ export const useWorkflowBuilder = () => {
 
     redo: () => 
       dispatch({ type: 'REDO' }),
-  }), [dispatch]);
+
+    // Gateway helper actions
+    createGateway: (type: 'parallel-gateway' | 'exclusive-gateway', position: Position) => {
+      const gatewayNode: WorkflowNode = {
+        id: nanoid(),
+        type,
+        position,
+        size: { width: 60, height: 60 },
+        label: type === 'parallel-gateway' ? 'Parallel Gateway' : 'Exclusive Gateway',
+        ...(type === 'parallel-gateway' 
+          ? { executionMode: 'all' as const, maxConcurrent: undefined }
+          : { condition: undefined, defaultBranch: undefined }
+        )
+      } as any;
+      
+      dispatch({ type: 'ADD_NODE', payload: { node: gatewayNode } });
+      return gatewayNode.id;
+    },
+
+    convertToGateway: (sourceNodeId: string, targetNodeId: string, sourcePort?: string) => {
+      // This will be handled by the END_CONNECTION action automatically
+      // But can be called manually if needed
+      try {
+        const result = SmartGatewayCreator.convertToGateway(
+          state.workflow,
+          sourceNodeId,
+          targetNodeId,
+          sourcePort
+        );
+        
+        dispatch({ 
+          type: 'SET_WORKFLOW', 
+          payload: result.workflow 
+        });
+        
+        return result.gatewayNode.id;
+      } catch (error) {
+        console.error('Manual gateway conversion failed:', error);
+        return null;
+      }
+    },
+
+    optimizeGateway: (gatewayNodeId: string) => {
+      if (SmartGatewayCreator.shouldOptimizeGateway(state.workflow, gatewayNodeId)) {
+        const optimizedWorkflow = SmartGatewayCreator.optimizeGateway(
+          state.workflow,
+          gatewayNodeId
+        );
+        
+        dispatch({ 
+          type: 'SET_WORKFLOW', 
+          payload: optimizedWorkflow 
+        });
+        
+        return true;
+      }
+      return false;
+    },
+  }), [dispatch, state.workflow]);
 
   return {
     state,

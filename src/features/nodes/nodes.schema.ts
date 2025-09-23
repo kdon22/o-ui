@@ -363,29 +363,6 @@ export const NODE_SCHEMA: ResourceSchema = {
       cacheStrategy: 'indexeddb',
       auditTrail: true
     },
-    nodeWorkflows: {
-      type: 'many-to-many',
-      relatedEntity: 'workflows',
-      description: 'Workflows associated with this node',
-      junction: {
-        tableName: 'nodeWorkflows', // ✅ Standard: node + workflows → nodeWorkflows
-        field: 'nodeId',
-        relatedField: 'workflowId',
-        attributes: {
-          sequence: {
-            type: 'number',
-            required: false,
-            default: 0
-          },
-          isActive: {
-            type: 'boolean',
-            required: false,
-            default: true
-          }
-        }
-      },
-      cacheStrategy: 'indexeddb'
-    },
     offices: {
       type: 'one-to-many',
       relatedEntity: 'offices',

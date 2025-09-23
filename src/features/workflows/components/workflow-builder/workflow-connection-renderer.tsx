@@ -63,6 +63,27 @@ export function WorkflowConnectionRenderer({
       }
     }
 
+    if (sourceNode.type === 'parallel-gateway' || sourceNode.type === 'exclusive-gateway') {
+      // Gateway nodes have diamond shape with specific output ports
+      if (connection.sourcePort === 'out-0') {
+        // Right output
+        sourceX = sourceNode.position.x + 60;
+        sourceY = sourceNode.position.y + 30;
+      } else if (connection.sourcePort === 'out-1') {
+        // Bottom output
+        sourceX = sourceNode.position.x + 30;
+        sourceY = sourceNode.position.y + 60;
+      } else if (connection.sourcePort === 'out-2') {
+        // Left output
+        sourceX = sourceNode.position.x;
+        sourceY = sourceNode.position.y + 30;
+      } else {
+        // Default output (right)
+        sourceX = sourceNode.position.x + 60;
+        sourceY = sourceNode.position.y + 30;
+      }
+    }
+
     if (targetNode.type === 'end') {
       targetX = targetNode.position.x; // Left side input
       targetY = targetNode.position.y + 30;
@@ -79,6 +100,12 @@ export function WorkflowConnectionRenderer({
       const idx = parseInt(inputIndex);
       const inputCount = 4; // Max inputs
       targetY = targetNode.position.y + (targetNode.size.height / (inputCount + 1)) * (idx + 1);
+    }
+
+    if (targetNode.type === 'parallel-gateway' || targetNode.type === 'exclusive-gateway') {
+      // Gateway nodes receive connections at the top input port
+      targetX = targetNode.position.x + 30;
+      targetY = targetNode.position.y;
     }
 
     return { sourceX, sourceY, targetX, targetY };
@@ -122,6 +149,17 @@ export function WorkflowConnectionRenderer({
     }
     if (connection.sourcePort?.startsWith('branch-')) {
       return { stroke: '#8b5cf6', strokeWidth: selected ? 3 : 2 };
+    }
+    if (connection.sourcePort?.startsWith('out-')) {
+      // Gateway connections - different colors for different ports
+      const portIndex = connection.sourcePort.match(/out-(\d+)/)?.[1];
+      const colors = ['#10b981', '#3b82f6', '#f59e0b']; // Green, Blue, Orange
+      const colorIndex = portIndex ? parseInt(portIndex) : 0;
+      return { 
+        stroke: colors[colorIndex] || '#10b981', 
+        strokeWidth: selected ? 3 : 2,
+        strokeDasharray: selected ? undefined : '2,2' // Dotted for parallel connections
+      };
     }
     
     // Default connection style

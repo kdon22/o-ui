@@ -2,12 +2,12 @@
  * Process Node - Business Process Execution
  * 
  * Rectangular node that represents a business process step.
- * Can contain multiple rules and has configurable timeout/retry settings.
+ * Displays process name, type, and associated rules count.
  */
 
 'use client';
 
-import { Settings, Clock, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Settings, AlertTriangle } from 'lucide-react';
 import type { ProcessNode as ProcessNodeType, Position } from '../../../types/workflow-builder';
 
 interface ProcessNodeProps {
@@ -54,11 +54,25 @@ export function ProcessNode({
   const handleOutputClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (!readOnly) {
-      onConnectionStart('output');
+      onConnectionStart('success');
+    }
+  };
+
+  const handleOutputMouseDown = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!readOnly) {
+      onConnectionStart('success');
     }
   };
 
   const handleErrorOutputClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!readOnly) {
+      onConnectionStart('error');
+    }
+  };
+
+  const handleErrorOutputMouseDown = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (!readOnly) {
       onConnectionStart('error');
@@ -70,13 +84,16 @@ export function ProcessNode({
   // ============================================================================
 
   return (
-    <g transform={`translate(${node.position.x}, ${node.position.y})`}>
+    <g 
+      transform={`translate(${node.position.x}, ${node.position.y})`}
+      data-node-id={node.id}
+    >
       
-      {/* Main Rectangle */}
+      {/* Main Rectangle - Grey Body */}
       <rect
         width={width}
         height={height}
-        fill="white"
+        fill="#f9fafb"
         stroke={selected ? "#3b82f6" : "#d1d5db"}
         strokeWidth={selected ? "3" : "2"}
         rx={cornerRadius}
@@ -109,7 +126,7 @@ export function ProcessNode({
         <Settings size={16} stroke="#6b7280" />
       </g>
 
-      {/* Process Name */}
+      {/* Process Name in Header */}
       <text
         x={30}
         y={18}
@@ -118,19 +135,21 @@ export function ProcessNode({
         fill="#374151"
         className="select-none pointer-events-none"
       >
-        {node.label || 'Process'}
+        {node.processName || node.label?.replace(' -process', '') || 'Process'}
       </text>
 
-      {/* Process ID/Name */}
-      {node.processName && (
+      {/* Process Type in Grey Body */}
+      {node.processType && (
         <text
-          x={8}
-          y={45}
-          fontSize="11"
-          fill="#6b7280"
+          x={width / 2}
+          y={height / 2 + 10}
+          fontSize="12"
+          fontWeight="500"
+          fill="#4b5563"
+          textAnchor="middle"
           className="select-none pointer-events-none"
         >
-          {node.processName}
+          {node.processType}
         </text>
       )}
 
@@ -138,7 +157,7 @@ export function ProcessNode({
       {node.rules && node.rules.length > 0 && (
         <text
           x={8}
-          y={60}
+          y={height - 8}
           fontSize="10"
           fill="#9ca3af"
           className="select-none pointer-events-none"
@@ -147,37 +166,6 @@ export function ProcessNode({
         </text>
       )}
 
-      {/* Timeout Indicator */}
-      {node.timeout && (
-        <g transform={`translate(${width - 50}, 35)`}>
-          <Clock size={12} stroke="#f59e0b" />
-          <text
-            x={15}
-            y={9}
-            fontSize="10"
-            fill="#f59e0b"
-            className="select-none pointer-events-none"
-          >
-            {node.timeout}s
-          </text>
-        </g>
-      )}
-
-      {/* Retry Indicator */}
-      {node.retryCount && node.retryCount > 0 && (
-        <g transform={`translate(${width - 50}, 50)`}>
-          <RotateCcw size={12} stroke="#8b5cf6" />
-          <text
-            x={15}
-            y={9}
-            fontSize="10"
-            fill="#8b5cf6"
-            className="select-none pointer-events-none"
-          >
-            x{node.retryCount}
-          </text>
-        </g>
-      )}
 
       {/* Input Connection Point */}
       <circle
@@ -187,8 +175,19 @@ export function ProcessNode({
         fill="white"
         stroke="#3b82f6"
         strokeWidth="2"
-        className="cursor-pointer hover:fill-blue-50 transition-colors"
+        className="cursor-pointer hover:fill-blue-50 hover:stroke-blue-600 transition-all duration-200 hover:scale-110"
         onClick={handleInputClick}
+        data-port-type="input"
+        title="Connection input port"
+      />
+      
+      {/* Input Port Indicator */}
+      <circle
+        cx={-6}
+        cy={height / 2}
+        r="3"
+        fill="#3b82f6"
+        className="pointer-events-none opacity-60"
       />
 
       {/* Input Port Label */}
@@ -204,16 +203,29 @@ export function ProcessNode({
       </text>
 
       {/* Output Connection Point */}
-      <circle
-        cx={width + 6}
-        cy={height / 2}
-        r="6"
-        fill="white"
-        stroke="#10b981"
-        strokeWidth="2"
-        className="cursor-pointer hover:fill-emerald-50 transition-colors"
-        onClick={handleOutputClick}
-      />
+      <g className="group">
+        <circle
+          cx={width + 6}
+          cy={height / 2}
+          r="6"
+          fill="white"
+          stroke="#10b981"
+          strokeWidth="2"
+          className="cursor-pointer hover:fill-emerald-50 hover:stroke-emerald-600 transition-colors"
+          onClick={handleOutputClick}
+          onMouseDown={handleOutputMouseDown}
+          title="Drag to connect to another node"
+        />
+        
+        {/* Success Port Indicator */}
+        <circle
+          cx={width + 6}
+          cy={height / 2}
+          r="3"
+          fill="#10b981"
+          className="pointer-events-none"
+        />
+      </g>
 
       {/* Output Port Label */}
       <text
@@ -227,16 +239,29 @@ export function ProcessNode({
       </text>
 
       {/* Error Output Connection Point */}
-      <circle
-        cx={width + 6}
-        cy={height - 15}
-        r="5"
-        fill="white"
-        stroke="#ef4444"
-        strokeWidth="2"
-        className="cursor-pointer hover:fill-red-50 transition-colors"
-        onClick={handleErrorOutputClick}
-      />
+      <g className="group">
+        <circle
+          cx={width + 6}
+          cy={height - 15}
+          r="5"
+          fill="white"
+          stroke="#ef4444"
+          strokeWidth="2"
+          className="cursor-pointer hover:fill-red-50 hover:stroke-red-600 transition-colors"
+          onClick={handleErrorOutputClick}
+          onMouseDown={handleErrorOutputMouseDown}
+          title="Drag to connect error handling"
+        />
+        
+        {/* Error Port Indicator */}
+        <circle
+          cx={width + 6}
+          cy={height - 15}
+          r="2"
+          fill="#ef4444"
+          className="pointer-events-none"
+        />
+      </g>
 
       {/* Error Port Label */}
       <text
@@ -267,7 +292,6 @@ export function ProcessNode({
           strokeDasharray="5,5"
           rx={cornerRadius + 2}
           ry={cornerRadius + 2}
-          className="animate-pulse"
         />
       )}
 

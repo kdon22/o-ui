@@ -193,10 +193,9 @@ const NODE_SPECIFIC_RESOURCES = ['process', 'rule', 'office', 'workflow'];
  * Junction table dependencies - defines which junction tables to load with resources
  */
 const JUNCTION_DEPENDENCIES: Record<string, string[]> = {
-      process: ['nodeProcesses'],         // When loading node processes, also load junction  
-    rule: ['processRules'],             // When loading node rules, also load junction  
-      workflow: ['nodeWorkflows'],        // When loading node workflows, also load junction
-  office: []                          // Office has no junction dependencies
+  process: ['nodeProcesses'],           // When loading node processes, also load junction  
+  rule: ['processRules'],               // When loading node rules, also load junction
+  office: []                            // Office has no junction dependencies
 };
 
 /**

@@ -558,36 +558,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
       cacheStrategy: 'memory',
       preload: false
     },
-    nodeWorkflows: {
-      type: 'many-to-many',
-      relatedEntity: 'nodes',
-      description: 'Nodes that use this workflow',
-      junction: {
-        tableName: 'nodeWorkflows', // ✅ Standard: node + workflows → nodeWorkflows
-        field: 'workflowId',
-        relatedField: 'nodeId'
-      }
-    },
-    processes: {
-      type: 'many-to-many',
-      relatedEntity: 'processes',
-      description: 'Processes included in this workflow',
-      junction: {
-        tableName: 'workflowProcesses', // ✅ Standard: workflow + processes → workflowProcesses
-        field: 'workflowId',
-        relatedField: 'processId'
-      }
-    },
-    customerWorkflows: {
-      type: 'many-to-many',
-      relatedEntity: 'customers',
-      description: 'Customers using this workflow',
-      junction: {
-        tableName: 'customerWorkflows', // ✅ Standard: customer + workflows → customerWorkflows
-        field: 'workflowId',
-        relatedField: 'customerId'
-      }
-    },
     workflowTags: {
       type: 'many-to-many',
       relatedEntity: 'tags',
@@ -596,6 +566,16 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         tableName: 'workflowTags', // ✅ Standard: workflow + tags → workflowTags
         field: 'workflowId',
         relatedField: 'tagId'
+      }
+    },
+    queueWorkflows: {
+      type: 'many-to-many',
+      relatedEntity: 'queues',
+      description: 'Queue assignments for this workflow (queue-based execution system)',
+      junction: {
+        tableName: 'queueWorkflows', // ✅ Standard: queue + workflows → queueWorkflows
+        field: 'workflowId',
+        relatedField: 'queueId'
       }
     }
   },
@@ -818,6 +798,53 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
 };
 
 // ============================================================================
+// QUEUE-WORKFLOW JUNCTION SCHEMA - QUEUE-BASED EXECUTION SYSTEM
+// ============================================================================
+
+export const QueueWorkflowSchema = z.object({
+  id: z.string(),
+  queueId: z.string(),
+  workflowId: z.string(),
+  tenantId: z.string(),
+  branchId: z.string(),
+  isActive: z.boolean(),
+  priority: z.number(),
+  assignedAt: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdById: z.string().nullable(),
+  updatedById: z.string().nullable(),
+  originalQueueWorkflowId: z.string().nullable(),
+});
+
+export type QueueWorkflow = z.infer<typeof QueueWorkflowSchema>;
+
+export const QUEUE_WORKFLOW_SCHEMA = {
+  databaseKey: 'queueWorkflows',
+  modelName: 'QueueWorkflow',
+  actionPrefix: 'queueWorkflows',
+  schema: QueueWorkflowSchema,
+  relations: ['queue', 'workflow', 'branch'],
+  primaryKey: ['id'],
+  
+  // ✅ JUNCTION: IndexedDB compound key configuration
+  indexedDBKey: (record: QueueWorkflow) => `${record.queueId}:${record.workflowId}`,
+  
+  // Junction auto-creation configuration
+  junctionConfig: {
+    autoCreateOnParentCreate: true,
+    navigationContext: {
+      queueId: 'string',    // If queueId provided in workflow creation, create QueueWorkflow
+      workflowId: 'string'  // If workflowId provided in queue creation, create QueueWorkflow
+    },
+    defaults: {
+      isActive: true,
+      priority: 0
+    }
+  }
+} as const;
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 export type Workflow = {
@@ -877,184 +904,11 @@ export interface WorkflowListQuery extends WorkflowQuery {
 }
 
 // ============================================================================
-// JUNCTION SCHEMAS: WORKFLOW RELATIONSHIPS
+// NOTE: WorkflowProcess relationship removed - workflows now use queue-based execution
 // ============================================================================
 
-/**
- * WorkflowProcess Junction Schema - Merged from workflow-process.schema.ts
- * Handles the many-to-many relationship between workflows and processes
- */
-export const WorkflowProcessSchema = z.object({
-  workflowId: z.string(),
-  processId: z.string(),
-  tenantId: z.string(),
-  branchId: z.string(),
-});
-
-export type WorkflowProcess = z.infer<typeof WorkflowProcessSchema>;
-
-export const WORKFLOW_PROCESS_SCHEMA = {
-  databaseKey: 'workflowProcesses', // ✅ Standard: workflow + processes → workflowProcesses
-  modelName: 'WorkflowProcess',
-  actionPrefix: 'workflowProcesses',
-  schema: WorkflowProcessSchema,
-  relations: ['process', 'workflow', 'branch'],
-  primaryKey: ['workflowId', 'processId'],
-  displayFields: ['workflowId', 'processId'],
-  searchFields: ['workflowId', 'processId'],
-  orderBy: [{ processId: 'asc' }],
-  // Metadata for schema-driven index generation (only mark exceptions)
-  notHasAuditFields: true,
-  
-  // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: WorkflowProcess) => `${record.workflowId}:${record.processId}`,
-  
-  // GOLD STANDARD: Junction field mapping configuration
-  fieldMappings: {
-    workflowId: { type: 'relation', target: 'workflow', targetField: 'id' },
-    processId: { type: 'relation', target: 'process', targetField: 'id' },
-    branchId: { type: 'relation', target: 'branch', targetField: 'id' },
-    tenantId: { type: 'scalar' }
-  },
-
-  // ============================================================================
-  // JUNCTION AUTO-CREATION CONFIGURATION
-  // ============================================================================
-  junctionConfig: {
-    // When creating a workflow, check if we should auto-create WorkflowProcess junction
-    autoCreateOnParentCreate: true,
-    
-    // Navigation context detection - if these fields are present, auto-create junction
-    navigationContext: {
-      processId: 'string' // If processId is provided in workflow creation, create WorkflowProcess
-    },
-    
-    // Default values for junction creation
-    defaults: {}
-  }
-} as const;
-
-/**
- * CustomerWorkflow Junction Schema - Merged from customer-workflow.schema.ts
- * Handles the many-to-many relationship between customers and workflows
- */
-export const CustomerWorkflowSchema = z.object({
-  customerId: z.string(),
-  workflowId: z.string(),
-  tenantId: z.string(),
-  branchId: z.string(),
-});
-
-export type CustomerWorkflow = z.infer<typeof CustomerWorkflowSchema>;
-
-export const CUSTOMER_WORKFLOW_SCHEMA = {
-  databaseKey: 'customerWorkflows', // ✅ Standard: customer + workflows → customerWorkflows
-  modelName: 'CustomerWorkflow',
-  actionPrefix: 'customerWorkflows',
-  schema: CustomerWorkflowSchema,
-  relations: ['customer', 'workflow', 'branch'],
-  primaryKey: ['customerId', 'workflowId'],
-  displayFields: ['customerId', 'workflowId'],
-  searchFields: ['customerId', 'workflowId'],
-  orderBy: [{ workflowId: 'asc' }],
-  // Metadata for schema-driven index generation (only mark exceptions)
-  notHasAuditFields: true,
-  
-  // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: CustomerWorkflow) => `${record.customerId}:${record.workflowId}`,
-  
-  // GOLD STANDARD: Junction field mapping configuration
-  fieldMappings: {
-    customerId: { type: 'relation', target: 'customer', targetField: 'id' },
-    workflowId: { type: 'relation', target: 'workflow', targetField: 'id' },
-    branchId: { type: 'relation', target: 'branch', targetField: 'id' },
-    tenantId: { type: 'scalar' }
-  },
-
-  // ============================================================================
-  // JUNCTION AUTO-CREATION CONFIGURATION
-  // ============================================================================
-  junctionConfig: {
-    // When creating a workflow, check if we should auto-create CustomerWorkflow junction
-    autoCreateOnParentCreate: true,
-    
-    // Navigation context detection - if these fields are present, auto-create junction
-    navigationContext: {
-      customerId: 'string' // If customerId is provided in workflow creation, create CustomerWorkflow
-    },
-    
-    // Default values for junction creation
-    defaults: {}
-  }
-} as const;
 
 // ============================================================================
-// JUNCTION SCHEMAS: WORKFLOW RELATIONSHIPS
-// ============================================================================
-
-/**
- * NodeWorkflow Junction Schema - Moved from nodes.schema.ts
- * Handles the many-to-many relationship between nodes and workflows
- */
-export const NodeWorkflowSchema = z.object({
-  id: z.string(),
-  nodeId: z.string(),
-  workflowId: z.string(),
-  tenantId: z.string(),
-  branchId: z.string(),
-  sequence: z.number(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-export type NodeWorkflow = z.infer<typeof NodeWorkflowSchema>;
-
-export const NODE_WORKFLOW_SCHEMA = {
-  databaseKey: 'nodeWorkflows',
-  modelName: 'NodeWorkflow',
-  actionPrefix: 'nodeWorkflows',
-  schema: NodeWorkflowSchema,
-  relations: ['node', 'workflow', 'branch'],
-  primaryKey: ['id'],
-  displayFields: ['nodeId', 'workflowId', 'sequence'],
-  searchFields: ['nodeId', 'workflowId'],
-  orderBy: [{ sequence: 'asc' }],
-  // No exception flags needed - has both tenant context and audit fields
-  
-  // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: NodeWorkflow) => `${record.nodeId}:${record.workflowId}`,
-  
-  // GOLD STANDARD: Junction field mapping configuration
-  fieldMappings: {
-    nodeId: { type: 'relation', target: 'node', targetField: 'id' },
-    workflowId: { type: 'relation', target: 'workflow', targetField: 'id' },
-    branchId: { type: 'relation', target: 'branch', targetField: 'id' },
-    // Scalar fields (kept as-is in Prisma data)
-    id: { type: 'scalar' },
-    tenantId: { type: 'scalar' },
-    sequence: { type: 'scalar' },
-    createdAt: { type: 'scalar' },
-    updatedAt: { type: 'scalar' }
-  },
-
-  // ============================================================================
-  // JUNCTION AUTO-CREATION CONFIGURATION
-  // ============================================================================
-  junctionConfig: {
-    // When creating a workflow, check if we should auto-create NodeWorkflow junction
-    autoCreateOnParentCreate: true,
-    
-    // Navigation context detection - if these fields are present, auto-create junction
-    navigationContext: {
-      // Require both nodeId and workflowId to avoid accidental triggers from unrelated actions
-      nodeId: 'string',
-      workflowId: 'string',
-      sequence: 'number'    // Optional: execution sequence within the workflow
-    },
-    
-    // Default values for junction creation
-    defaults: {
-      sequence: 0
-    }
-  }
-} as const; 
+// NOTE: NodeWorkflow and CustomerWorkflow relationships removed
+// Workflows are now queue-based only and no longer directly assigned to nodes/customers
+// ============================================================================ 

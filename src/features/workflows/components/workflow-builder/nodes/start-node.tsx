@@ -51,12 +51,22 @@ export function StartNode({
     }
   };
 
+  const handleOutputMouseDown = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!readOnly) {
+      onConnectionStart('output');
+    }
+  };
+
   // ============================================================================
   // RENDER
   // ============================================================================
 
   return (
-    <g transform={`translate(${node.position.x}, ${node.position.y})`}>
+    <g 
+      transform={`translate(${node.position.x}, ${node.position.y})`}
+      data-node-id={node.id}
+    >
       
       {/* Main Circle */}
       <circle
@@ -115,8 +125,19 @@ export function StartNode({
         fill="white"
         stroke="#10b981"
         strokeWidth="2"
-        className="cursor-pointer hover:fill-emerald-50 transition-colors"
+        className="cursor-pointer hover:fill-emerald-50 hover:stroke-emerald-600 transition-colors"
         onClick={handleOutputClick}
+        onMouseDown={handleOutputMouseDown}
+        title="Drag to connect to first process"
+      />
+      
+      {/* Output Port Indicator */}
+      <circle
+        cx={radius * 2}
+        cy={radius}
+        r="3"
+        fill="#10b981"
+        className="pointer-events-none opacity-60"
       />
 
       {/* Output Port Label */}
@@ -140,7 +161,6 @@ export function StartNode({
           stroke="#3b82f6"
           strokeWidth="2"
           strokeDasharray="5,5"
-          className="animate-pulse"
         />
       )}
 

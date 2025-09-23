@@ -43,15 +43,9 @@ export function HeaderTenantSwitcher({
         onOpenChange={setIsOpen}
       >
         <SelectTrigger className="w-48 h-8 border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">
-                {currentTenant.name}
-              </div>
-            </div>
+          <div className="text-sm font-medium truncate">
+            {currentTenant.name}
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </SelectTrigger>
         
         <SelectContent align="end" className="w-64">
