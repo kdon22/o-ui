@@ -10,6 +10,7 @@ import { NodeContent } from './node-content'
 import { EmptyState } from './empty-state'
 import { TablesPage } from '../tables'
 import MarketplacePage from '@/app/(main)/marketplace/page'
+import QueuesPage from '@/app/(main)/queues/page'
 
 export interface MainLayoutProps {
   initialSelectedNodeId?: string | null
@@ -199,7 +200,9 @@ export default function MainLayout({ initialSelectedNodeId }: MainLayoutProps) {
           
           {/* Main Content */}
           <div className="flex-1 overflow-hidden">
-            {topLevelTab === 'tables' ? (
+            {topLevelTab === 'queues' ? (
+              <QueuesPage />
+            ) : topLevelTab === 'tables' ? (
               <TablesPage />
             ) : topLevelTab === 'marketplace' ? (
               <MarketplacePage />

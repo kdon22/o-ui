@@ -22,6 +22,7 @@ import { CLASS_SCHEMA } from '@/features/classes/classes.schema';
 import { TABLE_CATEGORY_SCHEMA } from '@/features/table-categories/table-categories.schema';
 import { DATA_TABLE_SCHEMA } from '@/features/data-tables/data-tables.schema';
 import { TABLE_DATA_SCHEMA } from '@/features/table-data/table-data.schema';
+import { QUEUE_CONFIG_SCHEMA, QUEUE_MESSAGE_SCHEMA, QUEUE_WORKER_SCHEMA } from '@/features/queues/queues.schema';
 
 // Pull Request System Schemas
 import { 
@@ -80,6 +81,11 @@ export const ALL_SCHEMAS = [
   MARKETPLACE_PACKAGE_SCHEMA,
   PACKAGE_INSTALLATION_SCHEMA,
   PACKAGE_SUBSCRIPTION_SCHEMA,
+  
+  // Travel Queue Management System (server-only)
+  QUEUE_CONFIG_SCHEMA,
+  QUEUE_MESSAGE_SCHEMA,
+  QUEUE_WORKER_SCHEMA,
   
   // Junction schemas (auto-discovered)
   PROCESS_RULE_SCHEMA,

@@ -126,6 +126,7 @@ export function MainHeader({
     { key: 'workflows', label: 'Workflows', icon: FileText },
     { key: 'tables', label: 'Tables', icon: Table },
     { key: 'settings', label: 'Settings', icon: Settings },
+    { key: 'queues', label: 'Queues', icon: ShoppingCart },
     { key: 'marketplace', label: 'Marketplace', icon: ShoppingCart }
   ]
 
@@ -140,6 +141,7 @@ export function MainHeader({
               option.value === 'workflows' ? FileText :
               option.value === 'tables' ? Table :
               option.value === 'settings' ? Settings :
+              option.value === 'queues' ? ShoppingCart :
               option.value === 'marketplace' ? ShoppingCart :
               FileText // Default icon
       }))

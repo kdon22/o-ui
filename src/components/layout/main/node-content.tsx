@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useCallback, useMemo, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useReadyBranchContext } from '@/lib/context/branch-context'
 import { Zap, Users, FileText } from 'lucide-react'
 import { TabBar } from '@/components/ui/tab-bar'
@@ -49,6 +50,9 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     hookCount++
     console.log(`🪝 [NodeContent] Hook #${hookCount}: ${name}`, { nodeId, activeTopLevelTab })
   }
+  
+  hookDebug('useRouter')
+  const router = useRouter()
   
   hookDebug('useReadyBranchContext')
   // 🎯 SSOT: Get branch context from the single source of truth
@@ -239,8 +243,14 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
 
   hookDebug('useCallback-handleRowClick')
   const handleRowClick = useCallback((entity: any) => {
-    // Handle row click
-  }, [])
+    // Handle workflows specially - navigate to visual builder
+    if (activeTopLevelTab === 'workflows') {
+      router.push(`/workflows/builder?id=${entity.id}`)
+    } else {
+      // Handle other entity types as before
+      console.log('Row clicked:', entity)
+    }
+  }, [activeTopLevelTab, router])
 
   hookDebug('useCallback-handleAttachClick')
   const handleAttachClick = useCallback(() => {
@@ -384,6 +394,19 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
             return undefined
           })()}
           headerActions={(handleAdd) => {
+            // Special handling for workflows tab - navigate to builder instead of inline form
+            if (activeTopLevelTab === 'workflows') {
+              return (
+                <Button 
+                  onClick={() => router.push('/workflows/builder')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Add Workflow
+                </Button>
+              );
+            }
+            
             // Special handling for processes tab - show dual split buttons
             if (activeTopLevelTab === 'processes') {
               const { AttachAndSplitAddActions } = createAutoTableHeaderActions(handleAdd);

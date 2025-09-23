@@ -43,6 +43,7 @@ import { CLASS_SCHEMA } from '@/features/classes/classes.schema';
 import { TABLE_CATEGORY_SCHEMA } from '@/features/table-categories/table-categories.schema';
 import { DATA_TABLE_SCHEMA } from '@/features/data-tables/data-tables.schema';
 import { TABLE_DATA_SCHEMA } from '@/features/table-data/table-data.schema';
+import { QUEUE_CONFIG_SCHEMA, QUEUE_MESSAGE_SCHEMA, QUEUE_WORKER_SCHEMA } from '@/features/queues/queues.schema';
 
 // Junction Schema Imports - Standalone Junction Tables
 import { PROCESS_RULE_SCHEMA, RULE_IGNORE_SCHEMA } from '@/features/rules/rules.schema';
@@ -80,6 +81,11 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   TABLE_CATEGORY_SCHEMA,
   DATA_TABLE_SCHEMA,
   TABLE_DATA_SCHEMA,
+  
+  // Travel Queue Management System (server-only)
+  QUEUE_CONFIG_SCHEMA,
+  QUEUE_MESSAGE_SCHEMA,
+  QUEUE_WORKER_SCHEMA,
 
   // Pull Request System
   PULL_REQUEST_SCHEMA,

@@ -103,6 +103,8 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     // autoSaveInterval: 30000 // Optional: 30 second auto-save
   });
   
+  // ✅ Use server-only if schema marks it so (bypass IndexedDB)
+  const serverOnly = !!(resource as any)?.serverOnly || !!(resource as any)?.actions?.serverOnly;
   // ✅ REVERT TO ORIGINAL: Use the existing branch-aware action query system
   const { data: dataResult, isLoading, error } = useActionQuery(
     `${resourceKey}.list`,
@@ -115,7 +117,8 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     },
     {
       staleTime: 300000, // 5 minutes
-      fallbackToCache: true
+      fallbackToCache: true,
+      skipCache: serverOnly
     }
   );
 
