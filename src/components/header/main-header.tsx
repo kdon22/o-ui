@@ -6,7 +6,7 @@ import { HeaderBreadcrumb } from './header-breadcrumb'
 import { SearchTrigger } from '@/components/search'
 import { HeaderTenantSwitcher } from './header-tenant-switcher'
 import { HeaderBranchSwitcher } from './header-branch-switcher'
-import { BranchManagementPanel } from '@/components/branching/branch-management-panel'
+import dynamic from 'next/dynamic'
 import { TabBar, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Button } from '@/components/ui'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -40,6 +40,7 @@ export function MainHeader({
 }: MainHeaderProps) {
   const { data: session } = useSession();
   const router = useRouter();
+  const BranchManagementPanel = dynamic(() => import('@/components/branching/branch-management-panel').then(m => m.BranchManagementPanel), { ssr: false })
   
   // ✅ BULLETPROOF: Persist branch panel state across component remounts
   const [showBranchManagement, setShowBranchManagement] = useState(() => {
@@ -78,10 +79,11 @@ export function MainHeader({
 
   // Debug effect to track session changes that might affect state
   useEffect(() => {
+    const user: any = (session as any)?.user;
     console.log('🔍 [MainHeader] Session changed:', { 
       sessionExists: !!session,
-      currentBranchId: session?.user?.currentBranchId,
-      branchName: session?.user?.branchName,
+      currentBranchId: user?.currentBranchId,
+      branchName: user?.branchName,
       showBranchManagement,
       stackTrace: new Error().stack?.split('\n').slice(1, 3)
     });

@@ -1,61 +1,50 @@
 /**
- * useActionClientContext - Composed Hook for Action System
- * 
- * Convenience hook that combines auth + branch context
- * specifically for ActionClient usage patterns.
+ * useActionClientContext - Composed hook for ActionClient usage
+ *
+ * Provides tenantId and strict BranchContext for the Action System.
+ * Never falls back; returns isReady=false until both auth and branch
+ * contexts are available.
  */
 
 import { useMemo } from 'react';
 import { useAuth } from '../use-auth';
 import { useBranchContext } from '../use-branch-context';
-import type { ActionClientContext } from '../../types';
+import type { ActionClientContext, BranchContext as SessionBranchContext } from '../../types';
 
 export function useActionClientContext(): ActionClientContext {
-  const { tenantId, isAuthenticated } = useAuth();
-  const branchContext = useBranchContext();
-  
-  return useMemo(() => {
-    // Not ready if not authenticated or no tenant
-    if (!isAuthenticated || !tenantId) {
+  const { tenantId, userId, isAuthenticated } = useAuth();
+  const branch = useBranchContext();
+
+  return useMemo((): ActionClientContext => {
+    // Not ready until authenticated and branch context ready
+    if (!isAuthenticated || !tenantId || !userId || !branch.isReady) {
       return {
         tenantId: '',
+        // Provide a structurally-correct placeholder to satisfy types,
+        // but callers must gate on isReady before using it.
         branchContext: {
           currentBranchId: '',
           defaultBranchId: '',
           tenantId: '',
           userId: '',
-          isReady: false,
-        },
+          isReady: true,
+        } as SessionBranchContext,
         isReady: false,
       };
     }
-    
-    // Not ready if branch context isn't ready
-    if (!branchContext.isReady) {
-      return {
-        tenantId,
-        branchContext: {
-          currentBranchId: '',
-          defaultBranchId: '',
-          tenantId: '',
-          userId: '',
-          isReady: false,
-        },
-        isReady: false,
-      };
-    }
-    
-    // All ready - return complete context
-    return {
-      tenantId,
-      branchContext: {
-        currentBranchId: branchContext.currentBranchId,
-        defaultBranchId: branchContext.defaultBranchId,
-        tenantId: branchContext.tenantId,
-        userId: branchContext.userId,
-        isReady: true,
-      },
+
+    const branchContext: SessionBranchContext = {
+      currentBranchId: branch.currentBranchId,
+      defaultBranchId: branch.defaultBranchId,
+      tenantId: branch.tenantId,
+      userId: branch.userId,
       isReady: true,
     };
-  }, [isAuthenticated, tenantId, branchContext]);
+
+    return {
+      tenantId,
+      branchContext,
+      isReady: true,
+    };
+  }, [isAuthenticated, tenantId, userId, branch.currentBranchId, branch.defaultBranchId, branch.tenantId, branch.userId, branch.isReady]);
 }

@@ -44,36 +44,9 @@ export function useBranchContext(): BranchContextHookReturn {
       };
     }
     
-    const { currentBranchId, defaultBranchId, availableBranches } = session.user.branchContext as any;
+    const { currentBranchId, defaultBranchId } = session.user.branchContext as any;
     
-    // Derive defaults if missing but we have available branches
-    if ((!currentBranchId || !defaultBranchId) && Array.isArray(availableBranches) && availableBranches.length > 0) {
-      const derivedDefault = availableBranches.find((b: any) => b.isDefault) || availableBranches[0];
-      const derivedDefaultId = derivedDefault?.id;
-      const normalizedCurrent = currentBranchId || derivedDefaultId;
-      const normalizedDefault = defaultBranchId || derivedDefaultId;
-      
-      if (normalizedCurrent && normalizedDefault) {
-        return {
-          isReady: true,
-          currentBranchId: normalizedCurrent,
-          defaultBranchId: normalizedDefault,
-          tenantId: session.user.tenantId,
-          userId: session.user.id,
-        } as const;
-      }
-    }
-    
-    // Use currentBranchId = defaultBranchId if current is missing
-    if (!currentBranchId && defaultBranchId) {
-      return {
-        isReady: true,
-        currentBranchId: defaultBranchId,
-        defaultBranchId,
-        tenantId: session.user.tenantId,
-        userId: session.user.id,
-      } as const;
-    }
+    // NO FALLBACKS: both IDs must be present in session
     
     // Fail if we can't determine branch context
     if (!currentBranchId || !defaultBranchId) {

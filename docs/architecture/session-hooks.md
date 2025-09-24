@@ -38,11 +38,4 @@ const { tenantId, branchContext, isReady } = useActionClientContext();
 - **Enterprise Grade** - Never throws during SSR
 - **Clean APIs** - Single responsibility per hook
 - **No Fallbacks** - Fails fast with clear errors instead of defaulting to 'main'
-
-## 🔄 **Migration**
-
-**Old → New:**
-```typescript
-// ✅ NEW - Single focused implementations
-import { useAuth, useBranchContext, useActionClientContext } from '@/lib/session';
 ```
