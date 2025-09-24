@@ -43,11 +43,6 @@ const { tenantId, branchContext, isReady } = useActionClientContext();
 
 **Old → New:**
 ```typescript
-// ❌ OLD - Multiple competing implementations
-import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api';
-import { useCleanBranchContext } from '@/hooks/use-clean-branch-context';
-import { useBranchContextWithLoading } from '@/lib/context/branch-context';
-
 // ✅ NEW - Single focused implementations
 import { useAuth, useBranchContext, useActionClientContext } from '@/lib/session';
 ```

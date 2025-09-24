@@ -10,7 +10,7 @@ Recommended usage:
 - Keep enabled during development to inspect context, required fields, and errors
 
 Common pitfalls:
-- Missing tenant/branch context leads to submission errors → verify `useBranchContextWithLoading` and session
+- Missing tenant/branch context leads to submission errors → verify `useActionClientContext` and `useBranchContext`
 - Dynamic options are mocked → ensure integration with action system when going live
 
 

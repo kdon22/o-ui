@@ -105,7 +105,7 @@ export function useActionQuery<TData = any>(
   options?: ActionQueryOptions<TData>
 ) {
   const queryClient = useQueryClient();
-  const { session, branchContext } = useEnterpriseSession();
+  const { tenantId, branchContext } = useActionClientContext();
   const cacheContext = useOptionalCacheContext();
   
   // Generate cache key with branch context
@@ -124,11 +124,11 @@ export function useActionQuery<TData = any>(
 
   // Query function with ActionClient integration
   const queryFn = useCallback(async (): Promise<ActionResponse<TData>> => {
-    if (!session?.user?.tenantId) {
+    if (!tenantId) {
       throw new Error('No tenant context available');
     }
 
-    const actionClient = getActionClient(session.user.tenantId, branchContext);
+    const actionClient = getActionClient(tenantId);
     
     const actionRequest: ActionRequest = {
       action,
@@ -147,7 +147,7 @@ export function useActionQuery<TData = any>(
     }
 
     return response;
-  }, [action, data, session, branchContext, options?.bypassCache, options?.background]);
+  }, [action, data, tenantId, branchContext, options?.bypassCache, options?.background]);
 
   // TanStack Query integration with smart defaults
   return useQuery({
@@ -272,15 +272,15 @@ export function useActionMutation<TData = any, TError = Error, TVariables = any,
   options?: ActionMutationOptions<TData, TError, TVariables, TContext>
 ) {
   const queryClient = useQueryClient();
-  const { session, branchContext } = useEnterpriseSession();
+  const { tenantId, branchContext } = useActionClientContext();
 
   // Mutation function with ActionClient integration
   const mutationFn = useCallback(async (variables: TVariables): Promise<ActionResponse<TData>> => {
-    if (!session?.user?.tenantId) {
+    if (!tenantId) {
       throw new Error('No tenant context available');
     }
 
-    const actionClient = getActionClient(session.user.tenantId, branchContext);
+    const actionClient = getActionClient(tenantId);
     
     const actionRequest: ActionRequest = {
       action,
@@ -295,7 +295,7 @@ export function useActionMutation<TData = any, TError = Error, TVariables = any,
     }
 
     return response;
-  }, [action, session, branchContext]);
+  }, [action, tenantId, branchContext]);
 
   return useMutation({
     mutationFn,
@@ -1052,7 +1052,7 @@ const prefetchOfficeDetails = (officeId: string) => {
 - `src/hooks/query/cache-invalidation.ts` - Smart invalidation system
 
 ### **Integration Files**
-- `src/hooks/use-enterprise-action-api.ts` - Session and branch context
+- `src/lib/session` - `useActionClientContext`, `useBranchContext`
 - `src/components/providers/cache-provider.tsx` - Cache context provider
 
 ---

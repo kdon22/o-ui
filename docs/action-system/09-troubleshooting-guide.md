@@ -408,7 +408,7 @@ useEffect(() => {
 **Diagnosis**:
 ```typescript
 // Check branch context
-const { branchContext } = useEnterpriseSession();
+const { branchContext } = useActionClientContext();
 console.log('Current branch:', branchContext?.currentBranchId);
 console.log('Default branch:', branchContext?.defaultBranchId);
 ```

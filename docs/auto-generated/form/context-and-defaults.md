@@ -5,8 +5,8 @@ Default values:
 - Covers autoValue fields (IDs, tenant/branch, etc.) and schema `defaultValue`
 
 Session/branch:
-- `useBranchContextWithLoading()` to get `tenantId/currentBranchId`
-- `useSession()` for `session.user` context (tenant, branchContext)
+- `useActionClientContext()` to get `tenantId` and `branchContext`
+- `useBranchContext()` for branch switching and derived state
 
 Submission preparation:
 - `prepareSubmissionData` merges defaults + form data

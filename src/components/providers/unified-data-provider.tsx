@@ -11,9 +11,7 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
-import { useSession } from 'next-auth/react';
-import { useActionQuery } from '@/hooks/use-action-api';
-import { useCleanBranchContext } from '@/hooks/use-clean-branch-context';
+import { useBranchContext } from '@/lib/session';
 
 interface UnifiedDataContextValue {
   // Entities (with branch overlay already applied by IndexedDB)
@@ -46,8 +44,7 @@ interface UnifiedDataContextValue {
 const UnifiedDataContext = createContext<UnifiedDataContextValue | null>(null);
 
 export function UnifiedDataProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
-  const branchContext = useCleanBranchContext();
+  const branch = useBranchContext();
   
   // ✅ CRITICAL FIX: Don't make separate queries - just provide utilities
   // The existing action queries already have proper branch overlay logic
@@ -83,9 +80,9 @@ export function UnifiedDataProvider({ children }: { children: React.ReactNode })
     ruleIgnores,
     
     // Branch context
-    currentBranchId: branchContext.currentBranchId,
-    defaultBranchId: branchContext.defaultBranchId,
-    isFeatureBranch: branchContext.isFeatureBranch,
+    currentBranchId: branch.currentBranchId,
+    defaultBranchId: branch.defaultBranchId,
+    isFeatureBranch: branch.isFeatureBranch,
     
     // Loading states - simplified
     isLoading: false,

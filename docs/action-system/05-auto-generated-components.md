@@ -716,7 +716,7 @@ import {
 } from '@/hooks/use-action-api';
 
 // Branch context integration
-import { useBranchContextWithLoading } from '@/lib/context/branch-context';
+import { useBranchContext } from '@/lib/session';
 
 // Navigation context integration  
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context';
