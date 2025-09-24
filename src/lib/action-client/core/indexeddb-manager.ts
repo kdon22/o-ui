@@ -443,11 +443,12 @@ export class IndexedDBManager {
         const tx = this.db!.transaction(['__meta'], 'readwrite');
         const store = tx.objectStore('__meta');
         const meta = {
+          key: 'bootstrap', // ✅ FIXED: Use in-line key since store has keyPath: 'key'
           bootstrapped,
           lastBootstrapAt: Date.now(),
           version: this.version
         };
-        const req = store.put(meta, 'bootstrap');
+        const req = store.put(meta); // ✅ FIXED: No external key parameter needed
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
       });

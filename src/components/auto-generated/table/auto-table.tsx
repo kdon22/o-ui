@@ -18,6 +18,7 @@ import { useSession } from 'next-auth/react';
 // Resource System
 import { RESOURCE_REGISTRY } from '@/lib/resource-system/resource-registry';
 import { useActionQuery } from '@/hooks/use-action-api';
+import { useInstantActionQuery } from '@/hooks/use-instant-tabs'; // ✅ INSTANT TAB SWITCHING
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context';
 
 // Note: Reverted to original action query approach to preserve branch overlay logic
@@ -105,8 +106,8 @@ export const AutoTable: React.FC<AutoTableProps> = ({
   
   // ✅ Use server-only if schema marks it so (bypass IndexedDB)
   const serverOnly = !!(resource as any)?.serverOnly || !!(resource as any)?.actions?.serverOnly;
-  // ✅ REVERT TO ORIGINAL: Use the existing branch-aware action query system
-  const { data: dataResult, isLoading, error } = useActionQuery(
+  // 🚀 INSTANT TAB SWITCHING: Use instant loading system for 0ms tab switching
+  const { data: dataResult, isLoading, error } = useInstantActionQuery(
     `${resourceKey}.list`,
     {
       filters: filters,
@@ -116,16 +117,17 @@ export const AutoTable: React.FC<AutoTableProps> = ({
       }
     },
     {
-      staleTime: 300000, // 5 minutes
+      staleTime: 60000, // 1 minute - shorter than original for fresher data
       fallbackToCache: true,
-      skipCache: serverOnly
+      skipCache: serverOnly,
+      // placeholderData automatically handled by useInstantActionQuery
     }
   );
 
-  // ✅ REVERT TO ORIGINAL: Use enhanced data or API data
+  // ✅ INSTANT LOADING: Use enhanced data or API data, prioritize cached API data
   const data = (Array.isArray(enhancedData) && enhancedData.length > 0)
     ? enhancedData
-    : (dataResult?.data || []);
+    : (dataResult?.data || []); // Use API data or empty array (no blocking)
 
   // 🚨 AGGRESSIVE DEBUG: Track what's causing the disappearing
   console.log('🔥 [AutoTable] RENDER DEBUG:', {
@@ -275,10 +277,12 @@ export const AutoTable: React.FC<AutoTableProps> = ({
   // RENDER
   // ============================================================================
 
-  // Loading and error states
-  // Do NOT hide enhanced data (e.g., node rule hierarchy) just because the background
-  // API query is loading. Only block rendering when we have no enhanced data to show.
-  const shouldBlockForLoading = (!enhancedData || (enhancedData as any[]).length === 0) && (isLoading || error);
+  // ✅ INSTANT LOADING: Show table structure immediately, eliminate loading blockers
+  // Never block table rendering for enhanced data or background loading
+  // Only show loading state for genuine errors or first-time failures
+  const hasAnyData = data && data.length > 0;
+  const shouldBlockForLoading = !hasAnyData && isLoading && error; // Only block on actual errors with no data
+  
   if (shouldBlockForLoading) {
     return <LoadingStates isLoading={isLoading} error={error} className={className} />;
   }

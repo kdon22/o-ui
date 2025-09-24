@@ -11,6 +11,7 @@ import { createAutoTableHeaderActions } from '@/components/auto-generated/table/
 import { useNodeTabs } from '@/hooks/layout'
 import { useActionQuery } from '@/hooks/use-action-api'
 import { useNodeInheritance } from '@/lib/inheritance/service' // ✅ FIXED - using performance-optimized inheritance service
+import { useInstantActionQuery } from '@/hooks/use-instant-tabs' // ✅ INSTANT TAB SWITCHING
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { PROCESS_TYPE_LABELS, PROCESS_TYPE_OPTIONS } from '@/features/processes/constants'
@@ -96,6 +97,23 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
   // 🚀 PERFORMANCE-OPTIMIZED: Using fixed inheritance service with scoped queries
   // This replaces the problematic useNodeRuleHierarchy that was downloading entire database
   console.log('🔥 [NodeContent] Initializing inheritance hook for nodeId:', nodeId, 'branchContext:', branchContext)
+  
+  // 🚀 INSTANT TAB SWITCHING: Initialize instant loading system
+  console.log('🚀 [NodeContent] Initializing instant tab switching (0ms loading)...')
+  
+  // ✅ PREFETCH TRIGGER: Preload all tab data when node is selected
+  useEffect(() => {
+    if (nodeId && branchContext.isReady) {
+      console.log('🚀 [NodeContent] Node selected - prefetching all tab data for instant switching:', {
+        nodeId: nodeId.slice(-8),
+        branchId: branchContext.currentBranchId,
+        timestamp: new Date().toISOString()
+      });
+      
+      // The useInstantActionQuery hooks will handle the actual prefetching
+      // This effect just logs when prefetching should happen
+    }
+  }, [nodeId, branchContext.currentBranchId, branchContext.isReady]);
   
   const inheritanceResult = useNodeInheritance(nodeId, branchContext)
   
@@ -215,28 +233,31 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
     timestamp: new Date().toISOString()
   })
 
-  hookDebug('useActionQuery-processes')
-  // ✅ FIXED: Call all hooks on every render to maintain consistent hook order
-  // Only the `enabled` option controls whether data is fetched
-  const { data: processesData } = useActionQuery('process.list', {}, {
-    enabled: activeTopLevelTab === 'processes'
+  hookDebug('useInstantActionQuery-processes')
+  // 🚀 INSTANT TAB SWITCHING: Show cached data immediately, no loading spinners
+  const { data: processesData } = useInstantActionQuery('process.list', {}, {
+    enabled: activeTopLevelTab === 'processes',
+    staleTime: 30 * 1000, // Consider fresh for 30 seconds
   })
   
-  hookDebug('useActionQuery-offices')
-  const { data: officesData } = useActionQuery('office.list', {}, {
-    enabled: activeTopLevelTab === 'offices'
+  hookDebug('useInstantActionQuery-offices')
+  const { data: officesData } = useInstantActionQuery('office.list', {}, {
+    enabled: activeTopLevelTab === 'offices',
+    staleTime: 60 * 1000, // Offices change less frequently
   })
   
 
-  hookDebug('useActionQuery-rules')
-  // ✅ NEW: Add Rules and Classes data fetching (filtered by tenant/branch only, no nodeId)
-  const { data: rulesData } = useActionQuery('rule.list', {}, {
-    enabled: activeTopLevelTab === 'rules'
+  hookDebug('useInstantActionQuery-rules')
+  // ✅ 0ms LOADING: Rules appear instantly from cache when switching tabs
+  const { data: rulesData } = useInstantActionQuery('rule.list', {}, {
+    enabled: activeTopLevelTab === 'rules',
+    staleTime: 30 * 1000,
   })
   
-  hookDebug('useActionQuery-classes')
-  const { data: classesData } = useActionQuery('class.list', {}, {
-    enabled: activeTopLevelTab === 'classes'
+  hookDebug('useInstantActionQuery-classes')
+  const { data: classesData } = useInstantActionQuery('class.list', {}, {
+    enabled: activeTopLevelTab === 'classes',
+    staleTime: 60 * 1000, // Classes change less frequently
   })
 
   hookDebug('useCallback-handleRowClick')

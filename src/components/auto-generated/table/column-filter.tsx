@@ -25,25 +25,18 @@ export const ColumnFilter: React.FC<ColumnFilterProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus the input when dropdown opens - with better timing
+  // Auto-focus the input when dropdown opens - FIXED: single approach to prevent infinite re-renders
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      // Multiple approaches to ensure focus works
-      const focusInput = () => {
+      // ✅ SINGLE FOCUS ATTEMPT: Prevents infinite re-render loop
+      const timeoutId = setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
           inputRef.current.select();
         }
-      };
+      }, 150);
       
-      // Try immediately
-      focusInput();
-      
-      // Also try with timeout as fallback
-      setTimeout(focusInput, 100);
-      
-      // And with requestAnimationFrame
-      requestAnimationFrame(focusInput);
+      return () => clearTimeout(timeoutId); // ✅ CLEANUP: Prevent memory leaks
     }
   }, [isOpen]);
 
@@ -62,18 +55,10 @@ export const ColumnFilter: React.FC<ColumnFilterProps> = ({
     }
   };
 
-  // Handle dropdown opening to ensure focus
+  // Handle dropdown opening to ensure focus - FIXED: Removed redundant focus attempt
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (open) {
-      // Extra focus attempt when opening
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          inputRef.current.select();
-        }
-      }, 150);
-    }
+    // ✅ SIMPLIFIED: Focus is now handled by useEffect only, prevents double-focus issues
   };
 
   return (
