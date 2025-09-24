@@ -12,6 +12,15 @@ import type { AuthHookReturn } from '../types';
 export function useAuth(): AuthHookReturn {
   const { data: session, status, update } = useSession();
   
+  // DEBUG: Log NextAuth session state
+  console.log('🔍 [useAuth] NextAuth state:', {
+    status,
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    userTenantId: session?.user?.tenantId,
+    timestamp: new Date().toISOString()
+  });
+  
   const login = useCallback(() => {
     signIn();
   }, []);
@@ -28,7 +37,7 @@ export function useAuth(): AuthHookReturn {
     // Auth state
     isAuthenticated: !!session?.user,
     isLoading: status === 'loading',
-    isReady: status === 'authenticated',
+    isReady: status !== 'loading' && !!session?.user, // More lenient condition
     userId: session?.user?.id || null,
     userEmail: session?.user?.email || null,
     tenantId: session?.user?.tenantId || null,

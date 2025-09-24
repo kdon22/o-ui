@@ -37,14 +37,10 @@ export class UnifiedActionClient extends ActionClientCore {
       return;
     }
     
-    console.log('🚀 [UnifiedActionClient] Initializing unified data layer');
-    
     // Initialize unified resource system
     this.resourceRegistry = await initializeUnifiedResourceSystem(this, branchContext);
     
     this.unifiedInitialized = true;
-    
-    console.log('✅ [UnifiedActionClient] Unified data layer ready');
   }
   
   // ============================================================================

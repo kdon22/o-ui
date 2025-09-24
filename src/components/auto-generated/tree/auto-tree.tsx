@@ -18,7 +18,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils/generalUtils'
-import { useNodeData } from '@/components/providers/node-data-provider'
+import { useUnifiedApp } from '@/components/providers/app-provider'
 import { useNodeIdResolver } from '@/lib/utils/entity-id-resolver'
 import { useNavigationContext } from '@/lib/context/navigation-context'
 import { TreeNode } from './tree-node'
@@ -113,18 +113,20 @@ export function AutoTree({
   const { navigateFromProcess, navigateFromNode } = useNavigationContext();
 
   // ============================================================================
-  // DATA FETCHING - Single Source of Truth via NodeDataProvider
+  // DATA FETCHING - Single Source of Truth via App Provider
   // ============================================================================
   // Get all nodes from centralized provider - eliminates competing queries
   const {
     nodes,
-    isLoading: nodesLoading,
-    isInitialLoading,
-    error: nodeError,
-    currentBranchId: contextBranchId,
-    totalNodes,
-    visibleNodes
-  } = useNodeData();
+    isNodesLoading: nodesLoading,
+    currentBranchId: contextBranchId
+  } = useUnifiedApp();
+  
+  // Derived state for compatibility
+  const isInitialLoading = nodesLoading;
+  const nodeError = null; // TODO: Add error handling to app provider
+  const totalNodes = nodes.length;
+  const visibleNodes = nodes.length;
 
   // ✅ OPTIMISTIC LOADING: Enhanced loading state management
   const hasData = nodes.length > 0;

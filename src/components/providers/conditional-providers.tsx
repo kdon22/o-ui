@@ -1,57 +1,82 @@
+/**
+ * Conditional Providers - Clean Enterprise Architecture
+ * 
+ * GOLD STANDARD: Smart routing with minimal providers
+ * - Auth routes: Only SessionProvider + QueryClient
+ * - App routes: Full UnifiedAppProviders with loading boundary
+ * - Public routes: Minimal QueryClient only
+ * - No nested provider complexity
+ */
+
 'use client';
 
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
-import { UnifiedAppProviders, AppLoadingBoundary, useUnifiedApp } from './app-providers-unified';
+import { UnifiedAppProviders, AppLoadingBoundary, useUnifiedApp } from './app-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Auth routes that don't need heavy providers
+// ============================================================================
+// ROUTE CLASSIFICATION
+// ============================================================================
+
 const AUTH_ROUTES = [
   '/login',
-  '/devices',
+  '/devices', 
   '/auth',
-  // Public prompt execution pages should bypass heavy providers
+];
+
+const PUBLIC_ROUTES = [
   '/prompt/execute',
 ];
 
-// Check if current path is an auth route
 function isAuthRoute(pathname: string): boolean {
   return AUTH_ROUTES.some(route => 
     pathname === route || pathname.startsWith(`${route}/`)
   );
 }
 
-// Prompt execution is fully public and should avoid session/cache init
-function isPromptPublicRoute(pathname: string): boolean {
-  return pathname === '/prompt/execute' || pathname.startsWith('/prompt/execute/');
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
 }
 
-/**
- * Conditional Provider Wrapper
- * Only loads heavy providers (session, cache, data) for app routes
- * Auth routes get minimal SessionProvider only
- */
+// ============================================================================
+// SINGLETON QUERY CLIENT FOR PUBLIC/AUTH ROUTES
+// ============================================================================
+
+const lightQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30, // 30 seconds for minimal routes
+      gcTime: 1000 * 60, // 1 minute
+      refetchOnWindowFocus: false,
+      retry: 0, // No retries for public routes
+    },
+  },
+});
+
+// ============================================================================
+// CONDITIONAL PROVIDER WRAPPER
+// ============================================================================
+
 export function ConditionalProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuth = isAuthRoute(pathname);
-  const isPrompt = isPromptPublicRoute(pathname);
-  // Lightweight query client for public/auth routes (memoized)
-  const [queryClient] = useState(() => new QueryClient());
-
-  // Prompt execute: only QueryClientProvider, no session/workspace
-  if (isPrompt) {
+  
+  // Public routes: Minimal providers
+  if (isPublicRoute(pathname)) {
     return (
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={lightQueryClient}>
         {children}
       </QueryClientProvider>
     );
   }
 
-  // Auth routes: minimal providers only
-  if (isAuth) {
+  // Auth routes: SessionProvider + QueryClient only
+  if (isAuthRoute(pathname)) {
     return (
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={lightQueryClient}>
         <SessionProvider>
           {children}
         </SessionProvider>
@@ -59,7 +84,7 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
     );
   }
 
-  // App routes: full provider stack with loading boundary
+  // App routes: Full provider stack with loading boundary
   return (
     <UnifiedAppProviders>
       <AppLoadingBoundary>
@@ -69,5 +94,8 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
   );
 }
 
-// Re-export the useUnifiedApp hook for components to use
+// ============================================================================
+// RE-EXPORT HOOK FOR COMPONENTS
+// ============================================================================
+
 export { useUnifiedApp };

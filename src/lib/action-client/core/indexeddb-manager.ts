@@ -18,14 +18,20 @@ import type { QueryOptions } from '@/lib/resource-system/schemas';
 import { CompoundKeyManager } from '../utils/compound-key-manager';
 import { getIndexedDBStoreConfigs } from '@/lib/resource-system/resource-registry';
 
+// Global initialization locks to prevent multiple simultaneous database opens
+const initializationLocks = new Map<string, Promise<IDBDatabase>>();
+const dbInstances = new Map<string, IDBDatabase>();
+
 export class IndexedDBManager {
   private db: IDBDatabase | null = null;
   private dbName: string;
-  private version = 16; // ✅ Added tableData store for user data rows
+  private version = 17; // 🔧 ZOMBIE FIX: Increment to force upgrade trigger
   private isReady = false;
   private readyPromise: Promise<void>;
   private tenantId: string;
   private useCompoundKeys = true;
+  private fallbackMode = false; // If true, skip IndexedDB operations
+  private recoveryScheduled = false;
 
   constructor(tenantId: string, useCompoundKeys = true) {
     if (!tenantId) {
@@ -34,7 +40,70 @@ export class IndexedDBManager {
     this.tenantId = tenantId;
     this.dbName = `o-${tenantId}`;
     this.useCompoundKeys = useCompoundKeys;
-    this.readyPromise = this.initialize();
+    
+    // Use singleton pattern to prevent multiple simultaneous initializations
+    this.readyPromise = this.getOrCreateDatabase().then(async (db) => {
+      this.db = db;
+      this.isReady = true;
+      console.log('🎉 [IndexedDBManager] Database initialization successful:', { 
+        dbName: this.dbName, 
+        version: this.version,
+        stores: db.objectStoreNames.length,
+        storeNames: Array.from(db.objectStoreNames),
+        bootstrapped: await this.isBootstrapped()
+      });
+      
+    }).catch((error) => {
+      console.warn('⚠️ [IndexedDBManager] Initialization failed, enabling fallback mode:', error.message);
+      this.fallbackMode = true;
+      this.isReady = true; // Mark as ready but in fallback mode
+      console.log('✅ [IndexedDBManager] Fallback mode enabled - app will use API-only operations');
+    });
+
+    // Expose for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).__indexedDBManager__ = this;
+    }
+  }
+
+  /**
+   * Get or create database using singleton pattern to prevent multiple simultaneous opens
+   */
+  private async getOrCreateDatabase(): Promise<IDBDatabase> {
+    const dbKey = `${this.dbName}_v${this.version}`;
+    
+    // Check if database is already open
+    if (dbInstances.has(dbKey)) {
+      const existingDb = dbInstances.get(dbKey)!;
+      console.log('♻️ [IndexedDBManager] Reusing existing database instance:', { dbName: this.dbName });
+      return existingDb;
+    }
+    
+    // Check if initialization is already in progress
+    if (initializationLocks.has(dbKey)) {
+      console.log('⏳ [IndexedDBManager] Waiting for ongoing initialization:', { dbName: this.dbName });
+      return await initializationLocks.get(dbKey)!;
+    }
+    
+    // Start new initialization
+    console.log('🚀 [IndexedDBManager] Starting new database initialization:', { 
+      dbName: this.dbName, 
+      version: this.version,
+      tenantId: this.tenantId 
+    });
+    
+    const initPromise = this.openDatabase();
+    initializationLocks.set(dbKey, initPromise);
+    
+    try {
+      const db = await initPromise;
+      dbInstances.set(dbKey, db);
+      initializationLocks.delete(dbKey);
+      return db;
+    } catch (error) {
+      initializationLocks.delete(dbKey);
+      throw error;
+    }
   }
 
   setTenantId(tenantId: string): void {
@@ -44,7 +113,14 @@ export class IndexedDBManager {
       this.dbName = `o-${tenantId}`;
       this.isReady = false;
       this.db = null;
-      this.readyPromise = this.initialize();
+      this.readyPromise = this.getOrCreateDatabase().then((db) => {
+        this.db = db;
+        this.isReady = true;
+      }).catch((error) => {
+        console.warn('⚠️ [IndexedDBManager] Tenant switch failed, enabling fallback mode:', error.message);
+        this.fallbackMode = true;
+        this.isReady = true;
+      });
     }
   }
 
@@ -80,59 +156,359 @@ export class IndexedDBManager {
   // INITIALIZATION
   // ============================================================================
 
-  private async initialize(): Promise<void> {
-    if (typeof window === 'undefined') {
-      console.warn('⚠️ IndexedDB not available in server environment');
+  /**
+   * Force complete database deletion - used for zombie database recovery
+   */
+  private async forceDeleteDatabase(): Promise<void> {
+    if (typeof window === 'undefined' || !window.indexedDB) {
       return;
     }
 
+    return new Promise((resolve, reject) => {
+      console.log('🔨 [IndexedDBManager] FORCE DELETING DATABASE:', this.dbName);
+      
+      const deleteRequest = indexedDB.deleteDatabase(this.dbName);
+      
+      deleteRequest.onerror = () => {
+        console.error('❌ [IndexedDBManager] Force delete failed:', deleteRequest.error);
+        reject(deleteRequest.error);
+      };
+      
+      deleteRequest.onsuccess = () => {
+        console.log('✅ [IndexedDBManager] Force delete successful:', this.dbName);
+        resolve();
+      };
+      
+      deleteRequest.onblocked = () => {
+        console.warn('⚠️ [IndexedDBManager] Delete blocked - close other tabs');
+        // Continue anyway - sometimes this resolves itself
+        setTimeout(() => resolve(), 1000);
+      };
+    });
+  }
 
+  /**
+   * Detect zombie database state (exists at expected version but has no stores)
+   */
+  private async detectZombieDatabase(): Promise<boolean> {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      const request = indexedDB.open(this.dbName);
+      
+      request.onerror = () => {
+        console.log('🔍 [IndexedDBManager] Database does not exist - not zombie');
+        resolve(false);
+      };
+      
+      request.onsuccess = () => {
+        const db = request.result;
+        const isZombie = db.version === this.version - 1 && db.objectStoreNames.length === 0;
+        
+        console.log('🔍 [IndexedDBManager] Zombie detection:', {
+          dbName: this.dbName,
+          dbVersion: db.version,
+          expectedPreviousVersion: this.version - 1,
+          storeCount: db.objectStoreNames.length,
+          isZombie
+        });
+        
+        db.close();
+        resolve(isZombie);
+      };
+      
+      request.onupgradeneeded = () => {
+        console.log('🔍 [IndexedDBManager] Database upgrade needed - not zombie');
+        request.transaction?.abort();
+        resolve(false);
+      };
+    });
+  }
+
+  /**
+   * Simple database opening with minimal complexity
+   */
+  private async openDatabase(): Promise<IDBDatabase> {
+    if (typeof window === 'undefined') {
+      throw new Error('IndexedDB not available in server environment');
+    }
+
+    if (!window.indexedDB) {
+      throw new Error('IndexedDB not supported in this browser');
+    }
+
+    console.log('🔍 [IndexedDBManager] Opening IndexedDB database directly...');
 
     return new Promise((resolve, reject) => {
+      // Short timeout: warn at 1s, fail at 2s for local IndexedDB (should be instant)
+      const warnTimeout = setTimeout(() => {
+        console.warn('⏰ [IndexedDBManager] Database open taking longer than expected (1s)...');
+      }, 1000);
+      const hardTimeout = setTimeout(() => {
+        console.warn('⚠️ [IndexedDBManager] Database open timeout (2s) - enabling fallback mode');
+        clearTimeout(warnTimeout);
+        reject(new Error(`IndexedDB open timed out after 2 seconds`));
+      }, 2000);
+      
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        console.error('❌ IndexedDB initialization failed:', request.error);
-        reject(request.error);
+        clearTimeout(warnTimeout);
+        clearTimeout(hardTimeout);
+        console.error('❌ [IndexedDBManager] Database open failed:', {
+          error: request.error,
+          dbName: this.dbName,
+          errorCode: request.error?.name,
+          errorMessage: request.error?.message
+        });
+        reject(new Error(`IndexedDB open failed: ${request.error?.message || 'Unknown error'}`));
       };
       
-      request.onsuccess = async () => {
-        this.db = request.result;
-        this.isReady = true;
-        resolve();
+      request.onsuccess = () => {
+        clearTimeout(warnTimeout);
+        clearTimeout(hardTimeout);
+        const db = request.result;
+        console.log('🎉🎉🎉 [IndexedDBManager] DATABASE OPENED SUCCESSFULLY!');
+        console.log('🎉 [IndexedDBManager] Database opened successfully:', {
+          dbName: this.dbName,
+          version: this.version,
+          actualVersion: db.version,
+          stores: db.objectStoreNames.length,
+          storeNames: Array.from(db.objectStoreNames),
+          upgradeTriggered: db.objectStoreNames.length > 0 ? 'Yes (has stores)' : 'No (empty)'
+        });
+        
+        // CRITICAL: Check if database opened without upgrade and is empty (zombie state)
+        if (db.objectStoreNames.length === 0) {
+          console.error('🚨🚨🚨 [IndexedDBManager] ZOMBIE DATABASE STILL EXISTS!');
+          console.error('🚨 [IndexedDBManager] Database opened without upgrade trigger');
+          console.error('🚨 [IndexedDBManager] Version:', db.version, 'Expected:', this.version);
+          console.error('🚨 [IndexedDBManager] This should have been caught by zombie detection');
+          console.error('🚨 [IndexedDBManager] REJECTING - this will trigger fallback mode');
+          
+          // Close the empty database and reject to trigger recovery
+          db.close();
+          reject(new Error('Zombie database detected - empty database at current version'));
+          return;
+        }
+        
+        resolve(db);
       };
 
       request.onupgradeneeded = (event) => {
+        console.log('🔧🔧🔧 [IndexedDBManager] DATABASE UPGRADE TRIGGERED!');
+        console.log('🔧 [IndexedDBManager] Database upgrade needed:', {
+          oldVersion: event.oldVersion,
+          newVersion: event.newVersion,
+          dbName: this.dbName,
+          currentVersion: this.version,
+          timestamp: new Date().toISOString()
+        });
         const db = (event.target as IDBOpenDBRequest).result;
-        this.handleUpgrade(db, event.oldVersion, event.newVersion || this.version);
+        
+        try {
+          console.log('🔧 [IndexedDBManager] Calling handleUpgrade...');
+          this.handleUpgrade(db, event.oldVersion, event.newVersion || this.version);
+          console.log('✅ [IndexedDBManager] handleUpgrade completed successfully');
+        } catch (error) {
+          console.error('❌ [IndexedDBManager] handleUpgrade failed:', error);
+          throw error;
+        }
       };
 
       request.onblocked = () => {
-        console.warn('⚠️ IndexedDB upgrade blocked - close other tabs');
+        clearTimeout(warnTimeout);
+        clearTimeout(hardTimeout);
+        console.error('🚨 [IndexedDBManager] Database blocked by another tab or process');
+        reject(new Error('IndexedDB blocked - close all other tabs using this app'));
+      };
+    });
+  }
+
+  /**
+   * Check if IndexedDB storage is available and not exceeded
+   * More lenient approach - warns but doesn't fail hard to allow fallback
+   */
+  private async checkStorageAvailability(): Promise<void> {
+    try {
+      // Check if we can estimate storage
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const estimate = await navigator.storage.estimate();
+        const usage = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        const usagePercent = quota > 0 ? Math.round((usage / quota) * 100) : 0;
+
+        console.log('📊 [IndexedDBManager] Storage status:', {
+          usageMB: Math.round(usage / 1024 / 1024),
+          quotaMB: Math.round(quota / 1024 / 1024),
+          usagePercent: `${usagePercent}%`,
+          available: quota - usage > 10 * 1024 * 1024 // At least 10MB free
+        });
+
+        if (quota > 0 && (quota - usage) < 10 * 1024 * 1024) {
+          console.warn('⚠️ [IndexedDBManager] Low storage space (less than 10MB available)');
+          // Don't throw here - let it proceed and potentially fallback
+        }
+      }
+
+      // Test IndexedDB basic functionality with shorter timeout
+      const testDbName = `test-${Date.now()}`;
+      await new Promise<void>((resolve, reject) => {
+        const testTimeout = setTimeout(() => {
+          console.warn('⏰ [IndexedDBManager] IndexedDB test taking longer than expected (1s)');
+        }, 1000);
+        
+        // Reduced timeout from 3s to 2s for faster fallback
+        const testHardTimeout = setTimeout(() => {
+          console.warn('⚠️ [IndexedDBManager] IndexedDB test timeout (2s) - proceeding with fallback');
+          clearTimeout(testTimeout);
+          // Don't reject - allow fallback to API-only mode
+          resolve();
+        }, 2000);
+
+        const testRequest = indexedDB.open(testDbName, 1);
+        
+        testRequest.onsuccess = () => {
+          clearTimeout(testTimeout);
+          clearTimeout(testHardTimeout);
+          const testDb = testRequest.result;
+          testDb.close();
+          // Clean up test database
+          const deleteRequest = indexedDB.deleteDatabase(testDbName);
+          deleteRequest.onsuccess = () => resolve();
+          deleteRequest.onerror = () => resolve(); // Don't fail on cleanup
+        };
+        
+        testRequest.onerror = () => {
+          clearTimeout(testTimeout);
+          clearTimeout(testHardTimeout);
+          console.warn('⚠️ [IndexedDBManager] IndexedDB test failed, proceeding with fallback:', testRequest.error?.message);
+          // Don't reject - allow fallback to API-only mode
+          resolve();
+        };
+      });
+
+    } catch (error) {
+      console.warn('⚠️ [IndexedDBManager] Storage availability check failed, proceeding with fallback:', error);
+      // Don't throw - let the system proceed and fallback gracefully
+    }
+  }
+
+
+  // ============================================================================
+  // BOOTSTRAP SSOT - CLEAN, NO LEGACY
+  // ============================================================================
+
+  /**
+   * SSOT: Check bootstrap status (read-only)
+   */
+  async isBootstrapped(): Promise<boolean> {
+    if (!this.db || this.fallbackMode) return false;
+
+    try {
+      const meta = await new Promise<any | null>((resolve) => {
+        try {
+          const tx = this.db!.transaction(['__meta'], 'readonly');
+          const store = tx.objectStore('__meta');
+          const req = store.get('bootstrap');
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch {
+          resolve(null);
+        }
+      });
+
+      return !!(meta && meta.bootstrapped);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * SSOT: Set bootstrap complete (write)
+   */
+  async setBootstrapped(bootstrapped: boolean = true): Promise<void> {
+    if (!this.db || this.fallbackMode) return;
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = this.db!.transaction(['__meta'], 'readwrite');
+        const store = tx.objectStore('__meta');
+        const meta = {
+          bootstrapped,
+          lastBootstrapAt: Date.now(),
+          version: this.version
+        };
+        const req = store.put(meta, 'bootstrap');
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+      
+      console.log('✅ [IndexedDBManager] Bootstrap state updated:', { bootstrapped });
+    } catch (error) {
+      console.error('❌ [IndexedDBManager] Failed to set bootstrap state:', error);
+    }
+  }
+
+  /**
+   * Check if a store is empty
+   */
+  private async isStoreEmpty(storeName: string): Promise<boolean> {
+    if (!this.db) return true;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readonly');
+      const store = transaction.objectStore(storeName);
+      const countRequest = store.count();
+
+      countRequest.onsuccess = () => {
+        const count = countRequest.result;
+        console.log(`🔢 [IndexedDBManager] Store ${storeName} contains ${count} items`);
+        resolve(count === 0);
+      };
+
+      countRequest.onerror = () => {
+        console.warn(`⚠️ [IndexedDBManager] Failed to count items in ${storeName}`);
+        resolve(true); // Assume empty on error
+      };
+
+      transaction.onerror = () => {
+        resolve(true); // Assume empty on error
       };
     });
   }
 
     private handleUpgrade(db: IDBDatabase, oldVersion: number, newVersion: number): void {
-
+    console.log('🔧 [IndexedDB] Starting handleUpgrade...', { 
+      oldVersion, 
+      newVersion, 
+      timestamp: new Date().toISOString() 
+    });
     
-    // Delete all existing stores for clean upgrade
-    if (oldVersion > 0) {
-      const existingStores = Array.from(db.objectStoreNames);
-      existingStores.forEach(storeName => {
-        try {
-          db.deleteObjectStore(storeName);
-
-        } catch (error) {
-          console.error(`❌ Failed to delete store ${storeName}:`, error);
-        }
-      });
-    }
+    // NOTE: Do not delete existing stores during upgrades.
+    // Perform additive upgrades only (create missing stores and indexes).
     
     // Create/update stores
     try {
+      console.log('📋 [IndexedDB] Getting store configurations...');
       // Get store configurations - call the function to get actual array
       const storeConfigs = getIndexedDBStoreConfigs();
+      console.log('✅ [IndexedDB] Store configs loaded:', { 
+        count: storeConfigs?.length || 0,
+        configsType: typeof storeConfigs,
+        isArray: Array.isArray(storeConfigs),
+        firstConfig: storeConfigs?.[0],
+        sampleNames: storeConfigs?.slice(0, 5).map(s => s?.name),
+        configs: storeConfigs 
+      });
+      
+      // CRITICAL DEBUG: Check if store configs are empty
+      if (!storeConfigs || storeConfigs.length === 0) {
+        console.error('🚨🚨🚨 [IndexedDB] STORE CONFIGS ARE EMPTY! This is why no stores are created.');
+        console.error('🚨 [IndexedDB] getIndexedDBStoreConfigs() returned:', storeConfigs);
+      }
       
       console.log('🚀 [IndexedDB] Creating stores:', {
         totalStores: storeConfigs.length,
@@ -143,42 +519,97 @@ export class IndexedDBManager {
       
 
       
-      storeConfigs.forEach((storeConfig: any) => {
+      console.log('🔨 [IndexedDB] Starting store creation loop...');
+      storeConfigs.forEach((storeConfig: any, index: number) => {
         const storeName = storeConfig.name;
+        console.log(`🔨 [IndexedDB] Creating store ${index + 1}/${storeConfigs.length}: ${storeName}`);
+        
         try {
           if (db.objectStoreNames.contains(storeName)) {
+            console.log(`⚠️ [IndexedDB] Store ${storeName} already exists, skipping`);
             return; // Store already exists in this upgrade transaction
           }
           
           // Use compound keys if enabled, otherwise use single key
           const keyPath = this.useCompoundKeys ? undefined : (storeConfig?.keyPath || 'id');
+          console.log(`🔨 [IndexedDB] Creating store ${storeName} with:`, { 
+            keyPath, 
+            autoIncrement: storeConfig?.autoIncrement || false,
+            useCompoundKeys: this.useCompoundKeys 
+          });
+          
           const store = db.createObjectStore(storeName, {
             keyPath,
             autoIncrement: storeConfig?.autoIncrement || false
           });
+          console.log(`✅ [IndexedDB] Store ${storeName} created successfully`);
 
           // Create indexes
           if (storeConfig?.indexes) {
-            storeConfig.indexes.forEach((index: any) => {
+            console.log(`📇 [IndexedDB] Creating ${storeConfig.indexes.length} indexes for ${storeName}`);
+            storeConfig.indexes.forEach((index: any, indexIndex: number) => {
+              console.log(`📇 [IndexedDB] Creating index ${indexIndex + 1}: ${index.name}`);
               store.createIndex(index.name, index.keyPath, { unique: index.unique || false });
+              console.log(`✅ [IndexedDB] Index ${index.name} created`);
             });
           }
-
+          
+          console.log(`✅ [IndexedDB] Store ${storeName} fully configured`);
 
         } catch (error) {
           console.error(`❌ Error configuring store ${storeName}:`, error);
+          // Don't rethrow - continue with other stores
         }
       });
+      
+      // Ensure meta store exists for bootstrap state tracking
+      try {
+        const metaStoreName = '__meta';
+        if (!db.objectStoreNames.contains(metaStoreName)) {
+          console.log(`🔨 [IndexedDB] Creating meta store: ${metaStoreName}`);
+          db.createObjectStore(metaStoreName, { keyPath: 'key' });
+          console.log('✅ [IndexedDB] Meta store created');
+        }
+      } catch (error) {
+        console.error('❌ Error ensuring meta store:', error);
+      }
+
+      console.log('🎉 [IndexedDB] All stores creation completed');
     } catch (error) {
       console.error(`❌ Error accessing store configurations:`, error);
     }
+    
+    console.log('✅ [IndexedDB] handleUpgrade completed successfully - should trigger onsuccess next');
   }
 
 
 
   private async ensureReady(): Promise<void> {
+    console.log('🔍 [IndexedDBManager] ensureReady called:', {
+      isReady: this.isReady,
+      fallbackMode: this.fallbackMode,
+      dbName: this.dbName,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Skip background recovery attempts to prevent infinite loops
+    if (this.fallbackMode) {
+      console.log('⚠️ [IndexedDBManager] In fallback mode - skipping background recovery to prevent loops');
+    }
+
     if (!this.isReady) {
-      await this.readyPromise;
+      console.log('🔄 [IndexedDBManager] Waiting for readyPromise...');
+      try {
+        await this.readyPromise;
+        console.log('✅ [IndexedDBManager] readyPromise resolved, database ready');
+      } catch (error) {
+        console.log('⚠️ [IndexedDBManager] readyPromise failed but that\'s expected in fallback mode');
+        // readyPromise failure is handled in constructor, so this is expected
+      }
+    } else {
+      console.log('✅ [IndexedDBManager] Database already ready', { 
+        fallbackMode: this.fallbackMode 
+      });
     }
   }
 
@@ -188,6 +619,13 @@ export class IndexedDBManager {
 
   async get<T>(storeName: string, key: StorageKey): Promise<T | null> {
     await this.ensureReady();
+    
+    // Fallback mode: return null (no data available)
+    if (this.fallbackMode) {
+      console.log('⚠️ [IndexedDBManager] get() called in fallback mode, returning null');
+      return null;
+    }
+    
     if (!this.db) return null;
 
     return new Promise((resolve, reject) => {
@@ -222,7 +660,19 @@ export class IndexedDBManager {
   }
 
   async set<T>(storeName: string, data: T, key?: StorageKey): Promise<void> {
-    await this.ensureReady();
+    // Non-blocking: if DB not ready within a short timeout, skip persistence
+    const readyQuickly = await this.waitUntilReadyOrTimeout(5000);
+    if (!readyQuickly) {
+      console.warn('[IndexedDB.set] Skipping write because DB not ready within timeout', { storeName });
+      return;
+    }
+    
+    // Fallback mode: silently succeed (no persistence)
+    if (this.fallbackMode) {
+      console.log('⚠️ [IndexedDBManager] set() called in fallback mode, operation ignored');
+      return;
+    }
+    
     if (!this.db) return;
 
     // 🔥 CRITICAL DEBUG: Log all set operations to trace key usage
@@ -273,7 +723,13 @@ export class IndexedDBManager {
   }
 
   async setMany(storeName: string, items: any[]): Promise<void> {
-    await this.ensureReady();
+    const readyQuickly = await this.waitUntilReadyOrTimeout(5000);
+    if (!readyQuickly || !items.length) {
+      if (items.length) {
+        console.warn('[IndexedDB.setMany] Skipping writes because DB not ready within timeout', { storeName, count: items.length });
+      }
+      return;
+    }
     if (!this.db || !items.length) return;
 
     return new Promise((resolve, reject) => {
@@ -445,94 +901,94 @@ export class IndexedDBManager {
     branchContext: BranchContext | null,
     options?: QueryOptions
   ): Promise<any[]> {
-    await this.ensureReady();
-    if (!this.db) return [];
+    console.log('🔍 [IndexedDBManager] Starting getAllBranchAware:', {
+      storeName,
+      hasBranchContext: !!branchContext,
+      currentBranchId: branchContext?.currentBranchId,
+      defaultBranchId: branchContext?.defaultBranchId,
+      hasOptions: !!options,
+      timestamp: new Date().toISOString()
+    });
 
+    console.log('🔍 [IndexedDBManager] Step 1: Ensuring database ready...');
+    await this.ensureReady();
+    
+    // CRITICAL FIX: Handle fallback mode
+    if (this.fallbackMode) {
+      console.log('⚠️ [IndexedDBManager] getAllBranchAware() called in fallback mode, returning empty array');
+      return [];
+    }
+    
+    console.log('🔍 [IndexedDBManager] Step 2: Checking database availability...');
+    if (!this.db) {
+      console.log('⚠️ [IndexedDBManager] Database not available, returning empty array');
+      return [];
+    }
+
+    console.log('🔍 [IndexedDBManager] Step 3: Creating Promise for IndexedDB operation...');
     return new Promise((resolve, reject) => {
       try {
+        console.log('🔍 [IndexedDBManager] Step 4: Validating store existence...');
         // Check if store exists before creating transaction
         const availableStores = Array.from(this.db!.objectStoreNames);
+        
+        console.log('🔍 [IndexedDBManager] Available stores check:', {
+          requestedStore: storeName,
+          storeExists: availableStores.includes(storeName),
+          availableStores: availableStores.slice(0, 10),
+          totalStores: availableStores.length
+        });
+        
         if (!availableStores.includes(storeName)) {
           console.error('🚨 [IndexedDB] Store not found:', {
             requestedStore: storeName,
             availableStores: availableStores.slice(0, 10), // Show first 10 stores
             totalStores: availableStores.length
           });
-          reject(new Error(`IndexedDB store '${storeName}' not found. Available: ${availableStores.length} stores`));
+          
+          // CIRCUIT BREAKER: Prevent infinite loops by gracefully returning empty results
+          console.warn('🔄 [IndexedDB] Returning empty result to prevent infinite retry loop');
+          resolve([]); // Return empty array instead of rejecting
           return;
         }
         
+        console.log('🔍 [IndexedDBManager] Step 5: Creating transaction...');
         const transaction = this.db!.transaction([storeName], 'readonly');
+        
+        console.log('🔍 [IndexedDBManager] Step 6: Getting object store...');
         const store = transaction.objectStore(storeName);
+        
+        console.log('🔍 [IndexedDBManager] Step 7: Initiating getAll() request...');
         const request = store.getAll();
 
-        request.onsuccess = () => {
-          let results = request.result || [];
+        // Add transaction error handling
+        transaction.onerror = (event) => {
+          console.error('🚨 [IndexedDBManager] Transaction error:', event);
+          reject(new Error(`Transaction failed: ${event}`));
+        };
 
-          // Branch-aware overlay: pick one record per lineage (prefer current branch, then default); never leak other branches
+        transaction.onabort = (event) => {
+          console.error('🚨 [IndexedDBManager] Transaction aborted:', event);
+          reject(new Error(`Transaction aborted: ${event}`));
+        };
+
+        request.onsuccess = () => {
+          console.log('🔍 [IndexedDBManager] Step 8: IndexedDB request successful, processing results...');
+          
+          let results = request.result || [];
+          
+          console.log('🔍 [IndexedDBManager] Raw IndexedDB results:', {
+            storeName,
+            rawResultsType: Array.isArray(results) ? 'array' : typeof results,
+            rawResultsLength: Array.isArray(results) ? results.length : 'N/A',
+            hasResults: !!results,
+            timestamp: new Date().toISOString()
+          });
+
+          // Branch-strict filtering at storage layer (no overlay here)
           if (branchContext && this.useCompoundKeys) {
             const currentBranchId = branchContext.currentBranchId;
-            const defaultBranchId = branchContext.defaultBranchId;
-
-            // DEBUG: before overlay
-            try {
-              const dist = Array.isArray(results) ? [...new Set(results.map((r: any) => r?.branchId))] : [];
-              console.log('🔎 [IndexedDBManager.getAllBranchAware] pre-overlay distribution', {
-                storeName,
-                count: Array.isArray(results) ? results.length : 0,
-                branchIds: dist,
-                currentBranchId,
-                defaultBranchId
-              });
-            } catch {}
-
-            // Deterministic lineage grouping
-            const getLineageKey = (item: any): string => {
-              if (item && typeof item === 'object' && item.__lineageKey) return String(item.__lineageKey);
-              return getJunctionLineageKey(storeName, item);
-            };
-
-            // Consider only records from current or default branch; also include legacy unscoped records
-            const candidates = results.filter((it: any) => (
-              it.branchId === currentBranchId || it.branchId === defaultBranchId || !it.branchId
-            ));
-
-            // If viewing the default branch, return only default-branch items
-            if (currentBranchId === defaultBranchId) {
-              results = candidates.filter((it: any) => it.branchId === defaultBranchId || !it.branchId);
-            } else {
-              // Group by lineage key and select deterministic winner per group
-              const groups = new Map<string, any[]>();
-              for (const item of candidates) {
-                const key = getLineageKey(item);
-                const arr = groups.get(key) || [];
-                arr.push(item);
-                groups.set(key, arr);
-              }
-              const winners: any[] = [];
-              for (const [_, arr] of groups.entries()) {
-                // Sort by branch score then tie-break
-                arr.sort((a, b) => {
-                  const diff = branchScore(b, { currentBranchId, defaultBranchId }) - branchScore(a, { currentBranchId, defaultBranchId });
-                  if (diff !== 0) return diff;
-                  return tieBreakCompare(a, b);
-                });
-                winners.push(arr[0]);
-              }
-              results = winners;
-            }
-
-            // DEBUG: after overlay
-            try {
-              const distAfter = Array.isArray(results) ? [...new Set(results.map((r: any) => r?.branchId))] : [];
-              console.log('🔎 [IndexedDBManager.getAllBranchAware] post-overlay distribution', {
-                storeName,
-                count: Array.isArray(results) ? results.length : 0,
-                branchIds: distAfter,
-                currentBranchId,
-                defaultBranchId
-              });
-            } catch {}
+            results = results.filter((it: any) => it.branchId === currentBranchId);
           }
 
           // Apply additional filtering if needed
@@ -744,5 +1200,68 @@ export class IndexedDBManager {
 
   getReadyState(): boolean {
     return this.isReady;
+  }
+
+  isFallbackMode(): boolean {
+    return this.fallbackMode;
+  }
+
+  /**
+   * Waits up to timeoutMs for the database to become ready.
+   * Returns true if ready, false on timeout (non-fatal, caller can fallback to API).
+   */
+  async waitUntilReadyOrTimeout(timeoutMs: number = 5000): Promise<boolean> {
+    if (this.isReady) return true;
+    try {
+      await Promise.race([
+        this.readyPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs))
+      ]);
+      return true;
+    } catch {
+      // Non-blocking fallback; skip background recovery to prevent infinite loops
+      console.log('⏰ [IndexedDBManager] Database initialization timeout - using fallback mode without recovery');
+      return false;
+    }
+  }
+
+  private scheduleRecoveryOpen(): void {
+    // DISABLED: Background recovery was causing infinite loops and performance issues
+    console.log('🚫 [IndexedDBManager] Background recovery disabled - staying in fallback mode');
+    return;
+  }
+
+  /**
+   * Force delete the IndexedDB database to clear any corruption
+   * Call this from browser console: window.__indexedDBManager__.clearDatabase()
+   */
+  async clearDatabase(): Promise<void> {
+    console.log('🗑️ [IndexedDBManager] Clearing IndexedDB database...');
+    try {
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+      
+      const deleteRequest = indexedDB.deleteDatabase(this.dbName);
+      await new Promise<void>((resolve, reject) => {
+        deleteRequest.onsuccess = () => {
+          console.log('✅ [IndexedDBManager] Database cleared successfully');
+          resolve();
+        };
+        deleteRequest.onerror = () => {
+          console.error('❌ [IndexedDBManager] Failed to clear database:', deleteRequest.error);
+          reject(deleteRequest.error);
+        };
+      });
+      
+      // Reset state
+      this.isReady = false;
+      this.fallbackMode = false;
+      console.log('🔄 [IndexedDBManager] Restart the application to reinitialize');
+      
+    } catch (error) {
+      console.error('❌ [IndexedDBManager] Error clearing database:', error);
+    }
   }
 }

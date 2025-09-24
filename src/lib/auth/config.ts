@@ -225,14 +225,29 @@ export const authOptions: NextAuthOptions = {
               console.log('🌳 [JWT] Fetching workspace structure...');
               
               // Workspace structure for instant tree navigation with timeout
+              // First, get the default branch for this tenant
+              const defaultBranch = await Promise.race([
+                prisma.branch.findFirst({
+                  where: { 
+                    tenantId: currentTenant.tenant.id,
+                    isDefault: true 
+                  },
+                  select: { id: true }
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Default branch query timeout')), 2000)
+                )
+              ]) as any;
+
+              const branchId = defaultBranch?.id || 'main'; // Fallback to 'main' if no default found
+
               rootNodes = await Promise.race([
                 prisma.node.findMany({
                   where: { 
                     tenantId: currentTenant.tenant.id,
                     parentId: null,
                     isActive: true,
-                  // Do not hardcode branchId; server should provide real IDs
-                  branchId: undefined as unknown as string
+                    branchId: branchId // ✅ FIXED: Use actual branch ID
                   },
                   select: {
                     id: true,
@@ -479,20 +494,8 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      console.log('🚨 [Session] SESSION CALLBACK TRIGGERED!');
-      
       // 🚀 **PERFORMANCE OPTIMIZED**: Direct token-to-session mapping (no DB queries)
       // All data is pre-fetched and cached in JWT token during sign-in
-      
-      console.log('🔍 [Session] Session callback called:', {
-        hasToken: !!token,
-        tokenKeys: token ? Object.keys(token) : [],
-        hasUserId: !!(token as any)?.userId,
-        hasId: !!(token as any)?.id,
-        tokenUserId: (token as any)?.userId,
-        tokenId: (token as any)?.id,
-        timestamp: new Date().toISOString()
-      });
       
       if (token) {
         // Core identity - direct assignment (fast)
@@ -529,18 +532,6 @@ export const authOptions: NextAuthOptions = {
         session.user.dataLastSync = token.dataLastSync as string
         session.user.cacheVersion = token.cacheVersion as string
       }
-
-      console.log('🎉 [Session] Returning session object:', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userId: session?.user?.id,
-        tenantId: session?.user?.tenantId,
-        hasBranchContext: !!session?.user?.branchContext,
-        currentBranchId: session?.user?.branchContext?.currentBranchId,
-        sessionKeys: session ? Object.keys(session) : [],
-        userKeys: session?.user ? Object.keys(session.user) : [],
-        timestamp: new Date().toISOString()
-      });
 
       return session
     },

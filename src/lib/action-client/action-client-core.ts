@@ -244,6 +244,17 @@ export class ActionClientCore {
     
     const mapping = ACTION_MAPPINGS[action];
     
+    console.log('🔍 [ActionClientCore] ACTION MAPPING LOOKUP:', {
+      action,
+      mappingExists: !!mapping,
+      mappingStore: mapping?.store,
+      mappingMethod: mapping?.method,
+      mappingSchema: !!mapping?.schema,
+      availableActionsCount: Object.keys(ACTION_MAPPINGS).length,
+      sampleActions: Object.keys(ACTION_MAPPINGS).slice(0, 5),
+      timestamp: new Date().toISOString()
+    });
+    
     if (!mapping) {
       console.error('🚨 [ActionClientCore] UNKNOWN ACTION:', {
         action,
@@ -251,6 +262,14 @@ export class ActionClientCore {
         timestamp: new Date().toISOString()
       });
       throw new Error(`Unknown action: ${action}`);
+    }
+    
+    if (!mapping.store) {
+      console.error('🚨 [ActionClientCore] MAPPING MISSING STORE:', {
+        action,
+        mapping: JSON.stringify(mapping, null, 2),
+        timestamp: new Date().toISOString()
+      });
     }
 
 

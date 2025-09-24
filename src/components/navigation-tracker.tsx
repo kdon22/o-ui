@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { useNodeData } from '@/components/providers/node-data-provider'
+import { useUnifiedApp } from '@/components/providers/app-provider'
 import { useCacheContext } from '@/components/providers/cache-provider'
 
 export function NavigationTracker() {
@@ -27,7 +27,8 @@ export function NavigationTracker() {
   })
 
   // Get all nodes from centralized provider to resolve idShort to full node data
-  const { nodes, error: nodesError, isLoading: nodesLoading } = useNodeData();
+  const { nodes, isNodesLoading: nodesLoading } = useUnifiedApp();
+  const nodesError = null; // TODO: Add error handling to app provider
 
   // Log nodes data state
   console.log('🧭 NavigationTracker: Nodes data state:', {

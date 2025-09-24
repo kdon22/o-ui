@@ -207,9 +207,12 @@ async function loadAllNodes(
   maxRecords: number = 10000
 ): Promise<ResourceSummary> {
   const startTime = Date.now()
-  
-
-
+  console.log('[WorkspaceBootstrap] loadAllNodes start', {
+    tenantId,
+    branchIds: { current: branchContext.currentBranchId, def: branchContext.defaultBranchId },
+    maxRecords,
+    timestamp: new Date().toISOString()
+  })
   
   try {
     const actionClient = getActionClient(tenantId, branchContext)
@@ -227,8 +230,11 @@ async function loadAllNodes(
 
     const recordCount = Array.isArray(response.data) ? response.data.length : 0
     const loadTime = Date.now() - startTime
-
-
+    console.log('[WorkspaceBootstrap] loadAllNodes complete', {
+      recordCount,
+      ms: loadTime,
+      timestamp: new Date().toISOString()
+    })
 
     return {
       resourceType: 'node',
@@ -240,9 +246,7 @@ async function loadAllNodes(
   } catch (error) {
     const loadTime = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
-    
-    
+    console.error('[WorkspaceBootstrap] loadAllNodes error', { error: errorMessage, ms: loadTime })
     return {
       resourceType: 'node',
       action: 'node.list',
@@ -263,9 +267,11 @@ async function loadNodeSpecificResources(
   maxRecords: number = 200
 ): Promise<ResourceSummary[]> {
   const startTime = Date.now()
-  
-
-
+  console.log('[WorkspaceBootstrap] loadNodeSpecificResources start', {
+    visibleNodeIdsCount: visibleNodeIds.length,
+    maxRecords,
+    timestamp: new Date().toISOString()
+  })
   
   const results: ResourceSummary[] = []
   
@@ -288,8 +294,7 @@ async function loadNodeSpecificResources(
   const flatResults = allNodeResults.flat()
   
   const loadTime = Date.now() - startTime
-
-  
+  console.log('[WorkspaceBootstrap] loadNodeSpecificResources complete', { ms: loadTime })
   return flatResults
 }
 
@@ -304,9 +309,7 @@ async function loadResourceForNode(
   maxRecords: number = 200
 ): Promise<ResourceSummary> {
   const startTime = Date.now()
-  
-
-  
+  console.log('[WorkspaceBootstrap] loadResourceForNode start', { nodeId, resourceType, maxRecords })
   try {
     const actionClient = getActionClient(tenantId, branchContext)
     
@@ -323,9 +326,7 @@ async function loadResourceForNode(
 
     const recordCount = Array.isArray(response.data) ? response.data.length : 0
     const loadTime = Date.now() - startTime
-
-
-
+    console.log('[WorkspaceBootstrap] loadResourceForNode complete', { nodeId, resourceType, count: recordCount, ms: loadTime })
     // Load dependent junction tables in parallel
     await loadJunctionsForNodeResource(nodeId, resourceType, branchContext, maxRecords)
 
@@ -339,9 +340,7 @@ async function loadResourceForNode(
   } catch (error) {
     const loadTime = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
-    
-    
+    console.error('[WorkspaceBootstrap] loadResourceForNode error', { nodeId, resourceType, error: errorMessage, ms: loadTime })
     return {
       resourceType: `${resourceType}_for_${nodeId}`,
       action: `${resourceType}.list`,
@@ -365,12 +364,11 @@ async function loadJunctionsForNodeResource(
   const junctionTypes = JUNCTION_DEPENDENCIES[resourceType] || []
   
   if (junctionTypes.length === 0) {
-
+    console.log('[WorkspaceBootstrap] loadJunctionsForNodeResource skip (no deps)', { nodeId, resourceType })
     return
   }
   
-
-  
+  console.log('[WorkspaceBootstrap] loadJunctionsForNodeResource start', { nodeId, resourceType, junctionTypes })
   const junctionPromises = junctionTypes.map(async (junctionType) => {
     try {
       const { getActionClient } = await import('@/lib/action-client')
@@ -386,10 +384,9 @@ async function loadJunctionsForNodeResource(
       })
 
       const recordCount = Array.isArray(response.data) ? response.data.length : 0
-
-      
+      console.log('[WorkspaceBootstrap] junction loaded', { junctionType, nodeId, count: recordCount })
     } catch (error) {
-      
+      console.error('[WorkspaceBootstrap] junction load error', { junctionType, nodeId, error: error instanceof Error ? error.message : error })
     }
   })
   
@@ -426,9 +423,7 @@ async function loadResource(
   maxRecords: number = 1000
 ): Promise<ResourceSummary> {
   const startTime = Date.now()
-  
-
-
+  console.log('[WorkspaceBootstrap] loadResource start', { resourceType: resourceInfo.resourceType, action: resourceInfo.action, maxRecords })
 
   
   try {
@@ -446,11 +441,8 @@ async function loadResource(
 
     const recordCount = Array.isArray(response.data) ? response.data.length : 0
     const loadTime = Date.now() - startTime
-
-
-
-    // Load dependent junction tables if their dependencies are available
-    await loadDependentJunctions(resourceInfo.resourceType, branchContext, maxRecords);
+    console.log('[WorkspaceBootstrap] loadResource complete', { resourceType: resourceInfo.resourceType, count: recordCount, ms: loadTime })
+    // Don't load junctions here - they'll be loaded in parallel separately
 
     return {
       resourceType: resourceInfo.resourceType,
@@ -462,9 +454,7 @@ async function loadResource(
   } catch (error) {
     const loadTime = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
-    
-    
+    console.error('[WorkspaceBootstrap] loadResource error', { resourceType: resourceInfo.resourceType, error: errorMessage, ms: loadTime })
     return {
       resourceType: resourceInfo.resourceType,
       action: resourceInfo.action,
@@ -477,40 +467,64 @@ async function loadResource(
 }
 
 /**
- * Load junction tables that depend on the given resource type
+ * Load a single junction table (for parallel loading)
+ */
+async function loadSingleJunction(
+  junctionTableKey: string,
+  branchContext: BranchContext,
+  maxRecords: number = 1000
+): Promise<JunctionSummary> {
+  const startTime = Date.now()
+  console.log('[WorkspaceBootstrap] loadSingleJunction start', { junctionTableKey, maxRecords })
+  
+  try {
+    const { getActionClient } = await import('@/lib/action-client')
+    const actionClient = getActionClient(branchContext.tenantId, branchContext)
+    
+    const response = await actionClient.executeAction({
+      action: `${junctionTableKey}.list`,
+      options: { pagination: { page: 1, limit: maxRecords } },
+      branchContext
+    })
+
+    const recordCount = Array.isArray(response.data) ? response.data.length : 0
+    const loadTime = Date.now() - startTime
+    console.log('[WorkspaceBootstrap] loadSingleJunction complete', { junctionTableKey, count: recordCount, ms: loadTime })
+
+    return {
+      junctionType: junctionTableKey,
+      action: `${junctionTableKey}.list`,
+      recordCount,
+      success: true,
+      loadTime
+    }
+  } catch (error) {
+    const loadTime = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[WorkspaceBootstrap] loadSingleJunction error', { junctionTableKey, error: errorMessage, ms: loadTime })
+    
+    return {
+      junctionType: junctionTableKey,
+      action: `${junctionTableKey}.list`,
+      recordCount: 0,
+      success: false,
+      error: errorMessage,
+      loadTime
+    }
+  }
+}
+
+/**
+ * Load junction tables that depend on the given resource type (DEPRECATED - use loadSingleJunction)
  */
 async function loadDependentJunctions(
   resourceType: string,
   branchContext: BranchContext,
   maxRecords: number = 1000
 ): Promise<void> {
-  const junctionTables = JUNCTION_DEPENDENCIES[resourceType] || [];
-  
-  if (junctionTables.length === 0) {
-
-    return;
-  }
-
-
-
-  for (const junctionTableKey of junctionTables) {
-    try {
-      const { getActionClient } = await import('@/lib/action-client')
-      const actionClient = getActionClient(branchContext.tenantId, branchContext)
-      
-      const response = await actionClient.executeAction({
-        action: `${junctionTableKey}.list`,
-        options: { pagination: { page: 1, limit: maxRecords } },
-        branchContext
-      });
-
-      const recordCount = Array.isArray(response.data) ? response.data.length : 0;
-
-      
-    } catch (error) {
-      
-    }
-  }
+  // This function is now deprecated - junctions are loaded in parallel via loadSingleJunction
+  console.log('[WorkspaceBootstrap] loadDependentJunctions DEPRECATED - using parallel loading instead', { resourceType })
+  return
 }
 
 /**
@@ -518,9 +532,7 @@ async function loadDependentJunctions(
  */
 async function smartBootstrap(options: BootstrapOptions): Promise<BootstrapResult> {
   const startTime = Date.now()
-  
-
-
+  console.log('[WorkspaceBootstrap] smartBootstrap start', { strategy: options.strategy, tenantId: options.tenantId })
   
   // Discover all available resources
 
@@ -567,18 +579,31 @@ async function smartBootstrap(options: BootstrapOptions): Promise<BootstrapResul
     }
   }
   
-  // Load only critical resources in parallel
+  // Load critical resources and ALL junctions in parallel for maximum speed
   const maxRecords = options.maxRecordsPerResource || 100 // Much smaller default
 
   
-  const resourcePromises = resourcesToLoad.map(resource => {
-
-    return loadResource(resource, options.branchContext, maxRecords)
+  // Start loading main resources
+  const resourcePromises = resourcesToLoad.map(resource => loadResource(resource, options.branchContext, maxRecords))
+  
+  // Start loading all junctions in parallel (don't wait for main resources)
+  const allJunctionPromises = resourcesToLoad.flatMap(resource => {
+    const junctionTables = JUNCTION_DEPENDENCIES[resource.resourceType] || []
+    return junctionTables.map(junctionTableKey => 
+      loadSingleJunction(junctionTableKey, options.branchContext, maxRecords)
+    )
   })
   
+  console.log('[WorkspaceBootstrap] Loading resources and junctions in parallel', {
+    resourceCount: resourcePromises.length,
+    junctionCount: allJunctionPromises.length
+  })
 
-  
-  const resourceResults = await Promise.all(resourcePromises)
+  // Wait for EVERYTHING to finish in parallel
+  const [resourceResults, junctionResults] = await Promise.all([
+    Promise.all(resourcePromises),
+    Promise.all(allJunctionPromises)
+  ])
   
 
   
@@ -586,23 +611,31 @@ async function smartBootstrap(options: BootstrapOptions): Promise<BootstrapResul
   const successfulResources = resourceResults.filter(r => r.success).length
   const errors = resourceResults.filter(r => !r.success).map(r => r.error!)
   
-
-
+  const successfulJunctions = junctionResults.filter(j => j.success).length
+  const junctionErrors = junctionResults.filter(j => !j.success).map(j => j.error!)
+  const allErrors = [...errors, ...junctionErrors]
+  
+  console.log('[WorkspaceBootstrap] smartBootstrap complete', { 
+    duration, 
+    successfulResources, 
+    successfulJunctions,
+    totalErrors: allErrors.length 
+  })
   
   const result = {
-    success: errors.length === 0,
+    success: allErrors.length === 0,
     loadedResources: successfulResources,
-    loadedJunctions: 0, // Skip junctions for critical load
+    loadedJunctions: successfulJunctions, // Now includes actual junction count
     skippedResources: availableResources
       .filter(r => !resourcesToLoad.includes(r))
       .map(r => r.resourceType),
-    errors,
+    errors: allErrors,
     duration,
     resourceSummary: resourceResults,
-    junctionSummary: []
+    junctionSummary: junctionResults
   }
   
-
+  console.log('[WorkspaceBootstrap] result', result)
   return result
 }
 
@@ -660,9 +693,7 @@ async function loadJunction(
  */
 async function bootstrapWorkspace(options: BootstrapOptions): Promise<BootstrapResult> {
   const startTime = Date.now()
-  
-
-
+  console.log('[WorkspaceBootstrap] bootstrapWorkspace start', { tenantId: options.tenantId })
 
   // Discover all available resources and junctions
   const availableResources = discoverResources()
@@ -714,7 +745,7 @@ async function bootstrapWorkspace(options: BootstrapOptions): Promise<BootstrapR
 
 
 
-  return {
+  const result = {
     success: errors.length === 0,
     loadedResources: successfulResources,
     loadedJunctions: successfulJunctions,
@@ -726,6 +757,8 @@ async function bootstrapWorkspace(options: BootstrapOptions): Promise<BootstrapR
     resourceSummary: resourceResults,
     junctionSummary: junctionResults
   }
+  console.log('[WorkspaceBootstrap] bootstrapWorkspace complete', result)
+  return result
 }
 
 // ============================================================================

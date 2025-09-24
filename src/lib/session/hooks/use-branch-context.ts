@@ -18,6 +18,17 @@ export function useBranchContext(): BranchContextHookReturn {
   // ============================================================================
   
   const branchData = useMemo(() => {
+    // DEBUG: Log the complete session content to see what's missing
+    console.log('🔍 [useBranchContext] Session debug:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      user: session?.user,
+      userKeys: session?.user ? Object.keys(session.user) : [],
+      tenantId: session?.user?.tenantId,
+      branchContext: session?.user?.branchContext,
+      timestamp: new Date().toISOString()
+    });
+
     // Return not-ready state during loading or if unauthenticated
     if (!session?.user) {
       return { 

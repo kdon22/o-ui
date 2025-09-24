@@ -50,61 +50,161 @@ export class ReadOperations {
   ): Promise<ActionResponse> {
     const startTime = Date.now();
     
+    console.log('🚀 [ReadOperations] Starting read operation:', {
+      action,
+      cacheKey,
+      hasData: !!data,
+      dataKeys: data ? Object.keys(data) : [],
+      hasOptions: !!options,
+      optionsKeys: options ? Object.keys(options) : [],
+      storeName: mapping?.store,
+      method: mapping?.method,
+      hasBranchContext: !!branchContext,
+      currentBranchId: branchContext?.currentBranchId,
+      skipCache: !!options?.skipCache,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       // Step 1: Check memory cache first (sub-10ms)
+      console.log('🔍 [ReadOperations] Step 1: Checking memory cache...');
       const cachedData = this.cache.get(cacheKey);
       if (cachedData) {
+        console.log('✅ [ReadOperations] Memory cache HIT:', {
+          action,
+          cacheKey,
+          dataType: Array.isArray(cachedData) ? 'array' : typeof cachedData,
+          dataLength: Array.isArray(cachedData) ? cachedData.length : 'N/A',
+          timestamp: new Date().toISOString()
+        });
         return await this.buildCacheResponse(cachedData, action, options, startTime, true, branchContext);
       }
+      console.log('⚠️ [ReadOperations] Memory cache MISS:', { action, cacheKey });
 
       // Step 2: Skip IndexedDB if skipCache is set
       if (options?.skipCache) {
+        console.log('⚠️ [ReadOperations] Step 2: Skipping IndexedDB due to skipCache=true, going directly to API');
         return await fetchFromAPIFn(action, data, options, branchContext, startTime);
       }
 
-      // Step 3: Check IndexedDB (10-50ms) with conditional branch logic
+      // Step 3: Check IndexedDB (10-50ms) with conditional branch logic  
+      console.log('🔍 [ReadOperations] Step 3: Checking IndexedDB...');
+      
+      // CRITICAL: Check if IndexedDB is in fallback mode
+      if (this.indexedDB.isFallbackMode && this.indexedDB.isFallbackMode()) {
+        console.log('⚠️ [ReadOperations] IndexedDB in fallback mode, skipping to API...');
+        return await fetchFromAPIFn(action, data, options, branchContext, startTime);
+      }
+
+      // NEW: Non-blocking readiness gate (2s) before giving up to API
+      try {
+        const readyInTime = await (this.indexedDB as any).waitUntilReadyOrTimeout?.(2000);
+        if (readyInTime === false) {
+          console.warn('⏱️ [ReadOperations] IndexedDB not ready within 2s, using API now and DB will continue opening in background');
+          return await fetchFromAPIFn(action, data, options, branchContext, startTime);
+        }
+      } catch {
+        // If helper not present or throws, continue as before
+      }
+      
       const storeName = mapping.store;
       const needsBranchContext = this.requiresBranchContext(action);
       let indexedData: any;
       
+      console.log('🔍 [ReadOperations] IndexedDB configuration:', {
+        storeName,
+        needsBranchContext,
+        hasSpecificId: !!data?.id,
+        specificId: data?.id,
+        branchContext: branchContext ? {
+          currentBranchId: branchContext.currentBranchId,
+          defaultBranchId: branchContext.defaultBranchId,
+          tenantId: branchContext.tenantId
+        } : null
+      });
+      
       if (data?.id) {
+        console.log('🔍 [ReadOperations] Fetching specific item by ID...');
         if (needsBranchContext) {
+          console.log('🔍 [ReadOperations] Using branch-aware get for specific ID...');
           indexedData = await this.indexedDB.getBranchAware(storeName, data.id, branchContext);
         } else {
+          console.log('🔍 [ReadOperations] Using regular get for specific ID...');
           indexedData = await this.indexedDB.get(storeName, data.id);
         }
+        
+        console.log('🔍 [ReadOperations] IndexedDB single item result:', {
+          found: !!indexedData,
+          itemId: indexedData?.id,
+          itemBranchId: indexedData?.branchId,
+          itemName: indexedData?.name
+        });
       } else {
+        console.log('🔍 [ReadOperations] Fetching all items (list operation)...');
         if (needsBranchContext) {
+          console.log('🔍 [ReadOperations] Using branch-aware getAll...');
+          console.log('🔍 [ReadOperations] STORE NAME DEBUG:', {
+            action,
+            storeName,
+            storeNameType: typeof storeName,
+            mappingStore: mapping?.store,
+            mappingExists: !!mapping,
+            timestamp: new Date().toISOString()
+          });
           // Use branch-aware method for branch-scoped resources
           indexedData = await this.indexedDB.getAllBranchAware(storeName, branchContext, options);
           // DEBUG: log branch overlay results for this list
           try {
             if (Array.isArray(indexedData)) {
-              console.log('🔎 [ReadOperations] list overlay (branch-aware)', {
+              console.log('🔎 [ReadOperations] Branch-aware list result:', {
                 action,
                 storeName,
                 count: indexedData.length,
                 branchIds: [...new Set(indexedData.map((r: any) => r?.branchId))],
                 currentBranchId: branchContext?.currentBranchId,
-                defaultBranchId: branchContext?.defaultBranchId
+                defaultBranchId: branchContext?.defaultBranchId,
+                items: indexedData.map((item: any) => ({
+                  id: item?.id,
+                  name: item?.name,
+                  branchId: item?.branchId
+                }))
               });
             }
-          } catch {}
+          } catch (err) {
+            console.error('Error logging branch-aware result:', err);
+          }
         } else {
+          console.log('🔍 [ReadOperations] Using regular getAll (tenant-wide)...');
           // Use regular method for tenant-wide resources (like packageInstallations)
           indexedData = await this.indexedDB.getAll(storeName, options);
-          console.log('🔎 [ReadOperations] list overlay (tenant-wide)', {
+          console.log('🔎 [ReadOperations] Tenant-wide list result:', {
             action,
             storeName,
             count: Array.isArray(indexedData) ? indexedData.length : 0,
-            needsBranchContext: false
+            needsBranchContext: false,
+            items: Array.isArray(indexedData) ? indexedData.slice(0, 3).map((item: any) => ({
+              id: item?.id,
+              name: item?.name
+            })) : []
           });
         }
       }
 
       // Step 4: Return IndexedDB data if available
+      console.log('🔍 [ReadOperations] Step 4: Validating IndexedDB data...');
       const hasValidData = indexedData && (Array.isArray(indexedData) ? indexedData.length > 0 : indexedData);
+      
+      console.log('🔍 [ReadOperations] IndexedDB data validation:', {
+        hasIndexedData: !!indexedData,
+        isArray: Array.isArray(indexedData),
+        arrayLength: Array.isArray(indexedData) ? indexedData.length : 'N/A',
+        hasValidData,
+        dataType: typeof indexedData
+      });
+      
       if (hasValidData) {
+        console.log('✅ [ReadOperations] IndexedDB data found, returning cached response');
+        
         // 🚨 CRITICAL DEBUG: Check if IndexedDB is serving mixed branch data
         if (Array.isArray(indexedData) && action.includes('node.list')) {
           console.log('🚨 [ReadOperations] IndexedDB data branch analysis:', {
@@ -125,18 +225,68 @@ export class ReadOperations {
         }
         
         this.cache.set(cacheKey, indexedData);
-        return await this.buildCacheResponse(indexedData, action, options, startTime, false, branchContext);
+        const response = await this.buildCacheResponse(indexedData, action, options, startTime, false, branchContext);
+        
+        console.log('✅ [ReadOperations] Returning IndexedDB response:', {
+          action,
+          success: response.success,
+          dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+          cached: response.cached,
+          executionTime: response.executionTime
+        });
+        
+        return response;
       }
 
       // Step 5: Fallback to API
-      return await fetchFromAPIFn(action, data, options, branchContext, startTime);
+      console.log('⚠️ [ReadOperations] Step 5: IndexedDB empty, falling back to API...');
+      console.log('🌐 [ReadOperations] Calling API with:', {
+        action,
+        hasData: !!data,
+        dataKeys: data ? Object.keys(data) : [],
+        hasOptions: !!options,
+        hasBranchContext: !!branchContext,
+        currentBranchId: branchContext?.currentBranchId
+      });
+      
+      const apiResponse = await fetchFromAPIFn(action, data, options, branchContext, startTime);
+      
+      console.log('🌐 [ReadOperations] API response received:', {
+        action,
+        success: apiResponse.success,
+        hasData: !!apiResponse.data,
+        dataLength: Array.isArray(apiResponse.data) ? apiResponse.data.length : 'N/A',
+        cached: apiResponse.cached,
+        executionTime: apiResponse.executionTime,
+        error: apiResponse.error || null
+      });
+      
+      return apiResponse;
       
     } catch (error) {
-      console.error(`🔥 [ReadOperations] Read operation failed for ${action}:`, error);
+      console.error(`🔥 [ReadOperations] Read operation failed for ${action}:`, {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : null,
+        action,
+        cacheKey,
+        storeName: mapping?.store,
+        hasBranchContext: !!branchContext,
+        currentBranchId: branchContext?.currentBranchId,
+        executionTime: Date.now() - startTime,
+        timestamp: new Date().toISOString()
+      });
       
       // Graceful fallback
       const isListAction = action.includes('.list');
       const fallbackData = isListAction ? [] : null;
+      
+      console.log('🛡️ [ReadOperations] Using graceful fallback:', {
+        action,
+        isListAction,
+        fallbackData: Array.isArray(fallbackData) ? `array[${fallbackData.length}]` : fallbackData,
+        timestamp: new Date().toISOString()
+      });
       
       return {
         success: true,
@@ -162,6 +312,16 @@ export class ReadOperations {
     fromMemory: boolean,
     branchContext: BranchContext | null
   ): Promise<ActionResponse> {
+    
+    console.log('🔧 [ReadOperations] Building cache response:', {
+      action,
+      fromMemory,
+      hasData: !!cachedData,
+      dataType: Array.isArray(cachedData) ? 'array' : typeof cachedData,
+      dataLength: Array.isArray(cachedData) ? cachedData.length : 'N/A',
+      executionTime: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
     
     // Load junction data from IndexedDB
     let junctionData: any = {};
@@ -241,7 +401,7 @@ export class ReadOperations {
       console.warn('⚠️ [ReadOperations] Failed to load junction data from IndexedDB:', junctionError);
     }
     
-    return {
+    const response = {
       success: true,
       data: cachedData,
       ...(Object.keys(junctionData).length > 0 && { junctions: junctionData }),
@@ -250,5 +410,20 @@ export class ReadOperations {
       timestamp: Date.now(),
       action: action
     };
+    
+    console.log('✅ [ReadOperations] Final cache response built:', {
+      action,
+      success: response.success,
+      hasData: !!response.data,
+      dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+      hasJunctions: !!response.junctions,
+      junctionTables: response.junctions ? Object.keys(response.junctions) : [],
+      cached: response.cached,
+      fromMemory,
+      executionTime: response.executionTime,
+      timestamp: new Date().toISOString()
+    });
+    
+    return response;
   }
 } 

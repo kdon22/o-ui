@@ -25,6 +25,7 @@ export class APIClient {
     options: any, 
     branchContext?: BranchContext | null
   ): Promise<ActionResponse> {
+    const start = Date.now();
     const requestPayload = {
       action,
       data,
@@ -37,6 +38,15 @@ export class APIClient {
     const baseUrl = isServerSide ? process.env.NEXTAUTH_URL || 'http://localhost:3000' : '';
     const apiUrl = `${baseUrl}/api/workspaces/current/actions`;
     
+    console.log('[APIClient] REQUEST', {
+      url: apiUrl,
+      action,
+      hasData: !!data,
+      optionsKeys: options ? Object.keys(options) : [],
+      branchIds: branchContext ? { current: branchContext.currentBranchId, def: branchContext.defaultBranchId } : null,
+      timestamp: new Date().toISOString()
+    });
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -60,6 +70,7 @@ export class APIClient {
       hasJunctions: !!result?.junctions,
       junctionKeys: result?.junctions ? Object.keys(result.junctions) : [],
       resultKeys: result ? Object.keys(result) : [],
+      ms: Date.now() - start,
       timestamp: new Date().toISOString()
     });
     

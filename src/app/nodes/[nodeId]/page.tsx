@@ -5,12 +5,8 @@ import React, { Suspense } from 'react';
 import MainLayout from '@/components/layout/main/main-layout';
 
 export default function NodePage() {
-  console.log('🟡 [NodePage] COMPONENT RENDER START')
-  
   const params = useParams();
   const nodeId = params.nodeId as string;
-
-  console.log('🟡 [NodePage] Params:', { nodeId, params })
 
   return (
     <Suspense fallback={
