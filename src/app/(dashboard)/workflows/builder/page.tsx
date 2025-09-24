@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Save, Play, Download, X } from 'lucide-react';
 import { useActionQuery } from '@/hooks/use-action-api';
-import { useCleanBranchContext } from '@/hooks/use-clean-branch-context';
 import { WorkflowBuilder } from '@/features/workflows/components/workflow-builder';
 import { UnsavedChangesModal, useUnsavedChangesModal } from '@/features/workflows/components/workflow-builder/unsaved-changes-modal';
 import type { Workflow } from '@/features/workflows/workflows.schema';
@@ -27,8 +26,6 @@ export default function WorkflowBuilderPage() {
   // Get workflow ID from URL params (for editing existing workflows)
   const workflowId = searchParams.get('id');
   const isEditing = Boolean(workflowId);
-  
-  // Remove branch context requirement
   
   // State management
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

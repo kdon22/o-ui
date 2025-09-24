@@ -9,7 +9,7 @@ import { AutoForm } from '@/components/auto-generated/form'
 import { MARKETPLACE_PACKAGE_SCHEMA } from '@/features/marketplace/marketplace.schema'
 import { Rule } from '@/features/rules/types'
 import { cn } from '@/lib/utils/generalUtils'
-import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
+import { useActionClientContext } from '@/lib/session'
 import { getActionClient } from '@/lib/action-client'
 
 interface RuleMarketTabProps {
@@ -21,7 +21,16 @@ type MarketMode = 'create' | 'manage'
 export function RuleMarketTab({ rule }: RuleMarketTabProps) {
   const [mode, setMode] = useState<MarketMode>('create')
   const [isCreating, setIsCreating] = useState(false)
-  const { session, branchContext, tenantId } = useEnterpriseSession()
+  const { tenantId, branchContext, isReady } = useActionClientContext()
+  
+  // Guard: Return loading if action client context isn't ready
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
 
   const handleCreatePackage = async (formData: Record<string, any>) => {
     setIsCreating(true)

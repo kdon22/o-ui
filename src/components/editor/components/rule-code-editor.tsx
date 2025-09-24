@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
+import { useActionClientContext } from '@/lib/session'
 import { registerBusinessRulesLanguageFactory } from '../language/language-registration'
 import { createUnifiedHoverProvider } from '@/lib/editor/hover/hover-provider'
 import { BusinessRulesDiagnosticProvider } from '../services/diagnostics/diagnostic-provider'
@@ -73,7 +73,7 @@ export function RuleCodeEditor({
   
   // Session for tenant context
   const { data: session } = useSession()
-  const { tenantId: entTenantId, branchContext } = useEnterpriseSession()
+  const { tenantId: entTenantId, branchContext } = useActionClientContext()
   
   // Editor preferences - get both preferences and the apply function (SSR-safe)
   const { preferences, applyPreferencesToEditor } = useEditorPreferences()
@@ -311,11 +311,11 @@ export function RuleCodeEditor({
     )
   }
 
-  // Wait for session
-  if (!session?.user?.tenantId) {
+  // Wait for action client context to be ready
+  if (!entTenantId || !branchContext.isReady) {
     return (
       <div className={`h-full bg-yellow-50 border border-yellow-200 rounded-md p-4 ${className}`}>
-        <div className="text-sm text-yellow-800">Waiting for user session...</div>
+        <div className="text-sm text-yellow-800">Waiting for session context...</div>
       </div>
     )
   }

@@ -13,7 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getActionClient } from '@/lib/action-client';
-import { useEnterpriseSession } from './use-enterprise-action-api';
+import { useUnifiedApp } from '@/components/providers/conditional-providers';
 import type { ActionRequest, ActionResponse } from '@/lib/resource-system/schemas';
 import type { BranchContext } from '@/lib/action-client/types';
 
@@ -51,7 +51,7 @@ export function useServerOnlyQuery(
   data?: any,
   options: ServerOnlyOptions = {}
 ) {
-  const { session, branchContext, tenantId } = useEnterpriseSession();
+  const { session, branchContext, tenantId } = useUnifiedApp();
   
   const {
     page = 1,
@@ -153,7 +153,7 @@ export function useServerOnlyMutation(
     invalidateQueries?: string[];
   } = {}
 ) {
-  const { session, branchContext, tenantId } = useEnterpriseSession();
+  const { session, branchContext, tenantId } = useUnifiedApp();
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -217,7 +217,7 @@ export function useServerOnlyBulkMutation(
     onProgress?: (progress: { completed: number; total: number }) => void;
   } = {}
 ) {
-  const { session, branchContext, tenantId } = useEnterpriseSession();
+  const { session, branchContext, tenantId } = useUnifiedApp();
   
   return useMutation({
     mutationFn: async (bulkData: { operation: 'create' | 'update' | 'delete'; items: any[] }) => {
@@ -272,7 +272,7 @@ export function useServerOnlyExport(
     columns?: string[];
   } = {}
 ) {
-  const { session, branchContext, tenantId } = useEnterpriseSession();
+  const { session, branchContext, tenantId } = useUnifiedApp();
   
   return useMutation({
     mutationFn: async () => {
@@ -330,7 +330,7 @@ export function useServerOnlySearch(
     limit?: number;
   } = {}
 ) {
-  const { session, branchContext, tenantId } = useEnterpriseSession();
+  const { session, branchContext, tenantId } = useUnifiedApp();
   
   const {
     debounceMs = 300,

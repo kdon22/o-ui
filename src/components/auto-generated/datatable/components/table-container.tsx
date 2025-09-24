@@ -16,6 +16,7 @@ import { Plus, Trash2 } from 'lucide-react';
 
 // Action System
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
+import { useActionClientContext } from '@/lib/session';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Components
@@ -42,7 +43,7 @@ export const TableContainer: React.FC<AutoDataTableProps> = ({
 }) => {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
-  const { session: enterpriseSession, branchContext, tenantId } = useEnterpriseSession();
+  const { tenantId, branchContext, isReady } = useActionClientContext();
   
   // ============================================================================
   // STATE MANAGEMENT

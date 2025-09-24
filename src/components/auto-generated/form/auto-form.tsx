@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils/generalUtils';
 import { useSession } from 'next-auth/react';
 import { useActionMutation } from '@/hooks/use-action-api';
-import { useBranchContextWithLoading } from '@/lib/context/branch-context';
+import { useFormContext } from '@/lib/session';
 import { generateCompleteDefaultValues } from '../modal/utils';
 import { FormDebugComponent } from './form-debug';
 import type { FormRow } from './form-utils';
@@ -195,16 +195,16 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
   enableJunctionCreation = mode === 'create' // Default: enable for create mode
 }) => {
   // Get branch context from SSOT
-  const branchContext = useBranchContextWithLoading();
+  const formContext = useFormContext();
   const { data: session } = useSession();
   
-  // 🔍 DEBUG: Log branch context state on every render
-  console.log('🔍 [AutoForm] Component render - Branch context state:', {
-    hasBranchContext: !!branchContext,
-    branchContextIsReady: branchContext?.isReady,
-    branchContextType: typeof branchContext,
-    tenantId: branchContext?.tenantId,
-    currentBranchId: branchContext?.currentBranchId,
+  // 🔍 DEBUG: Log form context state on every render
+  console.log('🔍 [AutoForm] Component render - Form context state:', {
+    hasFormContext: !!formContext,
+    formContextIsReady: formContext?.isReady,
+    formContextType: typeof formContext,
+    tenantId: formContext?.tenantId,
+    currentBranchId: formContext?.currentBranchId,
     sessionStatus: session ? 'has-session' : 'no-session',
     sessionTenantId: session?.user?.tenantId,
     timestamp: new Date().toISOString()
@@ -364,7 +364,7 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
     try {
       // Get tenant and branch context
       const tenantId = session?.user?.tenantId;
-      const currentBranchId = branchContext?.currentBranchId;
+      const currentBranchId = formContext?.currentBranchId;
 
       if (!tenantId || !currentBranchId) {
         const contextError = new Error(`Missing context - tenantId: ${tenantId}, branchId: ${currentBranchId}`);
@@ -483,7 +483,7 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
 
   // Memoized form content
   const formContent = useMemo(() => {
-    if (!session?.user?.tenantId || !branchContext) {
+    if (!session?.user?.tenantId || !formContext) {
       return (
         <div className="flex items-center justify-center h-32">
           <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -493,7 +493,7 @@ const AutoFormComponent: React.FC<AutoFormProps> = ({
     }
 
     const tenantId = session.user.tenantId;
-    const currentBranchId = branchContext?.currentBranchId;
+    const currentBranchId = formContext?.currentBranchId;
 
     if (tabs.length === 1) {
       // Single tab - render directly

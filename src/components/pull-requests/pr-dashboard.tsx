@@ -46,7 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
 
 import type { PullRequest, PullRequestStatus, PRMode } from '@/features/pull-requests/pull-requests.schema';
-import { useBranchContext } from '@/lib/branching/branch-provider';
+import { useBranchContext } from '@/lib/session';
 
 // ============================================================================
 // TYPES

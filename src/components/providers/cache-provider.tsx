@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode, useMemo, useCallback } from 'react';
 import type { BranchContext } from '@/lib/resource-system/schemas';
-import { useReadyBranchContext } from '@/lib/context/branch-context';
+import { useBranchContext } from '@/lib/session';
 import { getActionClient, clearAllTenantDatabases } from '@/lib/action-client';
 import { BootstrapSplashScreen } from '@/components/bootstrap/bootstrap-splash-screen';
 import workspaceBootstrap from '@/lib/services/workspace-bootstrap';
@@ -113,7 +113,20 @@ export function CacheProvider({
   forceFreshBootstrap = false 
 }: CacheProviderProps) {
   // Get the branch context from SSOT
-  const branchContext = useReadyBranchContext();
+  const branchContext = useBranchContext();
+  
+  // Early return if branch context isn't ready yet
+  if (!branchContext.isReady) {
+    return (
+      <BootstrapSplashScreen
+        isInitialized={false}
+        isBootstrapping={false}
+        bootstrapResult={null}
+        branchName="loading"
+        tenantId={tenantId || ''}
+      />
+    );
+  }
   const [isInitialized, setIsInitialized] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [bootstrapResult, setBootstrapResult] = useState<BootstrapResult | null>(null);

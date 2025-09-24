@@ -19,8 +19,7 @@ import { SessionProvider, useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { BranchProvider } from '@/lib/branching/branch-provider';
-import { BranchContextProvider } from '@/lib/context/branch-context';
+// Branch providers removed - now using session-based hooks only
 import type { BranchContext } from '@/lib/resource-system/schemas';
 // ✅ FIXED: Use static imports to prevent re-render loops
 import { UnifiedDataProvider } from './unified-data-provider';
@@ -134,22 +133,18 @@ function SessionWrapper({ children }: { children: React.ReactNode }) {
   if (!shouldRenderCacheProvider) {
     // Waiting for session - silent
     return (
-      <BranchContextProvider>
-        <BranchProvider>
-          <UnifiedDataProvider>
-            <NodeDataProvider>
-              <NavigationContextProvider>
-                <TagProvider>
-                  <UniversalSearchProvider>
-                    {children}
-                    <GlobalTagModalRenderer />
-                  </UniversalSearchProvider>
-                </TagProvider>
-              </NavigationContextProvider>
-            </NodeDataProvider>
-          </UnifiedDataProvider>
-        </BranchProvider>
-      </BranchContextProvider>
+      <UnifiedDataProvider>
+        <NodeDataProvider>
+          <NavigationContextProvider>
+            <TagProvider>
+              <UniversalSearchProvider>
+                {children}
+                <GlobalTagModalRenderer />
+              </UniversalSearchProvider>
+            </TagProvider>
+          </NavigationContextProvider>
+        </NodeDataProvider>
+      </UnifiedDataProvider>
     );
   }
 
@@ -157,27 +152,23 @@ function SessionWrapper({ children }: { children: React.ReactNode }) {
   const CacheProviderDynamic = dynamic(() => import('./cache-provider').then(m => m.CacheProvider), { ssr: false });
 
   return (
-    <BranchContextProvider>
-      <BranchProvider>
-        <CacheProviderDynamic
-          tenantId={session.user.tenantId || ''}
-          forceFreshBootstrap={isFreshLogin}
-        >
-          <UnifiedDataProvider>
-            <NodeDataProvider>
-              <NavigationContextProvider>
-                <TagProvider>
-                  <UniversalSearchProvider>
-                    {children}
-                    <GlobalTagModalRenderer />
-                  </UniversalSearchProvider>
-                </TagProvider>
-              </NavigationContextProvider>
-            </NodeDataProvider>
-          </UnifiedDataProvider>
-        </CacheProviderDynamic>
-      </BranchProvider>
-    </BranchContextProvider>
+    <CacheProviderDynamic
+      tenantId={session.user.tenantId || ''}
+      forceFreshBootstrap={isFreshLogin}
+    >
+      <UnifiedDataProvider>
+        <NodeDataProvider>
+          <NavigationContextProvider>
+            <TagProvider>
+              <UniversalSearchProvider>
+                {children}
+                <GlobalTagModalRenderer />
+              </UniversalSearchProvider>
+            </TagProvider>
+          </NavigationContextProvider>
+        </NodeDataProvider>
+      </UnifiedDataProvider>
+    </CacheProviderDynamic>
   );
 }
 

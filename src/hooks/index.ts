@@ -25,7 +25,7 @@ export {
 // Resource hooks have been replaced by useActionQuery from use-action-api.ts
 
 // Layout hooks
-export { useSessionContext, useSearch, useNodeTabs } from './layout';
+export { useSearch, useNodeTabs } from './layout';
 
 // Node Rule Hierarchy - Hybrid Inheritance System
 export { 
@@ -50,7 +50,6 @@ export type {
 
 
 export type { 
-  SessionContext,
   SearchState,
   SearchActions,
   UseSearchReturn,

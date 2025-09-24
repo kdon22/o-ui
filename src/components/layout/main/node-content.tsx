@@ -3,7 +3,7 @@
 import React from 'react'
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useReadyBranchContext } from '@/lib/context/branch-context'
+import { useBranchContext } from '@/lib/session'
 import { Zap, Users, FileText } from 'lucide-react'
 import { TabBar } from '@/components/ui/tab-bar'
 import { AutoTable } from '@/components/auto-generated/table/auto-table'
@@ -54,10 +54,19 @@ export function NodeContent({ nodeId, currentBranch, activeTopLevelTab }: NodeCo
   hookDebug('useRouter')
   const router = useRouter()
   
-  hookDebug('useReadyBranchContext')
+  hookDebug('useBranchContext')
   // 🎯 SSOT: Get branch context from the single source of truth
-  // This will throw an error if branch context is not ready - NO FALLBACKS!
-  const branchContext = useReadyBranchContext()
+  // NO FALLBACKS - fails fast with loading state if not ready
+  const branchContext = useBranchContext()
+  
+  // Guard: Return loading if branch context isn't ready
+  if (!branchContext.isReady) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
   
   hookDebug('useNodeTabs')
   const {

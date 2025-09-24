@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useEnterpriseActionQuery } from '@/hooks/use-enterprise-action-api';
+import { useActionQuery } from '@/hooks/use-action-api';
 
 interface DataTable {
   id: string;
@@ -21,7 +21,7 @@ export function useTableSelection() {
   const [selectedTableId, setSelectedTableId] = useState<string>('');
 
   // Fetch available data tables
-  const { data: tablesResult, isLoading: tablesLoading } = useEnterpriseActionQuery(
+  const { data: tablesResult, isLoading: tablesLoading } = useActionQuery(
     'tables.list',
     {},
     { 

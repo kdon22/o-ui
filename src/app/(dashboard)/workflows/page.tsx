@@ -47,15 +47,30 @@ export default function WorkflowsPage() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <AutoTable
-        resourceKey="workflow"
-        onRowClick={handleRowClick}
-        headerActions={headerActions}
-        customTitle="Workflows"
-        customSearchPlaceholder="Search workflows..."
-        className="workflows-table"
-      />
+    <div className="h-full flex flex-col bg-white">
+      {/* Page Header */}
+      <div className="px-6 py-6 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Workflows</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Manage and organize your business workflow processes
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Table Content */}
+      <div className="flex-1 px-6 py-6">
+        <AutoTable
+          resourceKey="workflow"
+          onRowClick={handleRowClick}
+          headerActions={headerActions}
+          customTitle=""
+          customSearchPlaceholder="Search workflows..."
+          className="workflows-table"
+        />
+      </div>
     </div>
   );
 }

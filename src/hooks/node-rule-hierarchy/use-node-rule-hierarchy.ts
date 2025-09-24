@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { useReadyBranchContext } from '@/lib/context/branch-context'
+import { useBranchContext } from '@/lib/session'
 import { useNodeInheritance } from '@/lib/inheritance'
 import type { BranchContext } from '@/lib/action-client/types'
 
@@ -92,7 +92,24 @@ export function useNodeRuleHierarchy(
   })
 
   // Get branch context from SSOT
-  const ssotBranchContext = useReadyBranchContext()
+  const ssotBranchContext = useBranchContext()
+  
+  // Guard: Return empty result if branch context isn't ready
+  if (!ssotBranchContext.isReady) {
+    return {
+      processNames: [],
+      rulesByProcessId: {},
+      ignoredRuleIds: [],
+      totalRulesCount: 0,
+      totalInheritedCount: 0,
+      totalIgnoredCount: 0,
+      totalProcessesCount: 0,
+      isLoading: true,
+      error: null,
+      inheritance: null,
+      metadata: { nodeId, includeInherited: true, includeIgnored: true },
+    } as UseNodeRuleHierarchyResult;
+  }
   const { data: session, status } = useSession()
   
   console.log('🔍 [NodeRuleHierarchyV2] Session state:', {

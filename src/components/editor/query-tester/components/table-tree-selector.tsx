@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils/generalUtils';
-import { useEnterpriseActionQuery } from '@/hooks/use-enterprise-action-api';
+import { useActionQuery } from '@/hooks/use-action-api';
 
 interface DataTable {
   id: string;
@@ -50,7 +50,7 @@ export function TableTreeSelector({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Fetch table categories from schema
-  const { data: categoriesResult, isLoading: categoriesLoading } = useEnterpriseActionQuery(
+  const { data: categoriesResult, isLoading: categoriesLoading } = useActionQuery(
     'tableCategory.list',
     {},
     { 

@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useActionQuery } from '@/hooks/use-action-api';
-import { useBranchContext } from '@/lib/branching/branch-provider';
+import { useBranchContext } from '@/lib/session';
 
 // ============================================================================
 // TYPES

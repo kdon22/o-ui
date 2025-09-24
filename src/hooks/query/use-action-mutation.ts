@@ -8,7 +8,7 @@ import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/
 import { useCallback } from 'react';
 import type { ActionRequest, ActionResponse } from '@/lib/resource-system/schemas';
 import { getActionClient } from '@/lib/action-client';
-import { useEnterpriseSession } from '../use-enterprise-action-api';
+import { useActionClientContext } from '@/lib/session';
 import { invalidateCacheAfterMutation } from './cache-invalidation';
 
 // ============================================================================
@@ -36,7 +36,7 @@ export function useActionMutation<TData = any, TVariables = any>(
   options?: ActionMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
-  const { session, branchContext, tenantId } = useEnterpriseSession();
+  const { tenantId, branchContext, isReady } = useActionClientContext();
   
   const mutationFn = useCallback(async (variables: TVariables): Promise<ActionResponse<TData>> => {
     // 🔍 DEBUG: Add stack trace to identify duplicate calls
@@ -59,7 +59,7 @@ export function useActionMutation<TData = any, TVariables = any>(
     });
     
     // Ensure we have valid tenant ID
-    const validTenantId = tenantId || session?.user?.tenantId;
+    const validTenantId = tenantId;
     if (!validTenantId || typeof validTenantId !== 'string') {
       // Return error response instead of throwing during SSR
       return {
@@ -144,7 +144,7 @@ export function useActionMutation<TData = any, TVariables = any>(
       
       throw error;
     }
-  }, [action, options, branchContext?.currentBranchId, tenantId, session?.user?.tenantId]);
+  }, [action, options, branchContext?.currentBranchId, tenantId]);
 
   // 🔍 DEBUG: Log the mutation options to see what's happening
   console.log('🔧 [useActionMutation] Setting up mutation options', {

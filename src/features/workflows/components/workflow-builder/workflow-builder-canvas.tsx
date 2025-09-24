@@ -9,7 +9,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { WorkflowNodeRenderer } from './workflow-node-renderer';
 import { useWorkflowDefinition } from '../../hooks/useWorkflowDefinition';
-import { useBranchStore } from '@/features/versioning/stores/useBranchStore';
+import { useBranchContext } from '@/lib/session';
 import type { WorkflowNode, CanvasNode } from '@/types/workflow-definition';
 
 interface WorkflowBuilderCanvasProps {
@@ -31,7 +31,7 @@ export function WorkflowBuilderCanvas({
   const [canvasViewport, setCanvasViewport] = useState({ x: 0, y: 0, zoom: 1 });
   
   // Get current branch
-  const { currentBranchId } = useBranchStore();
+  const { currentBranchId } = useBranchContext();
   
   // Load workflow definition and canvas state
   const {
@@ -52,7 +52,7 @@ export function WorkflowBuilderCanvas({
   } = useWorkflowDefinition({
     workflowId,
     tenantId,
-    branchId: currentBranchId || 'main'
+    branchId: currentBranchId
   });
 
   // ============================================================================

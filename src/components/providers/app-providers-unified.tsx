@@ -19,8 +19,7 @@
 import React, { createContext, useContext, useMemo, useCallback, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession } from 'next-auth/react';
-import { BranchProvider } from '@/lib/branching/branch-provider';
-import { BranchContextProvider } from '@/lib/context/branch-context';
+// Branch providers removed - now using session-based hooks only
 import { NavigationContextProvider } from '@/lib/context/navigation-context';
 import { NodeDataProvider } from './node-data-provider';
 import { UniversalSearchProvider } from '@/components/search/universal-search-provider';
@@ -271,13 +270,9 @@ export function UnifiedAppProviders({ children }: UnifiedAppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
-        <BranchContextProvider>
-          <BranchProvider>
-            <UnifiedAppProviderCore>
-              {children}
-            </UnifiedAppProviderCore>
-          </BranchProvider>
-        </BranchContextProvider>
+        <UnifiedAppProviderCore>
+          {children}
+        </UnifiedAppProviderCore>
       </SessionProvider>
     </QueryClientProvider>
   );

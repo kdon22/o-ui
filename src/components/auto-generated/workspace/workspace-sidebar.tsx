@@ -22,7 +22,7 @@ import {
   Folder
 } from 'lucide-react';
 import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
-import { useBranchContextWithLoading } from '@/lib/context/branch-context';
+import { useBranchContext } from '@/lib/session';
 import { useTableInitializer } from '@/lib/data-tables/table-initializer';
 import TableActionsMenu from './table-actions-menu';
 
@@ -46,7 +46,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   const [newItemName, setNewItemName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const branchContext = useBranchContextWithLoading();
+  const branchContext = useBranchContext();
 
   // Load categories and tables separately
   const { data: categoriesResponse } = useActionQuery('tableCategory.list', {}, {
@@ -125,7 +125,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   };
 
   const handleCreateItem = async () => {
-    if (!newItemName.trim() || !branchContext || !creatingItem) return;
+    if (!newItemName.trim() || !branchContext.isReady || !creatingItem) return;
     
     const basePayload = {
       name: newItemName.trim(),

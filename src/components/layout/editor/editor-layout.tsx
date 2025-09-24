@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react'
 import { create } from 'zustand'
-import { useEnterpriseSession } from '@/hooks/use-enterprise-action-api'
+import { useAuth, useBranchContext } from '@/lib/session'
 import { useRuleSourceCode } from '@/components/editor/services/source-code-state-manager'
 import { EditorHeader } from './editor-header'
 import { EditorTabs } from './editor-tabs'
@@ -31,7 +31,8 @@ export default function EditorLayout({
   ruleId, ruleIdShort, initialRule,
   classId, classIdShort, initialClass 
 }: EditorLayoutProps) {
-  const { session, isAuthenticated, isLoading: sessionLoading, branchContext } = useEnterpriseSession()
+  const { isAuthenticated, isLoading: sessionLoading } = useAuth()
+  const branchContext = useBranchContext()
   
   // ============================================================================
   // ENTERPRISE SSR HANDLING - PROGRESSIVE LOADING

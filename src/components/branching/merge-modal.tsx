@@ -54,7 +54,7 @@ import {
 import { useActionMutation } from '@/hooks/use-action-api';
 import { formatDistanceToNow } from 'date-fns';
 import { ChangeHistoryModal } from './change-history-modal';
-import { useBranchContext } from '@/lib/branching/branch-provider';
+import { useBranchContext } from '@/lib/session';
 
 // ============================================================================
 // TYPES

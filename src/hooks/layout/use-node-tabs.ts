@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { PROCESS_SCHEMA } from '@/features/processes/processes.schema'
 import { RULE_SCHEMA } from '@/features/rules/rules.schema'
-import { useCleanBranchContext } from '@/hooks/use-clean-branch-context'
+import { useBranchContext } from '@/lib/session'
 
 export type TabType = 'processes' | 'offices'
 
@@ -31,7 +31,37 @@ export function useNodeTabs(nodeId: string): UseNodeTabsReturn {
   const [activeTab, setActiveTab] = useState<TabType>('processes')
   const [level1Filter, setLevel1Filter] = useState<string>('all')
   const [level2Filter, setLevel2Filter] = useState<string>('all')
-  const branchContext = useCleanBranchContext()
+  const branchContext = useBranchContext()
+  
+  // Guard: Early return if branch context isn't ready
+  if (!branchContext.isReady) {
+    return {
+      // State
+      activeTab: 'processes' as TabType,
+      level1Filter: 'all',
+      level2Filter: 'all',
+      
+      // Config
+      tabConfigs: {
+        processes: { 
+          resourceKey: 'processes',
+          filters: {},
+          filteringConfig: {}
+        },
+        offices: { 
+          resourceKey: 'offices',
+          filters: {},
+          filteringConfig: {}
+        }
+      },
+      
+      // Actions
+      setActiveTab: () => {},
+      setLevel1Filter: () => {},
+      setLevel2Filter: () => {},
+      reset: () => {}
+    }
+  }
 
   // Reset filters when tab changes
   useEffect(() => {

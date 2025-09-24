@@ -13,7 +13,7 @@ import { useEditorSave, ruleDetailsAdapter } from '@/lib/editor/save'
 import { RULE_SCHEMA } from '@/features/rules/rules.schema'
 import { useNavigationContext, useRuleCreationContext } from '@/lib/context/navigation-context'
 import { useAutoNavigationContext } from '@/lib/resource-system/navigation-context'
-import { useReadyBranchContext } from '@/lib/context/branch-context'
+import { useBranchContext } from '@/lib/session'
 
 // Local navigation context type
 type JunctionNavigationContext = {
@@ -38,7 +38,16 @@ export function RuleDetailsTab({
   onRuleCreated
 }: RuleDetailsTabProps) {
   // Get branch context from SSOT
-  const branchContext = useReadyBranchContext();
+  const branchContext = useBranchContext();
+  
+  // Guard: Return loading if branch context isn't ready
+  if (!branchContext.isReady) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 

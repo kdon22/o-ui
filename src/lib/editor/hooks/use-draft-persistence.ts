@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useSession } from 'next-auth/react'
-import { useBranchContext } from '@/lib/context/branch-context'
+import { useBranchContext } from '@/lib/session'
 
 export function useDraftPersistence(ruleId: string) {
   const { data: session } = useSession()
@@ -17,9 +17,9 @@ export function useDraftPersistence(ruleId: string) {
   // 🚀 CLEAN: Generate draft key
   const draftKey = useMemo(() => {
     const tenantId = session?.user?.tenantId || 'anon'
-    const branchId = branchContext?.currentBranchId || 'main'
+    const branchId = branchContext.isReady ? branchContext.currentBranchId : 'main'
     return `rule_draft_${tenantId}_${branchId}_${ruleId}`
-  }, [session?.user?.tenantId, branchContext?.currentBranchId, ruleId])
+  }, [session?.user?.tenantId, branchContext.isReady ? branchContext.currentBranchId : null, ruleId])
 
   // 🚀 ENTERPRISE: Simple draft save (debounced)
   const saveDraft = useDebouncedCallback((sourceCode: string) => {
@@ -34,7 +34,7 @@ export function useDraftPersistence(ruleId: string) {
         timestamp: Date.now(),
         ruleId,
         tenantId: session?.user?.tenantId,
-        branchId: branchContext?.currentBranchId
+        branchId: branchContext.isReady ? branchContext.currentBranchId : 'main'
       }
       
       localStorage.setItem(draftKey, JSON.stringify(draftData))

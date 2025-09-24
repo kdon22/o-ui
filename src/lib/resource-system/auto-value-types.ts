@@ -5,7 +5,7 @@
  * Supports all autoValue sources found in @features/ schemas.
  */
 
-import type { BranchContext } from '@/lib/context/branch-context'
+import type { BranchContext } from '@/lib/session'
 
 // ============================================================================
 // CORE CONTEXT TYPES

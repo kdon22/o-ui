@@ -58,7 +58,7 @@ import type {
   PRMode,
   MergeStrategy 
 } from '@/features/pull-requests/pull-requests.schema';
-import { useBranchContext } from '@/lib/branching/branch-provider';
+import { useBranchContext } from '@/lib/session';
 import { useActionMutation } from '@/hooks/use-action-api';
 
 // ============================================================================

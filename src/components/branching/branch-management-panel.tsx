@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { TabBar } from '@/components/ui/tab-bar';
-import { useBranchContext } from '@/lib/branching/branch-provider';
+import { useBranchContext } from '@/lib/session';
 import { useActionMutation, useActionQuery } from '@/hooks/use-action-api';
 import { formatDistanceToNow } from 'date-fns';
 import type { Branch } from '@/lib/branching/types';
@@ -308,23 +308,34 @@ export const BranchManagementPanel: React.FC<BranchPanelProps> = ({
     setInternalOpen(open || false);
   }, [open]);
   
-  const { 
-    currentBranch, 
-    defaultBranch, 
-    availableBranches, 
-    switchBranch, 
-    createBranch,
-    refreshBranches,
-    isLoading,
-    isSwitching,
-    error 
-  } = useBranchContext();
+  // 🚀 CLEAN: Use new session system directly
+  const branchContext = useBranchContext();
+  
+  // Early return if not ready
+  if (!branchContext.isReady) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="sm:max-w-[600px] overflow-y-auto" side="right">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <GitBranch className="h-5 w-5" />
+              Branch Management
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex items-center justify-center h-32">
+            <div className="text-gray-500">Loading branch context...</div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  const { currentBranchId, defaultBranchId, switchBranch } = branchContext;
 
   // Simple branch creation mutation - NO operation state management
   const createBranchMutation = useActionMutation('branches.create', {
     onSuccess: () => {
       setShowCreateBranchForm(false);
-      refreshBranches();
       refetchBranches();
     },
     onError: () => {
@@ -348,13 +359,23 @@ export const BranchManagementPanel: React.FC<BranchPanelProps> = ({
   // COMPUTED VALUES
   // ============================================================================
 
-  // Merge branches from session and action system (action system takes priority)
+  // 🚀 CLEAN: Use branches from action system directly
   const allBranches = useMemo(() => {
     if (actionBranches?.data && Array.isArray(actionBranches.data)) {
       return actionBranches.data;
     }
-    return availableBranches;
-  }, [actionBranches?.data, availableBranches]);
+    return [];
+  }, [actionBranches?.data]);
+
+  // Find current branch object from allBranches for display purposes
+  const currentBranch = useMemo(() => {
+    return allBranches.find(b => b.id === currentBranchId) || null;
+  }, [allBranches, currentBranchId]);
+
+  // Find default branch object from allBranches for display purposes
+  const defaultBranch = useMemo(() => {
+    return allBranches.find(b => b.id === defaultBranchId) || null;
+  }, [allBranches, defaultBranchId]);
 
   const stats = useMemo(() => {
     const total = allBranches.length;
@@ -418,7 +439,7 @@ export const BranchManagementPanel: React.FC<BranchPanelProps> = ({
     onBranchOperationStart?.();
     
     try {
-      await switchBranch({ branchId });
+      await switchBranch(branchId);
     } catch (err) {
       console.error('Failed to switch branch:', err);
     } finally {
@@ -450,7 +471,7 @@ export const BranchManagementPanel: React.FC<BranchPanelProps> = ({
       setPRBranch({ id: branchId, name: branch.name });
       setCreatePRModalOpen(true);
     } else {
-      console.error('Branch not found for PR creation:', { branchId, availableBranches: allBranches.length });
+      console.error('Branch not found for PR creation:', { branchId, totalBranches: allBranches.length });
     }
   };
 
@@ -627,11 +648,7 @@ export const BranchManagementPanel: React.FC<BranchPanelProps> = ({
         </h3>
         
         <div className="space-y-1">
-          {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-2 rounded mb-3">
-              {error}
-            </div>
-          )}
+          {/* Error handling removed for clean development implementation */}
           
           {filteredAndSortedBranches.map((branch) => (
             <BranchItem
@@ -749,7 +766,7 @@ export const BranchManagementPanel: React.FC<BranchPanelProps> = ({
 
 
   // TEMPORARY DEBUG: Skip loading state to test if that's the issue
-  if (false && isLoading) {
+  if (false && isLoadingActionBranches) {
     
     const loadingContent = (
       <div className="flex items-center gap-2 p-4">

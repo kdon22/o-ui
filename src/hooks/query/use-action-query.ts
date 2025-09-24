@@ -9,7 +9,7 @@ import { useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ActionRequest, ActionResponse } from '@/lib/resource-system/schemas';
 import { getActionClient } from '@/lib/action-client';
 import { useOptionalCacheContext } from '@/components/providers/cache-provider';
-import { useEnterpriseSession } from '../use-enterprise-action-api';
+import { useActionClientContext } from '@/lib/session';
 import { queryKeys } from './query-keys';
 
 // ============================================================================
@@ -39,7 +39,7 @@ export function useActionQuery<TData = any>(
   options?: ActionQueryOptions<TData>
 ) {
   const queryClient = useQueryClient();
-  const { session, branchContext } = useEnterpriseSession();
+  const { tenantId, branchContext, isReady } = useActionClientContext();
   
   // Gracefully handle CacheProvider not being available yet
   const cacheContext = useOptionalCacheContext();
@@ -102,7 +102,7 @@ export function useActionQuery<TData = any>(
       });
     }
 
-    const tenantId = session?.user?.tenantId;
+    // tenantId already available from useActionClientContext
     if (!tenantId) {
       // Return a safe error response instead of throwing during SSR
       return {
@@ -128,7 +128,7 @@ export function useActionQuery<TData = any>(
     });
 
     return result;
-  }, [action, data, options, branchContext, session?.user?.tenantId]);
+  }, [action, data, options, branchContext, tenantId]);
 
   // ============================================================================
   // QUERY CONFIGURATION
