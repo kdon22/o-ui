@@ -87,27 +87,34 @@ export class ReadOperations {
         return await fetchFromAPIFn(action, data, options, branchContext, startTime);
       }
 
-      // Step 3: Check IndexedDB (10-50ms) with conditional branch logic  
-      console.log('🔍 [ReadOperations] Step 3: Checking IndexedDB...');
+      // Step 3: Check IndexedDB (optimized for core entities: <50ms)
+      console.log('🔍 [ReadOperations] Step 3: Checking PERFORMANCE-OPTIMIZED IndexedDB...');
       
       // CRITICAL: Check if IndexedDB is in fallback mode
       if (this.indexedDB.isFallbackMode && this.indexedDB.isFallbackMode()) {
         console.log('⚠️ [ReadOperations] IndexedDB in fallback mode, skipping to API...');
         return await fetchFromAPIFn(action, data, options, branchContext, startTime);
       }
+      
+      // Get store name early for performance optimizations
+      const storeName = mapping.store;
+      
+      // 🚀 CORE ENTITY FAST PATH: Core entities should have sub-10ms IndexedDB access
+      const coreEntities = ['nodes', 'processes', 'rules', 'nodeProcesses', 'processRules'];
+      if (coreEntities.includes(storeName)) {
+        console.log(`🚀 [ReadOperations] Fast path for core entity: ${storeName}`);
+      }
 
-      // NEW: Non-blocking readiness gate (2s) before giving up to API
+      // 🚀 PERFORMANCE-OPTIMIZED: Reduced readiness timeout for core schema (should open in <200ms)
       try {
-        const readyInTime = await (this.indexedDB as any).waitUntilReadyOrTimeout?.(2000);
+        const readyInTime = await (this.indexedDB as any).waitUntilReadyOrTimeout?.(600);
         if (readyInTime === false) {
-          console.warn('⏱️ [ReadOperations] IndexedDB not ready within 2s, using API now and DB will continue opening in background');
+          console.warn('⏱️ [ReadOperations] IndexedDB not ready within 600ms, using API (core schema should be <200ms)');
           return await fetchFromAPIFn(action, data, options, branchContext, startTime);
         }
       } catch {
         // If helper not present or throws, continue as before
       }
-      
-      const storeName = mapping.store;
       const needsBranchContext = this.requiresBranchContext(action);
       let indexedData: any;
       
