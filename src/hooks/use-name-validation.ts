@@ -71,8 +71,7 @@ export function createNameValidationHook(config: NameValidationConfig) {
     // Safely get branch context - gracefully handle if provider is missing
     let branchContext = null;
     try {
-      const context = useBranchContext();
-      branchContext = context.branchContext;
+      branchContext = useBranchContext();
     } catch (error) {
       // Branch provider not available - validation will still work for basic checks
       console.warn('BranchProvider not available for name validation, duplicate checking disabled');
@@ -151,12 +150,12 @@ export function createNameValidationHook(config: NameValidationConfig) {
 
     // Only check for duplicates if basic validation passes, name is debounced, and we have branch context
     const shouldCheckDuplicates = basicValidation.isValid && 
-                                  debouncedName.trim() && 
+                                  debouncedName.trim().length > 0 && 
                                   debouncedName === name &&
                                   branchContext !== null;
 
     const duplicateCheckQuery = useActionQuery(
-      `${entityType}.query`,
+      `${entityType}.list`,
       {
         filters: {
           name: debouncedName.trim(),
@@ -196,7 +195,7 @@ export function createNameValidationHook(config: NameValidationConfig) {
       }
 
       const existingEntities = duplicateCheckQuery.data.data || [];
-      const exactMatches = existingEntities.filter(entity => 
+      const exactMatches = existingEntities.filter((entity: any) => 
         entity.name.toLowerCase() === debouncedName.trim().toLowerCase() &&
         entity.id !== entityIdToExclude
       );
@@ -233,10 +232,11 @@ export function createNameValidationHook(config: NameValidationConfig) {
         };
       }
 
-      // Still checking duplicates
+      // Still checking duplicates - BLOCK submission until complete
       if (isChecking) {
         return {
-          isValid: true, // Assume valid while checking
+          isValid: false, // Block submission while checking
+          error: 'Checking for duplicate names...',
           isChecking: true,
           isDuplicate: false
         };

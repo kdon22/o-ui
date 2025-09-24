@@ -20,7 +20,7 @@ The validation system now follows your established patterns:
 ```typescript
 // Uses your standardized action query pattern
 const duplicateCheckQuery = useActionQuery(
-  `${entityType}.query`,  // Action: 'workflow.query', 'rule.query', etc.
+  `${entityType}.list`,  // Action: 'workflow.list', 'rule.list', etc.
   {
     filters: {
       name: debouncedName.trim(),

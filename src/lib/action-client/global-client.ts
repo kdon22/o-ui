@@ -126,3 +126,49 @@ export function setupDebugUtilities(): void {
 
 // Auto-setup debug utilities
 setupDebugUtilities();
+
+// Also expose directly for easier access
+if (typeof window !== 'undefined') {
+  // Expose ActionClient debug utilities globally
+  (window as any).ActionClientDebug = {
+    getSyncQueueStatus(tenantId?: string) {
+      const client = tenantId ? getActionClient(tenantId) : globalActionClient;
+      if (!client) {
+        console.warn('No ActionClient available. Pass tenantId or initialize client first.');
+        return null;
+      }
+      return client.getSyncQueueStatus();
+    },
+    
+    clearSyncQueue(tenantId?: string) {
+      const client = tenantId ? getActionClient(tenantId) : globalActionClient;
+      if (!client) {
+        console.warn('No ActionClient available. Pass tenantId or initialize client first.');
+        return;
+      }
+      console.log('🧹 Clearing sync queue for tenant:', client.getTenantId());
+      client.clearSyncQueue();
+      console.log('✅ Sync queue cleared');
+    },
+    
+    clearAllData(tenantId: string) {
+      console.log('🧹 Clearing all data for tenant:', tenantId);
+      const client = getActionClient(tenantId);
+      client.clearSyncQueue();
+      
+      // Also clear IndexedDB
+      const dbName = `o-${tenantId}`;
+      const deleteRequest = indexedDB.deleteDatabase(dbName);
+      deleteRequest.onsuccess = () => {
+        console.log('✅ All data cleared for tenant:', tenantId);
+        setTimeout(() => window.location.reload(), 1000);
+      };
+    }
+  };
+  
+  // Make it available with your tenant ID for easy access
+  (window as any).clearSyncQueue = () => {
+    const tenantId = '1BD'; // Your tenant ID
+    (window as any).ActionClientDebug.clearSyncQueue(tenantId);
+  };
+}

@@ -237,13 +237,24 @@ export async function POST(request: NextRequest) {
       throw executionError;
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('🔥 [API] POST /api/workspaces/current/actions - Request failed', {
       error: error instanceof Error ? error.message : error,
       stack: error instanceof Error ? error.stack : undefined,
+      errorCode: error.code,
+      statusCode: error.statusCode,
       executionTime: Date.now() - startTime,
       timestamp: new Date().toISOString()
     });
+    
+    // Determine appropriate HTTP status code
+    let statusCode = 500; // Default to internal server error
+    
+    if (error.code === 'VALIDATION_ERROR' && error.statusCode) {
+      statusCode = error.statusCode; // Use the specific status code (e.g., 409 for conflicts)
+    } else if (error.statusCode) {
+      statusCode = error.statusCode;
+    }
     
     const errorResponse: ActionResponse = {
       success: false,
@@ -255,6 +266,9 @@ export async function POST(request: NextRequest) {
       debug: process.env.NODE_ENV === 'development' ? {
         stack: error instanceof Error ? error.stack : undefined,
         errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorCode: error.code,
+        statusCode: error.statusCode,
+        details: error.details,
         actionRequest: actionRequest ? {
           action: actionRequest.action,
           hasData: !!actionRequest.data,
@@ -265,7 +279,7 @@ export async function POST(request: NextRequest) {
       } : undefined
     };
     
-    return NextResponse.json(errorResponse, { status: 500 });
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 

@@ -297,6 +297,7 @@ export function useUnifiedApp(): UnifiedAppContextValue {
 export function AppLoadingBoundary({ children }: { children: React.ReactNode }) {
   const { isSessionReady, isCacheReady, cacheError } = useUnifiedApp();
   
+  // Show error if cache initialization completely failed
   if (cacheError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -314,18 +315,23 @@ export function AppLoadingBoundary({ children }: { children: React.ReactNode }) 
     );
   }
   
-  if (!isSessionReady || !isCacheReady) {
+  // 🚨 FIX: Only block on session loading, allow cache to initialize in background
+  // This prevents the tree from being stuck on "Loading tree..." forever
+  if (!isSessionReady) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {!isSessionReady ? 'Loading session...' : 'Initializing workspace...'}
+          <p className="text-gray-600">Loading session...</p>
+          <p className="text-xs text-gray-400 mt-2">
+            {process.env.NODE_ENV === 'development' && 'Cache: ' + (isCacheReady ? 'Ready' : 'Loading...')}
           </p>
         </div>
       </div>
     );
   }
   
+  // ✅ Allow app to render even if cache is still initializing
+  // Components can handle loading states individually
   return <>{children}</>;
 }

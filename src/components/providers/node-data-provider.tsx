@@ -105,6 +105,21 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
     session?.user?.branchContext?.currentBranchId
   );
   
+  // 🚨 DEBUG: Enhanced session debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 [NodeDataProvider] Session state check:', {
+      status,
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      hasTenantId: !!session?.user?.tenantId,
+      tenantId: session?.user?.tenantId,
+      hasBranchContext: !!session?.user?.branchContext,
+      currentBranchId: session?.user?.branchContext?.currentBranchId,
+      sessionReady,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
   // ============================================================================
   // SIMPLE NODE QUERY - JUST USE WHAT WORKS
   // ============================================================================
@@ -123,9 +138,25 @@ export function NodeDataProvider({ children }: NodeDataProviderProps) {
     {
       enabled: sessionReady, // 🎯 Use bulletproof session check
       staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 10, // 10 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (renamed from cacheTime in React Query v5)
+      retry: 3, // Retry failed requests
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     }
   );
+  
+  // 🚨 DEBUG: Enhanced query debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 [NodeDataProvider] Query state:', {
+      isLoading: nodeQuery.isLoading,
+      isFetching: nodeQuery.isFetching,
+      isError: nodeQuery.isError,
+      error: nodeQuery.error?.message,
+      hasData: !!nodeQuery.data,
+      dataLength: nodeQuery.data?.data?.length || 0,
+      enabled: sessionReady,
+      timestamp: new Date().toISOString()
+    });
+  }
   
   // ============================================================================
   // DATA PROCESSING & INDEXING

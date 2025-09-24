@@ -124,6 +124,19 @@ export class ActionClientCore {
   }
 
   // ============================================================================
+  // SYNC QUEUE MANAGEMENT & DEBUGGING
+  // ============================================================================
+
+  getSyncQueueStatus() {
+    return this.syncQueue.getQueueStatus();
+  }
+
+  clearSyncQueue(): void {
+    console.log('🧹 [ActionClientCore] Clearing sync queue');
+    this.syncQueue.clearQueue();
+  }
+
+  // ============================================================================
   // TENANT & BRANCH MANAGEMENT
   // ============================================================================
 

@@ -344,15 +344,29 @@ export class CreateHandler {
 
         return actionResult;
         
-      } catch (prismaError) {
+      } catch (prismaError: any) {
         console.error('🔥 [CreateHandler] PrismaService.create failed', {
           resourceType,
           data,
           prismaContext,
           error: prismaError instanceof Error ? prismaError.message : prismaError,
           stack: prismaError instanceof Error ? prismaError.stack : undefined,
+          errorCode: prismaError.code,
           timestamp: new Date().toISOString()
         });
+        
+        // Handle unique constraint violations with proper HTTP status
+        if (prismaError.code === 'UNIQUE_CONSTRAINT_VIOLATION') {
+          const validationError = new Error(prismaError.message);
+          (validationError as any).statusCode = 409; // Conflict
+          (validationError as any).code = 'VALIDATION_ERROR';
+          (validationError as any).details = {
+            type: 'unique_constraint',
+            fields: prismaError.fields,
+            entityName: prismaError.entityName
+          };
+          throw validationError;
+        }
         
         throw prismaError;
       }

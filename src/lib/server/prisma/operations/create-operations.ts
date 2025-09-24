@@ -218,35 +218,71 @@ export class CreateOperationsService {
   private async executeCreate(createData: any, model: any, schema: ResourceSchema): Promise<any> {
     let result;
     
-    if (createData.id) {
-      // Check for existing record with same ID to support idempotent creation
-      const existingRecord = await model.findUnique({
-        where: { id: createData.id }
-      });
-      
-      if (existingRecord) {
-        result = existingRecord;
+    try {
+      if (createData.id) {
+        // Check for existing record with same ID to support idempotent creation
+        const existingRecord = await model.findUnique({
+          where: { id: createData.id }
+        });
+        
+        if (existingRecord) {
+          result = existingRecord;
+        } else {
+          result = await model.create({
+            data: createData
+          });
+        }
       } else {
+        // No ID provided, create normally (Prisma will generate ID)
         result = await model.create({
           data: createData
         });
+        
+        // Set originalId to the generated ID for new entities
+        if (schema.modelName === 'Node' && result.id && !result.originalNodeId) {
+          result = await model.update({
+            where: { id: result.id },
+            data: { originalNodeId: result.id }
+          });
+        }
       }
-    } else {
-      // No ID provided, create normally (Prisma will generate ID)
-      result = await model.create({
-        data: createData
-      });
       
-      // Set originalId to the generated ID for new entities
-      if (schema.modelName === 'Node' && result.id && !result.originalNodeId) {
-        result = await model.update({
-          where: { id: result.id },
-          data: { originalNodeId: result.id }
+      return result;
+      
+    } catch (error: any) {
+      // Handle unique constraint violations with user-friendly messages
+      if (error.code === 'P2002') {
+        const entityName = schema.modelName || 'entity';
+        const fields = error.meta?.target;
+        let message = `A ${entityName.toLowerCase()} with this information already exists`;
+        
+        if (fields?.includes('name')) {
+          message = `A ${entityName.toLowerCase()} named "${createData.name}" already exists`;
+          if (fields.includes('branchId')) {
+            message += ' in this workspace';
+          }
+        }
+        
+        console.error('🚫 [CreateOperations] Unique constraint violation:', {
+          entityName,
+          fields,
+          name: createData.name,
+          branchId: createData.branchId,
+          tenantId: createData.tenantId,
+          timestamp: new Date().toISOString()
         });
+        
+        // Throw a more user-friendly error
+        const friendlyError = new Error(message);
+        (friendlyError as any).code = 'UNIQUE_CONSTRAINT_VIOLATION';
+        (friendlyError as any).fields = fields;
+        (friendlyError as any).entityName = entityName;
+        throw friendlyError;
       }
+      
+      // Re-throw other errors as-is
+      throw error;
     }
-    
-    return result;
   }
 
   /**
