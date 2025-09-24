@@ -45,15 +45,9 @@ export class IndexedDBManager {
     this.readyPromise = this.getOrCreateDatabase().then(async (db) => {
       this.db = db;
       this.isReady = true;
-      console.log('🎉 [IndexedDBManager] PERFORMANCE-OPTIMIZED Database initialization successful:', { 
+      console.log('✅ [IndexedDBManager] Database ready:', { 
         dbName: this.dbName, 
-        version: this.version,
-        stores: db.objectStoreNames.length,
-        storeNames: Array.from(db.objectStoreNames),
-        bootstrapped: await this.isBootstrapped(),
-        performanceGain: `Reduced from 25+ stores to ${db.objectStoreNames.length} core stores`,
-        expectedSpeedup: '5-10x faster initialization',
-        coreStoresReady: 'Tree navigation and basic functionality available immediately'
+        stores: db.objectStoreNames.length
       });
       
     }).catch((error) => {
@@ -89,11 +83,6 @@ export class IndexedDBManager {
     }
     
     // Start new initialization
-    console.log('🚀 [IndexedDBManager] Starting new database initialization:', { 
-      dbName: this.dbName, 
-      version: this.version,
-      tenantId: this.tenantId 
-    });
     
     const initPromise = this.openDatabase();
     initializationLocks.set(dbKey, initPromise);
@@ -274,17 +263,6 @@ export class IndexedDBManager {
         clearTimeout(warnTimeout);
         clearTimeout(hardTimeout);
         const db = request.result;
-        console.log('🎉🎉🎉 [IndexedDBManager] PERFORMANCE-OPTIMIZED DATABASE OPENED SUCCESSFULLY!');
-        console.log('🎉 [IndexedDBManager] Database opened successfully with core schema:', {
-          dbName: this.dbName,
-          version: this.version,
-          actualVersion: db.version,
-          stores: db.objectStoreNames.length,
-          storeNames: Array.from(db.objectStoreNames),
-          upgradeTriggered: db.objectStoreNames.length > 0 ? 'Yes (has stores)' : 'No (empty)',
-          performanceNote: `Core schema (${db.objectStoreNames.length} stores) vs 25+ stores before`,
-          expectedPerfGain: '80% faster initialization'
-        });
         
         // CRITICAL: Check if database opened without upgrade and is empty (zombie state)
         if (db.objectStoreNames.length === 0) {
@@ -304,14 +282,7 @@ export class IndexedDBManager {
       };
 
       request.onupgradeneeded = (event) => {
-        console.log('🔧🔧🔧 [IndexedDBManager] DATABASE UPGRADE TRIGGERED!');
-        console.log('🔧 [IndexedDBManager] Database upgrade needed:', {
-          oldVersion: event.oldVersion,
-          newVersion: event.newVersion,
-          dbName: this.dbName,
-          currentVersion: this.version,
-          timestamp: new Date().toISOString()
-        });
+        console.log('🔧 [IndexedDBManager] Database upgrade:', event.oldVersion, '→', event.newVersion);
         const db = (event.target as IDBOpenDBRequest).result;
         
         try {
@@ -499,17 +470,7 @@ export class IndexedDBManager {
     
     // Create/update stores
     try {
-      console.log('📋 [IndexedDB] Getting store configurations...');
-      // Get store configurations - call the function to get actual array
       const storeConfigs = getIndexedDBStoreConfigs();
-      console.log('✅ [IndexedDB] Store configs loaded:', { 
-        count: storeConfigs?.length || 0,
-        configsType: typeof storeConfigs,
-        isArray: Array.isArray(storeConfigs),
-        firstConfig: storeConfigs?.[0],
-        sampleNames: storeConfigs?.slice(0, 5).map(s => s?.name),
-        configs: storeConfigs 
-      });
       
       // CRITICAL DEBUG: Check if store configs are empty
       if (!storeConfigs || storeConfigs.length === 0) {
@@ -517,19 +478,12 @@ export class IndexedDBManager {
         console.error('🚨 [IndexedDB] getIndexedDBStoreConfigs() returned:', storeConfigs);
       }
       
-      console.log('🚀 [IndexedDB] Creating stores:', {
-        totalStores: storeConfigs.length,
-        storeNames: storeConfigs.map(s => s.name),
-        hasPullRequests: storeConfigs.some(s => s.name === 'pullRequests'),
-        version: newVersion
-      });
+      console.log(`🚀 [IndexedDB] Creating ${storeConfigs.length} stores`);
       
 
       
-      console.log('🔨 [IndexedDB] Starting store creation loop...');
-      storeConfigs.forEach((storeConfig: any, index: number) => {
+      storeConfigs.forEach((storeConfig: any) => {
         const storeName = storeConfig.name;
-        console.log(`🔨 [IndexedDB] Creating store ${index + 1}/${storeConfigs.length}: ${storeName}`);
         
         try {
           if (db.objectStoreNames.contains(storeName)) {
@@ -539,29 +493,17 @@ export class IndexedDBManager {
           
           // Use compound keys if enabled, otherwise use single key
           const keyPath = this.useCompoundKeys ? undefined : (storeConfig?.keyPath || 'id');
-          console.log(`🔨 [IndexedDB] Creating store ${storeName} with:`, { 
-            keyPath, 
-            autoIncrement: storeConfig?.autoIncrement || false,
-            useCompoundKeys: this.useCompoundKeys 
-          });
           
           const store = db.createObjectStore(storeName, {
             keyPath,
             autoIncrement: storeConfig?.autoIncrement || false
           });
-          console.log(`✅ [IndexedDB] Store ${storeName} created successfully`);
-
           // Create indexes
           if (storeConfig?.indexes) {
-            console.log(`📇 [IndexedDB] Creating ${storeConfig.indexes.length} indexes for ${storeName}`);
-            storeConfig.indexes.forEach((index: any, indexIndex: number) => {
-              console.log(`📇 [IndexedDB] Creating index ${indexIndex + 1}: ${index.name}`);
+            storeConfig.indexes.forEach((index: any) => {
               store.createIndex(index.name, index.keyPath, { unique: index.unique || false });
-              console.log(`✅ [IndexedDB] Index ${index.name} created`);
             });
           }
-          
-          console.log(`✅ [IndexedDB] Store ${storeName} fully configured`);
 
         } catch (error) {
           console.error(`❌ Error configuring store ${storeName}:`, error);

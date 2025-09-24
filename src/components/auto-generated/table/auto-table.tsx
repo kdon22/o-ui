@@ -129,52 +129,7 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     ? enhancedData
     : (dataResult?.data || []); // Use API data or empty array (no blocking)
 
-  // 🚨 AGGRESSIVE DEBUG: Track what's causing the disappearing
-  console.log('🔥 [AutoTable] RENDER DEBUG:', {
-    resourceKey,
-    dataLength: data.length,
-    isLoading,
-    hasDataResult: !!dataResult,
-    hasEnhancedData: !!enhancedData && enhancedData.length > 0,
-    dataResultLength: dataResult?.data?.length || 0,
-    enhancedDataLength: enhancedData?.length || 0,
-    enhancedDataIsArray: Array.isArray(enhancedData),
-    dataSelectionLogic: {
-      enhancedDataCondition: Array.isArray(enhancedData) && enhancedData.length > 0,
-      usingEnhancedData: (Array.isArray(enhancedData) && enhancedData.length > 0),
-      fallbackToApiData: !(Array.isArray(enhancedData) && enhancedData.length > 0)
-    },
-    queryState: {
-      isLoading,
-      isFetching: dataResult ? 'unknown' : 'no-dataResult',
-      error: !!error
-    },
-    branchInfo: {
-      sessionReady: !!session?.user?.tenantId,
-      currentBranchId: session?.user?.currentBranchId,
-      defaultBranchId: session?.user?.defaultBranchId
-    },
-    // 🚨 SHOW ACTUAL DATA TO SEE WHAT'S HAPPENING
-    actualDataPreview: data.slice(0, 3).map(item => ({
-      id: item?.id || item?.ruleId,
-      name: item?.name || item?.ruleName,
-      branchId: item?.branchId,
-      type: item?.type,
-      processName: item?.processName,
-      displayClass: item?.displayClass,
-      isInherited: item?.isInherited
-    })),
-    enhancedDataPreview: enhancedData?.slice(0, 3).map(item => ({
-      id: item?.id || item?.ruleId,
-      name: item?.name || item?.ruleName,
-      branchId: item?.branchId,
-      type: item?.type,
-      processName: item?.processName,
-      displayClass: item?.displayClass,
-      isInherited: item?.isInherited
-    })),
-    timestamp: new Date().toISOString()
-  });
+  // Debug logging removed for cleaner production logs
 
   // ✅ CRITICAL DEBUG: Log when data becomes empty (causes flashing)
   if (data.length === 0 && !isLoading) {
