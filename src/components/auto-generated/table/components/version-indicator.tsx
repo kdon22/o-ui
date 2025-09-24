@@ -14,7 +14,11 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Clock, History, GitBranch, User } from 'lucide-react';
+// TEMP DIAGNOSTIC: remove lucide-react entirely to isolate chunk issues
+const Clock = ((props: any) => <span {...props} />);
+const History = ((props: any) => <span {...props} />);
+const GitBranch = ((props: any) => <span {...props} />);
+const User = ((props: any) => <span {...props} />);
 import { formatDistanceToNow } from 'date-fns';
 
 // ============================================================================

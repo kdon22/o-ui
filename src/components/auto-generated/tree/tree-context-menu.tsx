@@ -13,7 +13,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils/generalUtils';
-import { TreeNodeData } from './auto-tree';
+import type { TreeNodeData } from './types';
 import { Plus, Trash2, FileText, Settings, Building, RefreshCw, Eye, EyeOff } from 'lucide-react';
 
 // ============================================================================

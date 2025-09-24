@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import { UnifiedAppProviders, AppLoadingBoundary, useUnifiedApp } from './app-providers-unified';
@@ -35,8 +36,8 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const isAuth = isAuthRoute(pathname);
   const isPrompt = isPromptPublicRoute(pathname);
-  // Lightweight query client for public/auth routes
-  const queryClient = new QueryClient();
+  // Lightweight query client for public/auth routes (memoized)
+  const [queryClient] = useState(() => new QueryClient());
 
   // Prompt execute: only QueryClientProvider, no session/workspace
   if (isPrompt) {

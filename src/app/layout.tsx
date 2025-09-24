@@ -1,28 +1,27 @@
 import './globals.css'
-import { Inter, JetBrains_Mono, Source_Code_Pro, Fira_Code } from 'next/font/google'
+import { Inter, JetBrains_Mono, Fira_Code } from 'next/font/google'
 import { cn } from '@/lib/utils/generalUtils'
 import { ConditionalProviders } from '@/components/providers/conditional-providers'
 import { headers } from 'next/headers'
 
-const fontSans = Inter({ 
+// Font configurations
+const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-sans',
-});
+  display: 'swap',
+})
 
-const fontMono = JetBrains_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono-jetbrains',
-});
+  display: 'swap',
+})
 
-const fontSourceCode = Source_Code_Pro({
+const firaCode = Fira_Code({
   subsets: ['latin'],
-  variable: '--font-mono-source',
-});
-
-const fontFiraCode = Fira_Code({
-  subsets: ['latin'],
-  variable: '--font-mono-fira',
-});
+  variable: '--font-mono-fira', 
+  display: 'swap',
+})
 
 export const metadata = {
   title: 'O-UI',
@@ -39,10 +38,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn(
         "min-h-screen bg-background font-sans antialiased", 
-        fontSans.variable,
-        fontMono.variable,
-        fontSourceCode.variable,
-        fontFiraCode.variable
+        inter.variable,
+        jetbrainsMono.variable,
+        firaCode.variable
       )}>
         <ConditionalProviders>
           {children}

@@ -239,7 +239,8 @@ const ShortcutHelpModal: React.FC = () => {
     let keyDisplay = shortcut.key;
     if (keyDisplay.startsWith('Arrow')) {
       const direction = keyDisplay.replace('Arrow', '');
-      keyDisplay = `${direction} ←→↑↓`[{ Left: 1, Right: 2, Up: 3, Down: 4 }[direction as keyof typeof { Left: 1, Right: 2, Up: 3, Down: 4 }] || 0];
+      const arrows = { Left: '←', Right: '→', Up: '↑', Down: '↓' };
+      keyDisplay = arrows[direction as keyof typeof arrows] || direction;
     }
     
     parts.push(keyDisplay);

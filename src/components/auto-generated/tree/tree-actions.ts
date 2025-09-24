@@ -9,7 +9,7 @@
 
 import { useCallback, useState } from 'react';
 import { useActionCache } from '@/hooks/use-action-api';
-import type { TreeNodeData } from './auto-tree';
+import type { TreeNodeData } from './types';
 
 // ============================================================================
 // TYPES

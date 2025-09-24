@@ -9,23 +9,27 @@
  * - Branch-aware operations throughout
  */
 
+import UnifiedActionClient, { 
+  createAndInitializeUnifiedActionClient as createAndInitializeUnifiedActionClientImpl 
+} from './unified-action-client';
+
 // ============================================================================
-// UNIFIED ACTION CLIENT - LAZY LOADED TO AVOID CIRCULAR DEPENDENCIES
+// UNIFIED ACTION CLIENT - PURE ES6 MODULE PATTERN
 // ============================================================================
 
-// Lazy load functions to avoid circular dependencies
-export function createUnifiedActionClient(tenantId: string) {
-  const { UnifiedActionClient } = require('./unified-action-client');
+export function createUnifiedActionClient(tenantId: string): UnifiedActionClient {
   return new UnifiedActionClient(tenantId);
 }
 
-export async function createAndInitializeUnifiedActionClient(tenantId: string, branchContext: any) {
-  const { createAndInitializeUnifiedActionClient: createAndInit } = require('./unified-action-client');
-  return await createAndInit(tenantId, branchContext);
+export async function createAndInitializeUnifiedActionClient(
+  tenantId: string, 
+  branchContext: any
+): Promise<UnifiedActionClient> {
+  return await createAndInitializeUnifiedActionClientImpl(tenantId, branchContext);
 }
 
-// Export classes and other exports using require
-export const UnifiedActionClient = require('./unified-action-client').UnifiedActionClient;
+// Export the main client class
+export { default as UnifiedActionClient } from './unified-action-client';
 
 // ============================================================================
 // CORE TYPES
@@ -47,7 +51,7 @@ export type ActionClient = UnifiedActionClient;
 // DEFAULT EXPORT - UNIFIED SYSTEM
 // ============================================================================
 
-export default require('./unified-action-client').UnifiedActionClient;
+export default UnifiedActionClient;
 
 // ============================================================================
 // CONVENIENCE FACTORY
@@ -58,8 +62,8 @@ export const ActionClientFactory = {
     return createUnifiedActionClient(tenantId);
   },
   
-  createAndInitialize: async (tenantId: string) => {
-    return await createAndInitializeUnifiedActionClient(tenantId);
+  createAndInitialize: async (tenantId: string, branchContext: any) => {
+    return await createAndInitializeUnifiedActionClient(tenantId, branchContext);
   }
 };
 

@@ -35,7 +35,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TreeNode } from './tree-node';
-import { TreeNodeData } from './auto-tree';
+import type { TreeNodeData } from './types';
 import { useResourceUpdate } from '@/hooks/use-action-api';
 import { cn } from '@/lib/utils/generalUtils';
 

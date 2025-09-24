@@ -9,7 +9,7 @@
  * - Relationship types
  */
 
-import { ProcessType } from '@prisma/client';
+import type { ProcessType } from '@prisma/client';
 
 // ============================================================================
 // CORE ENTITY TYPES

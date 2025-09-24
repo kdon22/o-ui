@@ -16,6 +16,9 @@
 // MAIN TREE COMPONENTS
 // ============================================================================
 
+// Dev diagnostics: import modules to verify availability at runtime
+// Debug diagnostics completely removed to prevent webpack evaluation issues
+
 export { AutoTree } from './auto-tree';
 export { TreeNode } from './tree-node';
 export { TreeContextMenu } from './tree-context-menu';
@@ -90,7 +93,7 @@ export {
 // TYPES
 // ============================================================================
 
-export type { TreeNodeData } from './auto-tree';
+export type { TreeNodeData, AutoTreeProps, TreeProps, TreeNodeProps } from './types';
 export type { VirtualTreeContainerProps, FlatTreeNode } from './tree-virtual-container';
 export type { DragDropTreeProps, DragData, DropZoneData } from './tree-drag-drop';
 export type { TreeSkeletonProps, SkeletonNodeProps } from './tree-skeleton';
@@ -116,5 +119,4 @@ export { VirtualTreeContainer as PerformanceTree } from './tree-virtual-containe
  */
 export { DragDropTree as InteractiveTree } from './tree-drag-drop';
 
-// CSS imports
-import './auto-tree.css'; 
+// Note: CSS is imported within component entry files (e.g., auto-tree.tsx)

@@ -13,6 +13,7 @@ import type {
   CompoundKey, 
   StorageKey 
 } from '../types';
+import { getBaseId, getJunctionLineageKey, tieBreakCompare, branchScore } from '../utils/branch-identity';
 import type { QueryOptions } from '@/lib/resource-system/schemas';
 import { CompoundKeyManager } from '../utils/compound-key-manager';
 import { getIndexedDBStoreConfigs } from '@/lib/resource-system/resource-registry';
@@ -486,7 +487,6 @@ export class IndexedDBManager {
             } catch {}
 
             // Deterministic lineage grouping
-            const { getBaseId, getJunctionLineageKey, tieBreakCompare, branchScore } = require('../utils/branch-identity');
             const getLineageKey = (item: any): string => {
               if (item && typeof item === 'object' && item.__lineageKey) return String(item.__lineageKey);
               return getJunctionLineageKey(storeName, item);

@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AutoTree, TreeFooter, TreeSearchEnhanced } from '@/components/auto-generated/tree'
-import type { TreeNodeData } from '@/components/auto-generated/tree'
+import { AutoTree } from '../../auto-generated/tree/auto-tree'
+import { TreeFooter } from '../../auto-generated/tree/tree-footer'
+import { TreeSearchEnhanced } from '../../auto-generated/tree/tree-search-enhanced'
+import type { TreeNodeData } from '@/components/auto-generated/tree/types'
 import type { TreeStats } from '@/components/auto-generated/tree/tree-footer'
 import { useSearch } from '@/hooks/layout'
-import { useTreeActions } from '@/components/auto-generated/tree/tree-actions'
+import { useTreeActions } from '../../auto-generated/tree/tree-actions'
 import type { BranchInfo } from '@/lib/utils/branch-utils'
 
 export interface TreeNavigationProps {

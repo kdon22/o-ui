@@ -15,7 +15,7 @@ import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TreeNode } from './tree-node';
-import { TreeNodeData } from './auto-tree';
+import type { TreeNodeData } from './types';
 import { cn } from '@/lib/utils/generalUtils';
 
 // ============================================================================

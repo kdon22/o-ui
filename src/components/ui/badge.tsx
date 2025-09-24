@@ -31,6 +31,7 @@ const staticVariants = {
     default: "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
     secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
     outline: "text-foreground border",
+    destructive: "border-transparent bg-red-100 text-red-800 hover:bg-red-100/80 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30",
 };
 
 const badgeVariants = cva(

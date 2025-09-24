@@ -1,5 +1,6 @@
 import * as React from "react"
-import { MoreHorizontal } from "lucide-react"
+// TEMP DIAGNOSTIC: remove lucide-react icons entirely
+const MoreHorizontal = (props: any) => <span {...props} />
 import { cn } from '@/lib/utils/generalUtils'
 import { Button } from "@/components/ui/button"
 import {

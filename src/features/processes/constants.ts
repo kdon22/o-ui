@@ -7,7 +7,7 @@
  * - Default values
  */
 
-import { ProcessType } from '@prisma/client';
+import type { ProcessType } from '@prisma/client';
 
 // ============================================================================
 // PROCESS TYPE MAPPINGS - FRIENDLY NAMES

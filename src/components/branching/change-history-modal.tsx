@@ -18,7 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DiffEditor } from '@monaco-editor/react';
+import dynamic from 'next/dynamic';
+const DiffEditor = dynamic(() => import('@monaco-editor/react').then(m => m.DiffEditor), { ssr: false });
 import { Clock, User, GitBranch, RotateCcw, Eye, Code, FileText } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 

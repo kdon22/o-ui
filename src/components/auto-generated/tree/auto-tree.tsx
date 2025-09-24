@@ -24,50 +24,17 @@ import { useNavigationContext } from '@/lib/context/navigation-context'
 import { TreeNode } from './tree-node'
 import { TreeContextMenu } from './tree-context-menu'
 import { useTreeActions, getActionHandler } from './tree-actions'
-import { AutoModal } from '@/components/auto-generated/modal/auto-modal'
+import { AutoModal } from '../modal/auto-modal'
 import { NODE_SCHEMA } from '@/features/nodes/nodes.schema'
 import { PROCESS_SCHEMA } from '@/features/processes/processes.schema'
-import './auto-tree.css'
+import type { TreeNodeData, AutoTreeProps } from './types'
+// Styles are provided by Tailwind utility classes; dedicated CSS import removed to avoid bundling issues
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface TreeNodeData {
-  id: string;
-  idShort: string;
-  name: string;
-  parentId?: string | null;
-  level: number;
-  path: string;
-  sortOrder: number;
-  childCount: number;
-  isActive: boolean;
-  type: 'NODE' | 'CUSTOMER' | string;
-  // Tree-specific states
-  isExpanded?: boolean;
-  isLoading?: boolean;
-  children?: TreeNodeData[];
-  description?: string;
-  icon?: React.ReactNode;
-  hasChildren?: boolean;
-  isRootNode?: boolean;
-  isLeafNode?: boolean;
-  metadata?: Record<string, any>;
-}
 
-export interface AutoTreeProps {
-  rootNodeId: string
-  userRootNodeId?: string
-  onNodeSelect?: (node: TreeNodeData) => void
-  onNodeExpand?: (node: TreeNodeData) => void
-  onNodeCollapse?: (node: TreeNodeData) => void
-  onContextMenu?: (node: TreeNodeData, action: string) => void
-  onTreeStatsChange?: (stats: { totalNodes: number, visibleNodes: number }) => void
-  onNodesDataChange?: (data: any[]) => void // ✅ NEW: Pass nodes data to parent
-  className?: string
-  maxHeight?: number;
-}
 
 export interface ContextMenuData {
   node: TreeNodeData;

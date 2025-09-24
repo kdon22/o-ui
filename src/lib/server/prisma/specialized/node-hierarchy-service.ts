@@ -10,7 +10,7 @@
  * This service is responsible for solving the ancestorIds population issue.
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import type { BranchContext } from '@/lib/resource-system/schemas';
 
 interface HierarchyData {

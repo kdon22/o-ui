@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { PROCESS_TYPE_LABELS, PROCESS_TYPE_OPTIONS } from '@/features/processes/constants'
 import { RULE_SCHEMA } from '@/features/rules/rules.schema'
-import { ProcessType } from '@prisma/client'
 
 interface NodeContentProps {
   nodeId: string

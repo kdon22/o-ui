@@ -1,0 +1,207 @@
+---
+description: "Comprehensive debugging guide for webpack 'Cannot read properties of undefined (reading call)' errors in Next.js"
+---
+
+# Webpack Module Loading Error - Complete Debugging Guide
+
+## Error Signature
+```
+Cannot read properties of undefined (reading 'call')
+TypeError: Cannot read properties of undefined (reading 'call')
+    at options.factory (webpack.js:704:31)
+    at __webpack_require__ (webpack.js:29:33)
+```
+
+## Root Cause Analysis
+This error occurs when webpack tries to load a module but receives `undefined` instead of the expected module factory function. Common causes:
+
+1. **Import/Export Mismatches** (Most Common)
+2. **TypeScript Compilation Errors** (Prevents module creation)
+3. **Circular Dependencies**
+4. **Missing Dependencies**
+
+## Debugging Steps Applied & Results
+
+### ✅ STEP 1: Import/Export Mismatch Detection
+**Problem Found:** Multiple files importing `MainLayout` as default when it was exported as named export.
+
+**Files Fixed:**
+- [o-ui/src/app/nodes/layout.tsx](mdc:o-ui/src/app/nodes/layout.tsx) - Line 4
+- [o-ui/src/app/nodes/[nodeId]/page.tsx](mdc:o-ui/src/app/nodes/[nodeId]/page.tsx) - Line 5
+- [o-ui/src/components/layout/main/index.ts](mdc:o-ui/src/components/layout/main/index.ts) - Line 2
+
+**Changes Made:**
+```typescript
+// ❌ Before:
+import MainLayout from './main-layout'
+
+// ✅ After:
+import { MainLayout } from './main-layout'
+```
+
+### ✅ STEP 2: TypeScript Syntax Error Fix
+**Problem Found:** Complex TypeScript expression causing compilation failure.
+
+**File Fixed:** [o-ui/src/components/auto-generated/datatable/shortcuts/shortcut-provider.tsx](mdc:o-ui/src/components/auto-generated/datatable/shortcuts/shortcut-provider.tsx) - Line 242
+
+**Change Made:**
+```typescript
+// ❌ Before (causing TS compilation error):
+keyDisplay = `${direction} ←→↑↓`[{ Left: 1, Right: 2, Up: 3, Down: 4 }[direction as keyof typeof { Left: 1, Right: 2, Up: 3, Down: 4 }] || 0];
+
+// ✅ After (clean and readable):
+const arrows = { Left: '←', Right: '→', Up: '↑', Down: '↓' };
+keyDisplay = arrows[direction as keyof typeof arrows] || direction;
+```
+
+### ✅ STEP 3: Framer Motion Validation
+**Investigation Result:** Framer Motion was NOT the problem despite appearing in the error stack trace.
+- Library properly installed (v12.12.1)
+- Imports working correctly
+- Animation code syntactically correct
+
+**Key Insight:** Error stack traces can be misleading - the failing module isn't always where the real problem is.
+
+### ✅ STEP 4: Build Cache Clearing
+**Actions Taken:**
+```bash
+cd o-ui
+rm -rf .next
+npm run dev
+```
+**Result:** Temporary improvement but error persisted, indicating deeper issues.
+
+### ✅ STEP 5: TypeScript Compilation Check
+**Command:** `npx tsc --noEmit`
+**Result:** Found 400+ TypeScript errors throughout codebase, but none in the failing module chain.
+
+**Key Insight:** While TS errors exist, they don't always prevent webpack bundling for development.
+
+### ✅ STEP 6: Circular Dependency Resolution via Relative Imports
+**Problem Found:** Even after fixing the import/export mismatches, the runtime error persisted. The root cause was identified as a **circular dependency** created by components importing each other through a central barrel file (`/tree/index.ts`). For example, `tree-navigation.tsx` would import `auto-tree.tsx` via an alias (`@/components/...`), which resolved to the barrel file. This barrel file, in turn, exported all the components from the directory, creating a module resolution loop at runtime.
+
+**Strategy:** The definitive fix is to bypass the barrel file for intra-component imports within the same feature module. All components in the `tree` directory and their immediate parents must import siblings using direct relative paths.
+
+**Files Fixed:**
+- **[o-ui/src/components/layout/main/tree-navigation.tsx](mdc:o-ui/src/components/layout/main/tree-navigation.tsx):** Changed multiple imports that were using the `'@/components/auto-generated/tree'` alias to direct relative paths.
+- **[o-ui/src/components/auto-generated/tree/auto-tree.tsx](mdc:o-ui/src/components/auto-generated/tree/auto-tree.tsx):** Changed the import for `AutoModal` to a relative path to break a deeper circular dependency.
+
+**Changes Made:**
+```typescript
+// ❌ Before (in tree-navigation.tsx):
+import { AutoTree } from '@/components/auto-generated/tree'
+import { useTreeActions } from '@/components/auto-generated/tree/tree-actions'
+
+
+// ✅ After (in tree-navigation.tsx):
+import { AutoTree } from '../../auto-generated/tree/auto-tree'
+import { useTreeActions } from '../../auto-generated/tree/tree-actions'
+```
+
+## Import Chain Analysis Performed
+
+**Traced the complete import chain:**
+```
+nodes/layout.tsx (❌ Import mismatch here)
+     ↓
+main-layout.tsx → TreeSearchEnhanced 
+     ↓
+tree-search-enhanced.tsx → TreeNode
+     ↓
+tree-node.tsx → Framer Motion (✅ Working fine)
+```
+
+**Method Used:**
+1. Examined each file in the webpack stack trace
+2. Verified all imports and exports match
+3. Checked for circular dependencies
+4. Validated module existence
+
+## Files Examined (No Issues Found)
+- [o-ui/src/components/auto-generated/tree/tree-node.tsx](mdc:o-ui/src/components/auto-generated/tree/tree-node.tsx)
+- [o-ui/src/components/auto-generated/tree/auto-tree.tsx](mdc:o-ui/src/components/auto-generated/tree/auto-tree.tsx)
+- [o-ui/src/components/layout/main/tree-navigation.tsx](mdc:o-ui/src/components/layout/main/tree-navigation.tsx)
+- [o-ui/src/components/auto-generated/tree/tree-search-enhanced.tsx](mdc:o-ui/src/components/auto-generated/tree/tree-search-enhanced.tsx)
+- [o-ui/src/components/auto-generated/tree/tree-search.tsx](mdc:o-ui/src/components/auto-generated/tree/tree-search.tsx)
+
+## Verification Methods Applied
+
+### Build Testing
+```bash
+npx next build --no-lint
+```
+**Result:** Build completed successfully with warnings about import errors (now fixed).
+
+### Runtime Testing
+```bash
+curl -s http://localhost:3000
+curl -s http://localhost:3000/nodes/n7sbent
+```
+
+### Module Resolution Testing
+Used `grep` and `codebase_search` to verify:
+- All export patterns
+- Import statement consistency
+- Circular dependency detection
+
+## Additional Issues to Check (If Problem Persists)
+
+### 1. Remaining Import/Export Mismatches
+Search for patterns:
+```bash
+grep -r "import.*MainLayout.*from" src/
+grep -r "export.*MainLayout" src/
+```
+
+### 2. Circular Dependencies
+Check for modules importing each other:
+```bash
+grep -r "from.*tree-node" src/components/auto-generated/tree/
+grep -r "from.*auto-tree" src/components/
+```
+
+### 3. Missing Dependencies
+Verify all imported modules exist:
+- Check `@/lib/utils/generalUtils`
+- Check `@/components/ui/*` imports
+- Verify schema imports
+
+### 4. Node Modules Issues
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### 5. Next.js Configuration
+Check [o-ui/next.config.js](mdc:o-ui/next.config.js) for:
+- Webpack configuration overrides
+- Module resolution settings
+- Experimental features
+
+## Systematic Debugging Approach
+
+**For Future Webpack Module Loading Errors:**
+
+1. **Start with Import Chain Analysis** - Don't assume the module in the error is the problem
+2. **Check TypeScript Compilation** - Run `npx tsc --noEmit`
+3. **Verify Export/Import Consistency** - Use grep to find mismatches
+4. **Clear Build Cache** - `rm -rf .next`
+5. **Check for Circular Dependencies** - Trace import patterns
+6. **Validate Dependencies** - Ensure all imports resolve
+
+## Key Lessons Learned
+
+1. **Error Stack Traces Can Be Misleading** - The module that fails to load may not be where the problem is
+2. **Import/Export Mismatches Are Common** - Always verify named vs default exports
+3. **TypeScript Errors Don't Always Block Webpack** - But complex syntax errors can
+4. **Trust Your Instincts** - If a library seems fine, look elsewhere
+5. **Build Cache Issues Are Real** - Clear `.next` when in doubt
+6. **Barrel Files (`index.ts`) Are a Common Source of Circular Dependencies** - When debugging, replace aliased imports with direct relative imports to break potential loops.
+
+## Status: PARTIAL RESOLUTION
+- ✅ TypeScript syntax error fixed
+- ✅ Import/export mismatches resolved
+- ✅ Circular dependencies in the tree component hierarchy resolved.
+- ⚠️ Error may persist due to additional issues not yet identified
+
+**Next Steps:** If error continues, focus on dependency validation and module resolution configuration.

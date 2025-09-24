@@ -17,12 +17,12 @@ import type { BranchContext } from './types';
 
 let globalActionClient: ActionClient | null = null;
 
+import { ActionClientCore } from './action-client-core';
+
 /**
  * Create a new ActionClient instance
  */
 export function createActionClient(tenantId: string): ActionClient {
-  // Dynamic import to avoid circular dependency
-  const { ActionClientCore } = require('./action-client-core');
   return new ActionClientCore(tenantId);
 }
 

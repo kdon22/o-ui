@@ -3,16 +3,21 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Zap, Users, FileText, Settings, Code2, Table, ShoppingCart, ChevronDown, Shield, Cog } from 'lucide-react'
 import { HeaderBreadcrumb } from './header-breadcrumb'
-import { SearchTrigger } from '@/components/search'
+import { SearchTrigger } from '@/components/search/universal-search-provider'
 import { HeaderTenantSwitcher } from './header-tenant-switcher'
-import { HeaderBranchSwitcher } from './header-branch-switcher'
+// import { HeaderBranchSwitcher } from './header-branch-switcher'
 import dynamic from 'next/dynamic'
-import { TabBar, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Button } from '@/components/ui'
+import { TabBar } from '@/components/ui/tab-bar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/drop-down-menu'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-
 import type { BranchInfo } from '@/lib/utils/branch-utils'
-import { getBranchDisplayName } from '@/lib/utils/branch-utils'
+
+// Load heavy/complex client-only panels without SSR to avoid RSC/SSR eval issues (disabled for isolation)
+// const BranchManagementPanel = dynamic(
+//   () => import('@/components/branching/branch-management-panel').then(m => m.BranchManagementPanel),
+//   { ssr: false }
+// )
 
 export interface MainHeaderProps {
   selectedNodeId: string | null
@@ -40,88 +45,34 @@ export function MainHeader({
 }: MainHeaderProps) {
   const { data: session } = useSession();
   const router = useRouter();
-  const BranchManagementPanel = dynamic(() => import('@/components/branching/branch-management-panel').then(m => m.BranchManagementPanel), { ssr: false })
   
   // ✅ BULLETPROOF: Persist branch panel state across component remounts
-  const [showBranchManagement, setShowBranchManagement] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('branch-panel-open');
-      return saved === 'true';
-    }
-    return false;
-  });
+  // const [showBranchManagement, setShowBranchManagement] = useState(false);
   
   // ✅ DEBUG: Track component mount/unmount
   useEffect(() => {
     console.log('🔥 [MainHeader] COMPONENT MOUNTED');
     return () => {
-      console.log('🔥 [MainHeader] COMPONENT UNMOUNTED - showBranchManagement was:', showBranchManagement);
+      console.log('🔥 [MainHeader] COMPONENT UNMOUNTED');
     };
   }, []);
   
   // ✅ BULLETPROOF: Override setShowBranchManagement to add debugging + persistence
-  const setShowBranchManagementWithDebug = (value: boolean) => {
-    console.log('🔥 [MainHeader] setShowBranchManagement called:', { 
-      value, 
-      currentValue: showBranchManagement,
-      stackTrace: new Error().stack?.split('\n').slice(1, 8)
-    });
-    setShowBranchManagement(value);
-    
-    // ✅ PERSIST: Save to localStorage to survive component remounts
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('branch-panel-open', value.toString());
-      console.log('💾 [MainHeader] Persisted branch panel state:', value);
-    }
-  };
-  const [preventBranchPanelClose, setPreventBranchPanelClose] = useState(false);
-  const branchOperationInProgress = useRef(false);
+  // const setShowBranchManagementWithDebug = (value: boolean) => {};
+  // const [preventBranchPanelClose, setPreventBranchPanelClose] = useState(false);
+  // const branchOperationInProgress = useRef(false);
 
   // Debug effect to track session changes that might affect state
-  useEffect(() => {
-    const user: any = (session as any)?.user;
-    console.log('🔍 [MainHeader] Session changed:', { 
-      sessionExists: !!session,
-      currentBranchId: user?.currentBranchId,
-      branchName: user?.branchName,
-      showBranchManagement,
-      stackTrace: new Error().stack?.split('\n').slice(1, 3)
-    });
-  }, [session, showBranchManagement]);
+  // useEffect(() => {}, [session]);
 
   // Debug effect to track showBranchManagement changes
-  useEffect(() => {
-    console.log('🔍 [MainHeader] showBranchManagement changed:', { 
-      showBranchManagement, 
-      preventClose: preventBranchPanelClose, 
-      refValue: branchOperationInProgress.current,
-      stackTrace: new Error().stack?.split('\n').slice(1, 4)
-    });
-  }, [showBranchManagement]);
+  // useEffect(() => {}, []);
 
   // Debug effect to track prevention flag changes
-  useEffect(() => {
-    console.log('🔍 [MainHeader] Prevention flag changed:', { preventBranchPanelClose, refValue: branchOperationInProgress.current });
-  }, [preventBranchPanelClose]);
+  // useEffect(() => {}, []);
 
   // Custom handler to prevent accidental closes during branch operations
-  const handleBranchPanelOpenChange = (open: boolean) => {
-    console.log('🔄 [MainHeader] handleBranchPanelOpenChange called:', { 
-      open, 
-      preventClose: preventBranchPanelClose,
-      refValue: branchOperationInProgress.current,
-      currentState: showBranchManagement,
-      stackTrace: new Error().stack?.split('\n').slice(1, 5)
-    });
-    
-    if (!open && (preventBranchPanelClose || branchOperationInProgress.current)) {
-      console.log('🛡️ [MainHeader] Prevented branch panel close during operation');
-      return;
-    }
-    
-    console.log('🔄 [MainHeader] Allowing branch panel state change:', { open, preventClose: preventBranchPanelClose });
-    setShowBranchManagementWithDebug(open);
-  };
+  // const handleBranchPanelOpenChange = (open: boolean) => {};
   
   const defaultTopLevelTabs = [
     { key: 'processes', label: 'Processes', icon: Zap },
@@ -169,13 +120,7 @@ export function MainHeader({
         
         {/* Right Section - Branch Switcher, Tenant Switcher & Status */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <HeaderBranchSwitcher
-            variant="compact"
-            onManageBranches={() => {
-              console.log('🚀 [MainHeader] onManageBranches triggered - setting showBranchManagement to true');
-              setShowBranchManagementWithDebug(true);
-            }}
-          />
+          {/** HeaderBranchSwitcher disabled during isolation **/}
           
           <HeaderTenantSwitcher 
             currentTenant={currentTenant}
@@ -245,21 +190,7 @@ export function MainHeader({
         </div>
       )}
       
-      {/* Branch Management Panel */}
-      <BranchManagementPanel
-        open={showBranchManagement}
-        onOpenChange={handleBranchPanelOpenChange}
-        onBranchOperationStart={() => {
-          console.log('🔒 [MainHeader] Branch operation started - setting prevention flag');
-          branchOperationInProgress.current = true;
-          setPreventBranchPanelClose(true);
-        }}
-        onBranchOperationEnd={() => {
-          console.log('🔓 [MainHeader] Branch operation ended - clearing prevention flag');
-          branchOperationInProgress.current = false;
-          setPreventBranchPanelClose(false);
-        }}
-      />
+      {/** Branch Management Panel disabled during isolation **/}
     </div>
   )
 } 

@@ -14,14 +14,14 @@ import {
   Button
 } from '@/components/ui';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  ArrowUp, 
-  ArrowDown, 
-  ArrowUpDown
-} from 'lucide-react';
+// TEMP DIAGNOSTIC: remove lucide-react entirely to isolate chunk issues
+const ArrowUp = ((props: any) => <span {...props} />);
+const ArrowDown = ((props: any) => <span {...props} />);
+const ArrowUpDown = ((props: any) => <span {...props} />);
 import { ColumnFilter } from '../column-filter';
 import { ContextMenu } from '../context-menu';
-import { VersionIndicator } from './version-indicator';
+// TEMP DIAGNOSTIC: avoid importing VersionIndicator to exclude its module from the chunk
+// import { VersionIndicator } from './version-indicator';
 import type { ResourceSchema } from '@/lib/resource-system/schemas';
 
 interface TableStructureProps {
@@ -199,13 +199,9 @@ export const TableStructure: React.FC<TableStructureProps> = ({
                   );
                 })}
                 
-                {/* Version Indicator */}
+                {/* Version Indicator (temporarily disabled for diagnostics) */}
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <VersionIndicator
-                    entity={entity}
-                    onViewHistory={onViewHistory}
-                    compact={true}
-                  />
+                  <span className="text-xs text-gray-400">v{entity.version || 1}</span>
                 </TableCell>
                 
                 {/* Actions */}

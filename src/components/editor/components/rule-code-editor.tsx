@@ -17,6 +17,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useActionClientContext } from '@/lib/session'
 import { registerBusinessRulesLanguageFactory } from '../language/language-registration'
+import { EditorContextService } from '../language/editor-context'
 import { createUnifiedHoverProvider } from '@/lib/editor/hover/hover-provider'
 import { BusinessRulesDiagnosticProvider } from '../services/diagnostics/diagnostic-provider'
 import { useEditorPreferences } from '@/components/layout/editor/editor-preferences/hooks/use-editor-preferences'
@@ -129,7 +130,7 @@ export function RuleCodeEditor({
   useEffect(() => {
     try {
       if (entTenantId && branchContext && (branchContext as any).currentBranchId) {
-        const { EditorContextService } = require('../language/editor-context')
+        // Using imported EditorContextService instead of require()
         EditorContextService.set({
           tenantId: entTenantId,
           branchContext: branchContext as any
@@ -183,7 +184,7 @@ export function RuleCodeEditor({
     // Ensure EditorContext is ready before completion providers run
     try {
       if (entTenantId && branchContext && (branchContext as any).currentBranchId) {
-        const { EditorContextService } = require('../language/editor-context')
+        // Using imported EditorContextService instead of require()
         EditorContextService.set({
           tenantId: entTenantId,
           branchContext: branchContext as any

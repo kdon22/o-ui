@@ -1,5 +1,5 @@
 /**
- * TreeNode Component - Individual node rendering with enhanced icons and animations
+ * TreeNode Component - Inmotion.dividual node rendering with enhanced icons and animations
  * 
  * Features:
  * - Professional Lucide React icons (Home, Folder, FileText)
@@ -20,14 +20,16 @@ import {
   Folder, 
   FolderOpen, 
   FileText, 
-  ChevronRight,
+  ChevronRight, 
   Building2,
   User,
   Settings,
   Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils/generalUtils';
-import { TreeNodeData } from './auto-tree';
+import type { TreeNodeData } from './types';
+
+// Clean ES6 imports - all debug code removed to prevent webpack issues
 
 // ============================================================================
 // TYPES
@@ -114,13 +116,13 @@ const ExpandToggle: React.FC<{
   onToggle: () => void;
 }> = ({ hasChildren, isExpanded, onToggle }) => {
   if (!hasChildren) {
-    return <div className="w-4 h-4" />; // Spacer for alignment
+    return <motion.div className="w-4 h-4" />; // Spacer for alignment
   }
   
   return (
     <motion.button
       className="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors rounded-sm hover:bg-gray-100"
-      onClick={(e) => {
+      onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
         onToggle();
       }}
@@ -181,7 +183,7 @@ export const TreeNode: React.FC<TreeNodeProps> = React.memo(({
     >
       {/* Dotted connection line to parent */}
       {level > 0 && (
-        <div 
+        <motion.div 
           className="absolute border-l border-dotted border-gray-300"
           style={{ 
             left: `${indent - 10}px`,
@@ -194,7 +196,7 @@ export const TreeNode: React.FC<TreeNodeProps> = React.memo(({
       
       {/* Horizontal connection line */}
       {level > 0 && (
-        <div 
+        <motion.div 
           className="absolute border-t border-dotted border-gray-300"
           style={{ 
             left: `${indent - 10}px`,
@@ -231,14 +233,14 @@ export const TreeNode: React.FC<TreeNodeProps> = React.memo(({
         />
         
         {/* Node icon */}
-        <div className="mr-2 flex-shrink-0">
+        <motion.div className="mr-2 flex-shrink-0">
           <NodeIcon 
             isRoot={isRoot}
             hasChildren={hasChildren}
             isExpanded={isExpanded}
             nodeType={node.type}
           />
-        </div>
+        </motion.div>
         
         {/* Node name */}
         <span className={cn(
