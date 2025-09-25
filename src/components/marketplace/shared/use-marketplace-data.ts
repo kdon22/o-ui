@@ -12,13 +12,13 @@ export function useMarketplaceDashboard(options: { enabled?: boolean } = {}) {
   const pkgs = useActionQuery(
     'marketplacePackages.list',
     { includeAnalytics: true, limit: 500 },
-    { skipCache: true, staleTime: 5 * 60 * 1000, enabled: options.enabled !== false }
+    { staleTime: 5 * 60 * 1000, enabled: options.enabled !== false }
   );
 
   const installs = useActionQuery(
     'packageInstallations.list',
     { filters: { status: 'active' }, limit: 100 },
-    { skipCache: true, staleTime: 5 * 60 * 1000, enabled: options.enabled !== false }
+    { staleTime: 5 * 60 * 1000, enabled: options.enabled !== false }
   );
 
   const data = useMemo(() => {
@@ -73,13 +73,13 @@ export function useMarketplaceUserData(
   const installs = useActionQuery(
     'packageInstallations.list',
     { filters: { status: 'active' }, limit: 1000 },
-    { skipCache: true, staleTime: 3 * 60 * 1000, enabled: options.enabled !== false && needInstalls }
+    { staleTime: 3 * 60 * 1000, enabled: options.enabled !== false && needInstalls }
   );
 
   const starredPkgs = useActionQuery(
     'marketplacePackages.list',
     { filters: { isStarred: true }, includeAnalytics: true, limit: 500 },
-    { skipCache: true, staleTime: 3 * 60 * 1000, enabled: options.enabled !== false && needStarred }
+    { staleTime: 3 * 60 * 1000, enabled: options.enabled !== false && needStarred }
   );
 
   const data = useMemo(() => {
@@ -133,7 +133,7 @@ export function useMarketplacePackages(params: {
       limit,
       offset
     },
-    { skipCache: true, staleTime: 2 * 60 * 1000, enabled: options.enabled !== false }
+    { staleTime: 2 * 60 * 1000, enabled: options.enabled !== false }
   );
 }
 

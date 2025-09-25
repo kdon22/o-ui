@@ -51,7 +51,7 @@ Auto-generated actions via Resource Registry:
 - `queueMessages.list|read|update`
 
 Use `useActionQuery`/`useActionMutation` to interact:
-- Reads: `useActionQuery('queueMessages.list', { filters: {...} }, { skipCache: true })`
+- Reads: `useActionQuery('queueMessages.list', { filters: {...} })` (schema serverOnly: true)
 - Writes (update): `useActionMutation('queueMessages.update')`
 
 ## Activity Dashboard (`/queues/activity`)

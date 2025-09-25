@@ -22,9 +22,8 @@ export const TABLE_DATA_SCHEMA: ResourceSchema = {
   modelName: 'TableData',      // Prisma model access
   actionPrefix: 'tableData',   // Action naming
   
-  // ✅ SERVER-ONLY CONFIGURATION: Large datasets bypass IndexedDB
-  serverOnly: true,            // Forces all operations through API
-  cacheStrategy: 'server-only', // No local caching for data rows
+  // ✅ SERVER-ONLY: Large datasets use server-only execution (SSOT pattern)
+  serverOnly: true,
 
   // ============================================================================
   // UI DISPLAY CONFIGURATION
@@ -176,21 +175,19 @@ export const TABLE_DATA_SCHEMA: ResourceSchema = {
     delete: true,
     
     // ✅ SERVER-ONLY: Disable optimistic updates for large datasets
-    // Forces all operations to go through server first
     optimistic: false,
     
     // Enable bulk operations for server-side processing
     duplicate: true,
     bulk: true,
     
-    // Custom server-only actions for large data operations
+    // Custom actions for large data operations
     custom: [
       {
         id: 'bulkImport',
         label: 'Bulk Import',
         icon: 'upload',
         variant: 'default',
-        serverOnly: true,
         confirmation: {
           title: 'Bulk Import Data',
           message: 'This will import large amounts of data. Continue?'
@@ -200,15 +197,13 @@ export const TABLE_DATA_SCHEMA: ResourceSchema = {
         id: 'export',
         label: 'Export Data',
         icon: 'download', 
-        variant: 'outline',
-        serverOnly: true
+        variant: 'outline'
       },
       {
         id: 'search',
         label: 'Advanced Search',
         icon: 'search',
-        variant: 'ghost',
-        serverOnly: true
+        variant: 'ghost'
       }
     ]
   },

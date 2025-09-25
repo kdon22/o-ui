@@ -60,7 +60,7 @@ export function PackagePreviewModal({
   const { data: packageResponse, isActuallyLoading: isLoading } = useActionQuery<MarketplacePackageWithDetails>(
     'marketplacePackages.read',
     { id: packageId, include: { preview: true } },
-    { enabled: !!packageId && isOpen, skipCache: true }
+    { enabled: !!packageId && isOpen }
   );
   const packageData = packageResponse?.data as MarketplacePackageWithDetails | undefined;
 

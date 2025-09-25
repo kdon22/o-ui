@@ -46,8 +46,7 @@ export function useQueryExecution(selectedTable: DataTable | null) {
   const { mutate: executeQueryMutation, isPending } = useActionMutation(
     'tableData.list',
     {
-      // ✅ Follow datatable pattern: force server read, bypass IndexedDB entirely
-      ...( { skipCache: true } as any ),
+      // ✅ Follow datatable pattern: server-only handled by TableData schema (serverOnly: true)
       onSuccess: (result) => {
         if (result?.success) {
           // Extract actual data rows from tableData.list response
@@ -248,7 +247,7 @@ export function useQueryExecution(selectedTable: DataTable | null) {
     setCurrentQuery(finalQuery);
 
     // Execute the query mutation using tableData.list action
-    // ✅ Send tableId as data; options (skipCache) are provided via hook options above
+    // ✅ Send tableId as data parameter
     executeQueryMutation({
       tableId: selectedTable.id
     } as any);

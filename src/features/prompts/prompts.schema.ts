@@ -154,7 +154,7 @@ export const PROMPT_SCHEMA: ResourceSchema = {
     delete: true,
     duplicate: true,
     bulk: true,
-    // Server-first execution for prompts (bypass IndexedDB optimistic updates)
+    // Server-first execution for prompts (use server-only execution, SSOT pattern)
     optimistic: false,
     custom: [
       {

@@ -154,7 +154,7 @@ export function InstallationProgressModal({
       const installationResponse = await client.executeAction({
         action: 'marketplace.install',
         data: { packageId, ...installationOptions },
-        options: { skipCache: true }
+        options: {}
       } as any);
       const installationResult: InstallationResult = installationResponse?.data || { success: false, error: { type: 'unknown', message: 'No response' } } as any;
       if (!installationResponse?.success) {

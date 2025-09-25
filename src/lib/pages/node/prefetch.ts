@@ -14,7 +14,6 @@ import { queryKeys } from '@/hooks/use-action-api';
 export interface NodePrefetchOptions {
   tenantId: string;
   resources?: any[];
-  skipCache?: boolean;
   prioritized?: boolean;
 }
 

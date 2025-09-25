@@ -101,7 +101,7 @@ export function MarketplaceBrowse({
 
   // Star/unstar via standard update action
   const starMutation = useActionMutation('marketplacePackages.update', {
-    ...( { skipCache: true } as any ),
+    ...( {} as any ),
     onSuccess: (_res: any, variables: any) => {
       const starred = Boolean(variables?.isStarred);
       queryClient.invalidateQueries({ queryKey: ['marketplace-packages'] });
@@ -131,7 +131,7 @@ export function MarketplaceBrowse({
       include: { analytics: true, reviews: true, installations: true },
       limit: 500
     },
-    { skipCache: true, staleTime: 2 * 60 * 1000 }
+    { staleTime: 2 * 60 * 1000 }
   );
   const packages = (packagesResponse?.data as any[]) || [];
 

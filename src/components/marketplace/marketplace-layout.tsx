@@ -75,7 +75,7 @@ export function MarketplaceLayout({ initialView = 'dashboard' }: MarketplaceLayo
   const { data: installationsResponse } = useActionQuery(
     'packageInstallations.list',
     { filters: { status: 'active' }, limit: 1000 },
-    { skipCache: true, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000 }
+    { staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000 }
   );
 
   const updateCount = Array.isArray(installationsResponse?.data)

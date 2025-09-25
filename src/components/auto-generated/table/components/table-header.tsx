@@ -20,6 +20,7 @@ interface TableHeaderProps {
   createMutationPending?: boolean;
   customTitle?: string; // Allow custom title override
   customSearchPlaceholder?: string; // Allow custom search placeholder
+  buttonVariant?: 'blue' | 'black' | 'gray'; // Button color variant
 }
 
 export const TableHeader: React.FC<TableHeaderProps> = ({
@@ -33,8 +34,22 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   onAdd,
   createMutationPending = false,
   customTitle,
-  customSearchPlaceholder
+  customSearchPlaceholder,
+  buttonVariant = 'blue'
 }) => {
+  // Get button styling based on variant
+  const getButtonClass = (variant: 'blue' | 'black' | 'gray') => {
+    switch (variant) {
+      case 'black':
+        return 'flex items-center gap-2 bg-black text-white hover:bg-gray-800 transition-colors shadow-sm';
+      case 'gray':
+        return 'flex items-center gap-2 bg-gray-600 text-white hover:bg-gray-700 transition-colors shadow-sm';
+      case 'blue':
+      default:
+        return 'flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm';
+    }
+  };
+
   return (
     <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
       <div className="flex items-center justify-between">
@@ -65,7 +80,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
             !activeFilteringConfig?.level1 && (
               <Button
                 onClick={onAdd}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+                className={getButtonClass(buttonVariant)}
                 disabled={createMutationPending}
               >
                 <Plus className="h-4 w-4" />

@@ -35,6 +35,7 @@ export function SettingsRuntimeNotifications() {
           resourceKey="runtimeNotifications"
           customTitle="Runtime Notification Settings"
           customSearchPlaceholder="Search notification settings..."
+          buttonVariant="black"
         />
       </div>
     </div>

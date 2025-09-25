@@ -35,6 +35,7 @@ export function SettingsCommunications() {
           resourceKey="communication"
           customTitle="Communication Settings"
           customSearchPlaceholder="Search communication settings..."
+          buttonVariant="black"
         />
       </div>
     </div>

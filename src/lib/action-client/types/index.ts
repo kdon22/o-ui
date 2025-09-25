@@ -34,7 +34,6 @@ export interface ActionMeta {
 }
 
 export interface RequestOptions {
-  skipCache?: boolean;
   serverOnly?: boolean;
   timeout?: number;
   retries?: number;

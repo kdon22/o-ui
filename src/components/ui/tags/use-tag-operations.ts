@@ -38,7 +38,7 @@ export function useTagOperations({
     'tag.list',
     undefined,
     { 
-      skipCache: true, // bypassIndexedDB equivalent
+      // Server-only handled by schema serverOnly: true
       enabled: true 
     }
   );
@@ -51,7 +51,7 @@ export function useTagOperations({
       include: ['tag'] // 🎯 Include tag details for display
     } : undefined,
     { 
-      skipCache: true, // bypassIndexedDB equivalent
+      // Server-only handled by schema serverOnly: true
       enabled: hasValidEntity 
     }
   );

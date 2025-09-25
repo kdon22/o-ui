@@ -46,6 +46,7 @@ export function SettingsWorkflows() {
           resourceKey="workflow"
           customTitle="Workflow Management"
           customSearchPlaceholder="Search workflows..."
+          buttonVariant="black"
         />
       </div>
     </div>

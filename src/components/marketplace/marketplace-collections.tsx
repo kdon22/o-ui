@@ -37,7 +37,7 @@ export function MarketplaceCollections({ onPackageSelect }: MarketplaceCollectio
   const { data: starredResponse, isActuallyLoading: loadingStarred } = useActionQuery<MarketplacePackageWithDetails[]>(
     'marketplacePackages.list',
     { filters: { isStarred: true }, limit: 500 },
-    { skipCache: true }
+    {}
   );
   const starredPackages = (starredResponse?.data as any[]) || [];
 
@@ -46,7 +46,7 @@ export function MarketplaceCollections({ onPackageSelect }: MarketplaceCollectio
 
   // Star/unstar via standard update
   const starMutation = useActionMutation('marketplacePackages.update', {
-    ...( { skipCache: true } as any ),
+    ...( {} as any ),
     onSuccess: (_res: any, variables: any) => {
       const starred = Boolean((variables as any)?.isStarred);
       queryClient.invalidateQueries({ queryKey: ['marketplace-starred'] });

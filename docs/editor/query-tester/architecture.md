@@ -3,7 +3,7 @@
 High‑level flow:
 1) UI (QueryTestBench) → Select table → Build query → Execute
 2) Tables metadata from IndexedDB (schema‑driven), overlayed by branch
-3) Data rows from server (`tableData.list`) with `skipCache: true`
+3) Data rows from server (`tableData.list`) with schema `serverOnly: true`
 4) Client filters rows using parsed WHERE (optional)
 5) Columns fed to EditorContext cache → improves IntelliSense
 
@@ -20,7 +20,7 @@ High‑level flow:
 - Table details
   - `tables.read` (action) → resolves specific table `config.columns`
 - Data rows
-  - `tableData.list` (action mutation) with `{ skipCache: true }` to bypass IndexedDB
+  - `tableData.list` (action mutation) with schema `serverOnly: true` (no IndexedDB)
 
 #### Branching & SSOT
 - Branch overlay applied only to metadata (tables/columns) via `sql-provider` and `EditorContextService`

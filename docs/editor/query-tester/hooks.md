@@ -25,7 +25,7 @@ Purpose: execute query against server and produce a result set with columns.
 
 Actions used:
 - `useActionQuery('tables.read', { id })` — fetches `config.columns`
-- `useActionMutation('tableData.list', { skipCache: true })` — gets rows
+- `useActionMutation('tableData.list', {})` — gets rows (schema serverOnly: true)
 
 Client‑side filtering:
 - If query has WHERE, `simple-sql-parser` parses conditions and filters `result.data`

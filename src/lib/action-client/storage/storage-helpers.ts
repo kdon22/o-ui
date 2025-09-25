@@ -13,6 +13,7 @@ import type { ActionResponse } from '@/lib/resource-system/schemas';
 import type { IndexedDBManager } from '../core/indexeddb-manager';
 import { ACTION_MAPPINGS } from '@/lib/resource-system/resource-registry';
 import { getResourceSchema, getUnifiedResourceRegistry } from '@/lib/resource-system/unified-resource-registry';
+// Removed server-only-config.ts import - using schema-driven approach
 import { CompoundKeyManager } from '../utils/compound-key-manager';
 
 // ============================================================================
@@ -90,6 +91,21 @@ export class StorageHelpers {
   constructor(
     private indexedDB: IndexedDBManager
   ) {}
+
+  /**
+   * UNIFIED: Check if we should skip IndexedDB updates for this resource
+   */
+  private shouldSkipIndexedDBUpdate(storeName: string): boolean {
+    const schema = getResourceSchema(storeName);
+    
+    // Check schema serverOnly property
+    if (schema?.serverOnly === true) {
+      return true;
+    }
+    
+    // Legacy check: if indexedDBKey is explicitly set to null
+    return schema?.indexedDBKey === null;
+  }
 
   /**
    * Store API response data in IndexedDB (auto-discovery)
@@ -219,14 +235,11 @@ export class StorageHelpers {
     storeName: string, 
     branchContext: BranchContext | null
   ): Promise<void> {
-    // ✅ SERVER-ONLY: Check if schema is configured for server-only operations
-    const schema = getResourceSchema(storeName);
-    if (schema?.serverOnly === true || schema?.indexedDBKey === null) {
+    // ✅ UNIFIED: Check if schema is configured for server-only operations
+    if (this.shouldSkipIndexedDBUpdate(storeName)) {
       console.log('⚡ [StorageHelpers] Skipping IndexedDB update for server-only resource:', {
         storeName,
         dataId: data?.id,
-        serverOnly: schema?.serverOnly,
-        indexedDBKey: schema?.indexedDBKey,
         timestamp: new Date().toISOString()
       });
       return; // Skip IndexedDB operations for server-only resources

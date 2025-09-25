@@ -217,9 +217,8 @@ export const useTableData = ({
   // Table columns from resource schema
   const columns = useMemo(() => {
     return resource.fields
-      // New rule: only show fields that explicitly define a table{} config
-      // The existence of table{} implies inclusion; ignore any showInTable flags
-      .filter((field: any) => !!field.table)
+      // Show fields that have table config AND showInTable !== false
+      .filter((field: any) => !!field.table && field.table.showInTable !== false)
       .map((field: any) => ({
         key: field.key,
         header: field.label,

@@ -35,6 +35,7 @@ export function SettingsHitSettings() {
           resourceKey="hitSettings"
           customTitle="Hit Detection Settings"
           customSearchPlaceholder="Search hit settings..."
+          buttonVariant="black"
         />
       </div>
     </div>

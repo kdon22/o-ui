@@ -93,8 +93,7 @@ export function useTableData({
       staleTime: 30000, // 30 seconds
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      // ✅ Server-only options handled by TableData schema (serverOnly: true)
-      skipCache: true
+      // ✅ Server-only handled by TableData schema (serverOnly: true)
     }
   );
 

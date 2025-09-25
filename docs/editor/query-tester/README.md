@@ -10,7 +10,7 @@ Key entry points:
 Core principles:
 - Uses existing Action System (IndexedDB for metadata, server for data fetch)
 - Branch‑aware table/column overlay (via EditorContext/SSOT)
-- Server reads for table data (no cache), per Data Sync Flow
+- Server reads for table data (schema serverOnly: true), per Data Sync Flow
 - Variable substitution and basic SQL WHERE parsing in the browser
 
 #### Quickstart: Embedding in a page
@@ -42,7 +42,7 @@ To use the integrated layout:
 #### What happens at runtime
 - Tables list: `useTableSelection` calls `tables.list` (enterprise action) to show available tables and categories from schema.
 - Table details: `useQueryExecution` calls `tables.read` (action) to read `config.columns` for the selected table.
-- Data fetch: `useQueryExecution` executes `tableData.list` with `{ skipCache: true }` to force server read.
+- Data fetch: `useQueryExecution` executes `tableData.list` with schema `serverOnly: true` for server-only execution.
 - WHERE filtering: client applies `simple-sql-parser` to filter server rows when the query includes a WHERE clause.
 - Completion feedback: after a run, column names are cached via `EditorContextService` for editor IntelliSense.
 

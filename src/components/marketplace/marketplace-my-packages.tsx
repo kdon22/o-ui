@@ -36,7 +36,7 @@ export function MarketplaceMyPackages({ onPackageSelect }: MarketplaceMyPackages
   const { data: installationsResponse, isActuallyLoading: isLoading } = useActionQuery<PackageInstallation[]>(
     'packageInstallations.list',
     { filters: {} },
-    { skipCache: true }
+    {}
   );
   const installedPackages = installationsResponse?.data || [];
 

@@ -76,7 +76,7 @@ export const TableContainer: React.FC<AutoDataTableProps> = ({
     }
   );
 
-  // Fetch table data (server-only, no IndexedDB caching)
+  // Fetch table data (server-only via schema, no IndexedDB caching)
   const { data: dataResult, isLoading: dataLoading } = useActionQuery(
     'tableData.list',
     { tableId },
@@ -84,8 +84,7 @@ export const TableContainer: React.FC<AutoDataTableProps> = ({
       enabled: !!tableId,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      // ✅ Server-only options handled by TableData schema (serverOnly: true)
-      skipCache: true
+      // ✅ Server-only handled by TableData schema (serverOnly: true)
     }
   );
 

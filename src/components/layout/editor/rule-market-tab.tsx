@@ -49,8 +49,7 @@ export function RuleMarketTab({ rule }: RuleMarketTabProps) {
         action: 'marketplacePackages.create',
         data: formData,
         options: { 
-          serverOnly: true, 
-          skipCache: true 
+          // serverOnly handled by marketplace schema 
         },
         branchContext
       })

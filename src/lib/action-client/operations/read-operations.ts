@@ -13,6 +13,7 @@ import type { ActionResponse } from '@/lib/resource-system/schemas';
 import type { CacheManager } from '../core/cache-manager';
 import type { IndexedDBManager } from '../core/indexeddb-manager';
 import { getResourceByActionPrefix } from '@/lib/resource-system/resource-registry';
+// Removed server-only-config.ts import - using schema-driven approach
 // ✅ REMOVED: Old junction handler - replaced by schema-driven system
 
 export class ReadOperations {
@@ -21,6 +22,34 @@ export class ReadOperations {
     private cache: CacheManager,
     private indexedDB: IndexedDBManager
   ) {}
+
+  /**
+   * UNIFIED: Check if we should use server-only execution for read operations (SSOT pattern)
+   */
+  private shouldBypassIndexedDBForRead(action: string, options?: any): boolean {
+    // SSOT: Only check options.serverOnly
+    if (options?.serverOnly) {
+      return true;
+    }
+    
+    // Check schema serverOnly property
+    const resourceType = action.split('.')[0];
+    const schema = getResourceByActionPrefix(resourceType);
+    return schema?.serverOnly === true;
+  }
+
+  /**
+   * Get reason for server-only execution (for debugging)
+   */
+  private getBypassReason(action: string, options?: any): string {
+    if (options?.serverOnly) return 'options.serverOnly=true';
+    
+    const resourceType = action.split('.')[0];
+    const schema = getResourceByActionPrefix(resourceType);
+    if (schema?.serverOnly) return 'schema.serverOnly=true';
+    
+    return 'Unknown reason';
+  }
 
   /**
    * Check if a resource requires branch context based on its schema
@@ -61,7 +90,6 @@ export class ReadOperations {
       method: mapping?.method,
       hasBranchContext: !!branchContext,
       currentBranchId: branchContext?.currentBranchId,
-      skipCache: !!options?.skipCache,
       timestamp: new Date().toISOString()
     });
     
@@ -81,9 +109,14 @@ export class ReadOperations {
       }
       console.log('⚠️ [ReadOperations] Memory cache MISS:', { action, cacheKey });
 
-      // Step 2: Skip IndexedDB if skipCache is set
-      if (options?.skipCache) {
-        console.log('⚠️ [ReadOperations] Step 2: Skipping IndexedDB due to skipCache=true, going directly to API');
+      // Step 2: Check if we should use server-only execution (SSOT schema-driven)
+      const shouldBypass = this.shouldBypassIndexedDBForRead(action, options);
+      if (shouldBypass) {
+        console.log('⚠️ [ReadOperations] Step 2: Using server-only execution (schema serverOnly: true), going directly to API:', {
+          action,
+          storeName: mapping.store,
+          reason: this.getBypassReason(action, options)
+        });
         return await fetchFromAPIFn(action, data, options, branchContext, startTime);
       }
 

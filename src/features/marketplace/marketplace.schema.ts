@@ -481,9 +481,8 @@ export const MARKETPLACE_PACKAGE_SCHEMA: ResourceSchema = {
     update: true,
     delete: true,
     duplicate: true,
-    // ✅ SERVER-ONLY: Marketplace packages are shared across tenants
-    serverOnly: true,
-    optimistic: false, // No optimistic updates for server-only resources
+    // ✅ SERVER-ONLY: No optimistic updates for server-only resources
+    optimistic: false,
     custom: [
       {
         id: 'publish',

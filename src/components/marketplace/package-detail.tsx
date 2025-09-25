@@ -69,22 +69,19 @@ export function PackageDetail({ packageId, onBack }: PackageDetailProps) {
   // Fetch package details via action-system
   const { data: packageResponse, isActuallyLoading: isLoading } = useActionQuery<MarketplacePackageWithDetails>(
     'marketplacePackages.read',
-    { id: packageId, include: { all: true } },
-    { skipCache: true }
+    { id: packageId, include: { all: true } }
   );
   const packageData = packageResponse?.data as MarketplacePackageWithDetails | undefined;
 
   // Fetch package reviews via action-system
   const { data: reviewsResponse } = useActionQuery<PackageReview[]>(
     'packageReviews.list',
-    { filters: { packageId, isApproved: true, isPublic: true } },
-    { skipCache: true }
+    { filters: { packageId, isApproved: true, isPublic: true } }
   );
   const reviews = reviewsResponse?.data || [];
 
   // Package installation mutation
   const installPackageMutation = useActionMutation('marketplace.installPackage', {
-    ...( { skipCache: true } as any ),
     onSuccess: () => {
       toast({
         title: 'Package Installed',
@@ -103,7 +100,6 @@ export function PackageDetail({ packageId, onBack }: PackageDetailProps) {
 
   // Review submission mutation
   const submitReviewMutation = useActionMutation('marketplace.submitReview', {
-    ...( { skipCache: true } as any ),
     onSuccess: () => {
       toast({
         title: 'Review Submitted',

@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { SettingsDashboard } from './settings-dashboard';
 import { SettingsUsers } from './settings-users';
 import { SettingsCredentials } from './settings-credentials';
-import { SettingsPermissionGroups } from './settings-permission-groups';
+import { SettingsGroups } from './settings-groups';
 import { SettingsCustomers } from './settings-customers';
 import { SettingsCommunications } from './settings-communications';
 import { SettingsRuntimeNotifications } from './settings-runtime-notifications';
@@ -29,7 +29,7 @@ import { SettingsEndTransactSettings } from './settings-end-transact-settings';
 import { SettingsWorkflows } from './settings-workflows';
 
 interface SettingsLayoutProps {
-  initialView?: 'dashboard' | 'users' | 'credentials' | 'permission-groups' | 'customers' | 'communications' | 'runtime-notifications' | 'hit-settings' | 'end-transact-settings' | 'workflows';
+  initialView?: 'dashboard' | 'users' | 'credentials' | 'groups' | 'customers' | 'communications' | 'runtime-notifications' | 'hit-settings' | 'end-transact-settings' | 'workflows';
 }
 
 const NAVIGATION_ITEMS = [
@@ -59,10 +59,10 @@ const NAVIGATION_ITEMS = [
     indent: true
   },
   { 
-    id: 'permission-groups', 
-    label: 'Permission Groups', 
+    id: 'groups', 
+    label: 'Groups', 
     icon: Users, 
-    description: 'User roles and permissions',
+    description: 'User groups and permissions',
     indent: true 
   },
   { 
@@ -115,8 +115,8 @@ export function SettingsLayout({ initialView = 'dashboard' }: SettingsLayoutProp
         return <SettingsUsers />;
       case 'credentials':
         return <SettingsCredentials />;
-      case 'permission-groups':
-        return <SettingsPermissionGroups />;
+      case 'groups':
+        return <SettingsGroups />;
       case 'customers':
         return <SettingsCustomers />;
       case 'communications':

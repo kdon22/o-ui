@@ -47,7 +47,6 @@ export interface EnterpriseQueryOptions<TData = any> extends Omit<UseQueryOption
   fallbackToCache?: boolean;
   maxCacheAge?: number;
   background?: boolean;
-  skipCache?: boolean;
 }
 
 export function useEnterpriseActionQuery<TData = any>(

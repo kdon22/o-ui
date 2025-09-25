@@ -26,12 +26,12 @@ export default function QueuesActivityPage() {
   const fromIso = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString()
   const toIso = now.toISOString()
 
-  // Fetch queues and jobs (server-only via skipCache)
-  const { data: queuesRes } = useActionQuery('queues.list', {}, { skipCache: true, refetchInterval: 15000, refetchOnWindowFocus: true })
+  // Fetch queues and jobs (server-only via schema)
+  const { data: queuesRes } = useActionQuery('queues.list', {}, { refetchInterval: 15000, refetchOnWindowFocus: true })
   const { data: jobsRes } = useActionQuery(
     'queueMessages.list',
     { filters: { createdAt_gte: fromIso, createdAt_lte: toIso } },
-    { skipCache: true, refetchInterval: 5000, refetchOnWindowFocus: true }
+    { refetchInterval: 5000, refetchOnWindowFocus: true }
   )
   const [queueFilter, setQueueFilter] = React.useState<string>('all')
   const [statusFilter, setStatusFilter] = React.useState<string>('all')

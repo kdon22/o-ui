@@ -35,6 +35,7 @@ export function SettingsCustomers() {
           resourceKey="user"
           customTitle="Customer Management"
           customSearchPlaceholder="Search customers..."
+          buttonVariant="black"
         />
       </div>
     </div>

@@ -26,6 +26,8 @@ export interface AutoTableProps {
   customTitle?: string;
   // Custom search placeholder override
   customSearchPlaceholder?: string;
+  // Button styling variant (for settings tables, etc.)
+  buttonVariant?: 'blue' | 'black' | 'gray';
   // Navigation context for context menu actions
   navigationContext?: {
     nodeId?: string | null;

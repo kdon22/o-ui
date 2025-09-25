@@ -18,14 +18,27 @@ export const USER_SCHEMA: ResourceSchema = {
   notHasTenantContext: true, // Users are global, not tenant-specific
   notHasBranchContext: true, // User preferences don't need branching
   notHasAuditFields: true,   // Users don't have updatedBy/version fields
+  serverOnly: true,          // ✅ Force server-only for security
   
   display: {
     title: 'User',
     description: 'User profiles and preferences',
     icon: 'User'
   },
+
+  // ============================================================================
+  // FORM CONFIGURATION
+  // ============================================================================
+  form: {
+    width: 'lg',           // Make form compact - options: 'sm', 'md', 'lg', 'xl', 'full'
+    layout: 'compact',     // Layout style
+    showDescriptions: true // Show field descriptions
+  },
   
   fields: [
+    // ============================================================================
+    // CORE IDENTITY FIELDS - HIDDEN FROM FORMS
+    // ============================================================================
     {
       key: 'id',
       label: 'ID',
@@ -41,43 +54,351 @@ export const USER_SCHEMA: ResourceSchema = {
         showInTable: false
       }
     },
+
+    // ============================================================================
+    // BASIC PROFILE INFORMATION - PROFILE TAB
+    // ============================================================================
     {
-      key: 'codeEditorPreferences', 
-      label: 'Editor Preferences',
-      type: 'json',
-      required: false,
-      defaultValue: {
-        theme: 'vs',
-        fontSize: 14,
-        fontFamily: 'var(--font-mono-fira), "Fira Code", "SF Mono", Monaco, Consolas, monospace',
-        wordWrap: false,
-        minimap: true,
-        lineNumbers: 'on'
-      },
-      description: 'Monaco editor theme, font size, and display preferences',
+      key: 'name',
+      label: 'Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter full name...',
+      description: 'Full name of the user',
+      tab: 'Profile',
+      clickable: true,
       form: {
         row: 1,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'md',
+        showInTable: true
+      },
+      validation: [
+        { type: 'maxLength', value: 255, message: 'Name cannot exceed 255 characters' }
+      ]
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'email',
+      required: true,
+      placeholder: 'user@company.com',
+      description: 'Email address for the user',
+      tab: 'Profile',
+      form: {
+        row: 1,
+        width: 'half',
+        order: 2
+      },
+      table: {
+        width: 'lg',
+        showInTable: true
+      },
+      validation: [
+        { type: 'email', message: 'Please enter a valid email address' }
+      ]
+    },
+
+    // ============================================================================
+    // CODE EDITOR PREFERENCES - EDITOR TAB
+    // ============================================================================
+    {
+      key: 'editorTheme',
+      label: 'Editor Theme',
+      type: 'select',
+      required: false,
+      defaultValue: 'vs',
+      description: 'Visual theme for the code editor',
+      tab: 'Editor',
+      form: {
+        row: 1,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'sm',
+        showInTable: false
+      },
+      options: {
+        static: [
+          { value: 'vs', label: 'Visual Studio Light' },
+          { value: 'vs-dark', label: 'Visual Studio Dark' },
+          { value: 'hc-black', label: 'High Contrast Dark' },
+          { value: 'hc-light', label: 'High Contrast Light' }
+        ]
+      }
+    },
+    {
+      key: 'editorFontSize',
+      label: 'Font Size',
+      type: 'number',
+      required: false,
+      defaultValue: 14,
+      placeholder: '14',
+      description: 'Font size in pixels for the code editor',
+      tab: 'Editor',
+      form: {
+        row: 1,
+        width: 'half',
+        order: 2
+      },
+      table: {
+        width: 'xs',
+        showInTable: false
+      },
+      validation: [
+        { type: 'min', value: 8, message: 'Font size must be at least 8px' },
+        { type: 'max', value: 32, message: 'Font size cannot exceed 32px' }
+      ]
+    },
+    {
+      key: 'editorFontFamily',
+      label: 'Font Family',
+      type: 'select',
+      required: false,
+      defaultValue: 'var(--font-mono-fira), "Fira Code", "SF Mono", Monaco, Consolas, monospace',
+      description: 'Font family for the code editor',
+      tab: 'Editor',
+      form: {
+        row: 2,
         width: 'full'
       },
       table: {
-        width: 'xl',
+        width: 'lg',
+        showInTable: false
+      },
+      options: {
+        static: [
+          { value: 'var(--font-mono-fira), "Fira Code", "SF Mono", Monaco, Consolas, monospace', label: 'Fira Code (Default)' },
+          { value: '"SF Mono", Monaco, Consolas, monospace', label: 'SF Mono' },
+          { value: 'Monaco, Consolas, monospace', label: 'Monaco' },
+          { value: 'Consolas, monospace', label: 'Consolas' },
+          { value: '"Courier New", monospace', label: 'Courier New' }
+        ]
+      }
+    },
+    {
+      key: 'editorWordWrap',
+      label: 'Word Wrap',
+      type: 'switch',
+      required: false,
+      defaultValue: false,
+      description: 'Enable word wrapping in the editor',
+      tab: 'Editor',
+      form: {
+        row: 3,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'xs',
         showInTable: false
       }
     },
     {
-      key: 'personalPreferences',
-      label: 'Personal Preferences', 
-      type: 'json',
+      key: 'editorMinimap',
+      label: 'Show Minimap',
+      type: 'switch',
       required: false,
-      defaultValue: {},
-      description: 'Navigation tracking and personal app preferences',
+      defaultValue: true,
+      description: 'Show the code minimap on the right side',
+      tab: 'Editor',
       form: {
-        row: 2,
-        width: 'full',
-        showInForm: false  // Hidden - managed automatically
+        row: 3,
+        width: 'half',
+        order: 2
       },
       table: {
-        width: 'xl',
+        width: 'xs',
+        showInTable: false
+      }
+    },
+    {
+      key: 'editorLineNumbers',
+      label: 'Line Numbers',
+      type: 'select',
+      required: false,
+      defaultValue: 'on',
+      description: 'Display line numbers in the editor',
+      tab: 'Editor',
+      form: {
+        row: 4,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'sm',
+        showInTable: false
+      },
+      options: {
+        static: [
+          { value: 'on', label: 'Show Line Numbers' },
+          { value: 'off', label: 'Hide Line Numbers' },
+          { value: 'relative', label: 'Relative Line Numbers' }
+        ]
+      }
+    },
+    {
+      key: 'editorTabSize',
+      label: 'Tab Size',
+      type: 'number',
+      required: false,
+      defaultValue: 4,
+      placeholder: '4',
+      description: 'Number of spaces for indentation',
+      tab: 'Editor',
+      form: {
+        row: 4,
+        width: 'half',
+        order: 2
+      },
+      table: {
+        width: 'xs',
+        showInTable: false
+      },
+      validation: [
+        { type: 'min', value: 1, message: 'Tab size must be at least 1' },
+        { type: 'max', value: 8, message: 'Tab size cannot exceed 8' }
+      ]
+    },
+
+    // ============================================================================
+    // PERSONAL PREFERENCES - PERSONAL TAB
+    // ============================================================================
+    {
+      key: 'defaultView',
+      label: 'Default View',
+      type: 'select',
+      required: false,
+      defaultValue: 'dashboard',
+      description: 'Default page to show when logging in',
+      tab: 'Personal',
+      form: {
+        row: 1,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'sm',
+        showInTable: false
+      },
+      options: {
+        static: [
+          { value: 'dashboard', label: 'Dashboard' },
+          { value: 'nodes', label: 'Node Tree' },
+          { value: 'rules', label: 'Rules' },
+          { value: 'workflows', label: 'Workflows' },
+          { value: 'last-visited', label: 'Last Visited Page' }
+        ]
+      }
+    },
+    {
+      key: 'tablePageSize',
+      label: 'Table Page Size',
+      type: 'select',
+      required: false,
+      defaultValue: 25,
+      description: 'Default number of items per page in tables',
+      tab: 'Personal',
+      form: {
+        row: 1,
+        width: 'half',
+        order: 2
+      },
+      table: {
+        width: 'xs',
+        showInTable: false
+      },
+      options: {
+        static: [
+          { value: 10, label: '10 items' },
+          { value: 25, label: '25 items' },
+          { value: 50, label: '50 items' },
+          { value: 100, label: '100 items' }
+        ]
+      }
+    },
+    {
+      key: 'enableNotifications',
+      label: 'Enable Notifications',
+      type: 'switch',
+      required: false,
+      defaultValue: true,
+      description: 'Receive browser notifications for important events',
+      tab: 'Personal',
+      form: {
+        row: 2,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'xs',
+        showInTable: false
+      }
+    },
+    {
+      key: 'enableSounds',
+      label: 'Enable Sounds',
+      type: 'switch',
+      required: false,
+      defaultValue: false,
+      description: 'Play sounds for notifications and alerts',
+      tab: 'Personal',
+      form: {
+        row: 2,
+        width: 'half',
+        order: 2
+      },
+      table: {
+        width: 'xs',
+        showInTable: false
+      }
+    },
+    {
+      key: 'autoSaveInterval',
+      label: 'Auto-save Interval',
+      type: 'select',
+      required: false,
+      defaultValue: 30,
+      description: 'How often to auto-save work (in seconds)',
+      tab: 'Personal',
+      form: {
+        row: 3,
+        width: 'half',
+        order: 1
+      },
+      table: {
+        width: 'sm',
+        showInTable: false
+      },
+      options: {
+        static: [
+          { value: 10, label: 'Every 10 seconds' },
+          { value: 30, label: 'Every 30 seconds' },
+          { value: 60, label: 'Every minute' },
+          { value: 300, label: 'Every 5 minutes' },
+          { value: 0, label: 'Disabled' }
+        ]
+      }
+    },
+    {
+      key: 'compactMode',
+      label: 'Compact Mode',
+      type: 'switch',
+      required: false,
+      defaultValue: false,
+      description: 'Use compact layouts to show more information',
+      tab: 'Personal',
+      form: {
+        row: 3,
+        width: 'half',
+        order: 2
+      },
+      table: {
+        width: 'xs',
         showInTable: false
       }
     }
@@ -89,8 +410,8 @@ export const USER_SCHEMA: ResourceSchema = {
   },
   
   actions: {
-    update: true,  // ✅ This is what we need!
-    optimistic: true // ✅ Instant UI updates for preferences
+    update: true,  // ✅ Allow user preference updates
+    optimistic: false // ❌ Server-only resources can't be optimistic
   },
   
   mobile: {
@@ -105,10 +426,9 @@ export const USER_SCHEMA: ResourceSchema = {
   desktop: {
     sortField: 'name',
     sortOrder: 'asc'
-  },
+  }
 
-  // ✅ ENTITY: IndexedDB key configuration
-  indexedDBKey: (record: any) => record.id
+  // ❌ No IndexedDB config - server-only resource
 }
 
 // ============================================================================
@@ -140,9 +460,9 @@ export const USER_GROUP_SCHEMA = {
   // Metadata for schema-driven index generation (only mark exceptions)
   notHasTenantContext: true,
   notHasAuditFields: true,
+  serverOnly: true, // ✅ Security: User-group assignments are server-only
   
-  // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: UserGroup) => `${record.userId}:${record.groupId}`,
+  // ❌ No IndexedDB config - server-only resource
   
   // GOLD STANDARD: Junction field mapping configuration
   fieldMappings: {
@@ -200,9 +520,9 @@ export const USER_TENANT_SCHEMA = {
   orderBy: [{ createdAt: 'desc' }],
   // Metadata for schema-driven index generation (only mark exceptions)
   notHasTenantContext: true,
+  serverOnly: true, // ✅ Security: User-tenant relationships are server-only
   
-  // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: UserTenant) => `${record.userId}:${record.tenantId}`,
+  // ❌ No IndexedDB config - server-only resource
   
   // GOLD STANDARD: Junction field mapping configuration
   fieldMappings: {
@@ -261,9 +581,9 @@ export const GROUP_PERMISSION_SCHEMA = {
   // Metadata for schema-driven index generation (only mark exceptions)
   notHasTenantContext: true,
   notHasAuditFields: true,
+  serverOnly: true, // ✅ Security: Group permissions are server-only
   
-  // ✅ JUNCTION: IndexedDB compound key configuration
-  indexedDBKey: (record: GroupPermission) => `${record.groupId}:${record.permissionId}`,
+  // ❌ No IndexedDB config - server-only resource
   
   // GOLD STANDARD: Junction field mapping configuration
   fieldMappings: {

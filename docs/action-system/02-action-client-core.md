@@ -510,7 +510,7 @@ function applySchemaIndexedDBKey(
 ): any {
   const schema = getResourceSchema(storeName);
   
-  // ✅ SERVER-ONLY: Check if schema is configured for server-only operations
+  // ✅ SERVER-ONLY: Check if schema uses SSR execution (SSOT pattern)
   if (schema?.serverOnly === true || schema?.indexedDBKey === null) {
     return data;
   }

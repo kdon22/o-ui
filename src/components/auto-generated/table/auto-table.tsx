@@ -73,6 +73,7 @@ export const AutoTable: React.FC<AutoTableProps> = ({
   processNames,
   customTitle,
   customSearchPlaceholder,
+  buttonVariant = 'blue',
   navigationContext
 }) => {
   const { data: session } = useSession();
@@ -104,8 +105,6 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     // autoSaveInterval: 30000 // Optional: 30 second auto-save
   });
   
-  // ✅ Use server-only if schema marks it so (bypass IndexedDB)
-  const serverOnly = !!(resource as any)?.serverOnly || !!(resource as any)?.actions?.serverOnly;
   // 🚀 INSTANT TAB SWITCHING: Use instant loading system for 0ms tab switching
   const { data: dataResult, isLoading, error } = useInstantActionQuery(
     `${resourceKey}.list`,
@@ -119,7 +118,6 @@ export const AutoTable: React.FC<AutoTableProps> = ({
     {
       staleTime: 60000, // 1 minute - shorter than original for fresher data
       fallbackToCache: true,
-      skipCache: serverOnly,
       // placeholderData automatically handled by useInstantActionQuery
     }
   );
@@ -261,6 +259,7 @@ export const AutoTable: React.FC<AutoTableProps> = ({
         createMutationPending={mutations.createMutation.isPending}
         customTitle={customTitle}
         customSearchPlaceholder={customSearchPlaceholder}
+        buttonVariant={buttonVariant}
       />
 
       {/* Level 1 Filter Tabs (Schema-driven) */}

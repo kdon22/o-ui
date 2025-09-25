@@ -8,7 +8,7 @@ Integration tests:
 - Tables list renders categories and tables from mocked actions
 - Selecting a table auto‑seeds query to `SELECT * FROM [<table>]`
 - Entering WHERE with placeholders disables Run until values provided
-- Run triggers `tableData.list` with skipCache and displays rows
+- Run triggers `tableData.list` with schema serverOnly and displays rows
 - Results modal opens and renders columns/rows
 
 Manual checks:

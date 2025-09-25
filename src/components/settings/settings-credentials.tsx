@@ -35,6 +35,7 @@ export function SettingsCredentials() {
           resourceKey="credential"
           customTitle="API Credentials"
           customSearchPlaceholder="Search credentials..."
+          buttonVariant="black"
         />
       </div>
     </div>

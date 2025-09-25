@@ -121,7 +121,7 @@ export default function QueueManagement() {
     'queueConfigs.list',
     undefined, // No data/filters needed for list all
     {
-      skipCache: true, // Server-only, always fresh data
+      // Server-only via schema, always fresh data
       refetchInterval: refreshInterval
     }
   );
@@ -136,7 +136,7 @@ export default function QueueManagement() {
     'queueMessages.list',
     undefined, // No data/filters needed for list all
     {
-      skipCache: true, // Server-only, always fresh data
+      // Server-only via schema, always fresh data
       refetchInterval: refreshInterval
     }
   );

@@ -48,7 +48,7 @@ EditorContextService.set({
 - `tables.read` — read one table; returns `config.columns`
 - `tableData.list` — returns rows for a tableId
 
-`tableData.list` must be called with `skipCache: true` (already set by `useQueryExecution`).
+`tableData.list` uses schema `serverOnly: true` (automatically handled by schema).
 
 #### 4) Data model expectations
 - Table entity should have:

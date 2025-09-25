@@ -12,10 +12,10 @@ Client usage:
 - `useEnterpriseActionQuery('tables.list', {}, { staleTime, refetchOnWindowFocus: false })`
 - `useEnterpriseActionQuery('tableCategory.list', {}, { ... })`
 - `useActionQuery('tables.read', { id }, { enabled: !!id })`
-- `useActionMutation('tableData.list', { skipCache: true })`
+- `useActionMutation('tableData.list', {})`
 
 Notes:
-- `skipCache: true` ensures no IndexedDB fallback is used for row data
+- TableData schema has `serverOnly: true` ensuring no IndexedDB fallback for row data
 - Metadata reads are OK from cache; lists use schema‑driven sources
 - Results are post‑processed on client to match configured columns order
 

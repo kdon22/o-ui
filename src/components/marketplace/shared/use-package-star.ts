@@ -18,7 +18,7 @@ export function usePackageStar(options: UsePackageStarOptions = {}) {
     const { additionalInvalidationKeys = [] } = options;
 
     const starMutation = useActionMutation('marketplacePackages.update', {
-        ...( { skipCache: true } as any ),
+        ...( {} as any ),
         onSuccess: (_result: any, variables: any) => {
             const starred = Boolean((variables as any)?.isStarred);
             // Standard invalidations that all components need

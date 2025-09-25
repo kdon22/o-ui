@@ -24,6 +24,7 @@ import { WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
 import { PROMPT_SCHEMA } from '@/features/prompts/prompts.schema';
 import { USER_SCHEMA } from '@/features/users/users.schema';
 import { CREDENTIAL_SCHEMA } from '@/features/credentials/credentials.schema';
+import { GROUP_SCHEMA } from '@/features/groups/groups.schema';
 import { BRANCH_SCHEMA } from '@/features/branches/branches.schema';
 import { SESSION_SCHEMA } from '@/features/session/session.schema';
 import { MARKETPLACE_PACKAGE_SCHEMA } from '@/features/marketplace/marketplace.schema';
@@ -78,6 +79,7 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   WORKFLOW_SCHEMA,
   PROMPT_SCHEMA,
   USER_SCHEMA,
+  GROUP_SCHEMA,
   CREDENTIAL_SCHEMA,
   
   // Tag System Entities
@@ -235,7 +237,7 @@ function initializeIndexedDBStores(): IndexedDBStoreConfig[] {
     // Generate stores for CORE entities only (80% reduction in initialization time)
     SCHEMA_RESOURCES.forEach(schema => {
       // ✅ SKIP SERVER-ONLY: Don't create IndexedDB stores for server-only resources
-      if (schema.serverOnly || schema.actions?.serverOnly) {
+      if (schema.serverOnly === true) {
         console.log(`🚫 [IndexedDB] Skipping server-only resource: ${schema.databaseKey}`);
         return;
       }

@@ -5,7 +5,7 @@ import { useActionQuery } from '@/hooks/use-action-api'
 import { useActionMutation } from '@/hooks/query/use-action-mutation'
 
 export default function QueuesWorkPage() {
-  const { data, refetch } = useActionQuery('queueMessages.list', {}, { skipCache: true })
+  const { data, refetch } = useActionQuery('queueMessages.list', {}, {})
   // Use standard update action to change status/locks
   const updateMsg = useActionMutation('queueMessages.update', { invalidateQueries: ['queueMessages.list'] })
 

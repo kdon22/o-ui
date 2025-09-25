@@ -54,7 +54,9 @@ export const FIELD_TYPES = {
   code: { input: 'CodeInput', display: 'CodeDisplay' },
   // Marketplace-specific field types
   'component-selector': { input: 'ComponentSelectorInput', display: 'ComponentSelectorDisplay' },
-  currency: { input: 'CurrencyInput', display: 'CurrencyDisplay' }
+  currency: { input: 'CurrencyInput', display: 'CurrencyDisplay' },
+  // Permission management field types
+  'permission-matrix': { input: 'PermissionMatrixInput', display: 'PermissionMatrixDisplay' }
 } as const;
 
 export type FieldType = keyof typeof FIELD_TYPES;
@@ -344,7 +346,7 @@ export interface CustomAction {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   description?: string;
   handler?: string; // Handler function name (optional for server-only actions)
-  serverOnly?: boolean; // Forces action to bypass IndexedDB and go directly to server
+  serverOnly?: boolean; // Forces action to use server-only execution (SSOT pattern)
   confirmation?: {
     title: string;
     message: string;
@@ -361,8 +363,10 @@ export interface ActionsConfig {
   bulk?: boolean;
   // Control optimistic updates - if false, operations go server-first
   optimistic?: boolean;
-  // Force all operations to bypass IndexedDB and go directly to server
+  
+  // Force all operations to use server-only execution (SSOT pattern)
   serverOnly?: boolean;
+  
   custom?: CustomAction[];
 }
 
@@ -501,7 +505,7 @@ export interface ResourceSchema {
   notHasAuditFields?: boolean;   // Disable audit fields (for models without updatedBy/version)
   
   // Server-only configuration for large datasets
-  serverOnly?: boolean;          // Forces all operations through API, bypasses IndexedDB
+  serverOnly?: boolean;          // Forces all operations to use server-only execution (SSOT pattern)
   cacheStrategy?: 'indexeddb' | 'memory' | 'server-only'; // Caching strategy
   
   // UI Display
@@ -572,7 +576,8 @@ export interface QueryOptions {
   filters?: Record<string, any>;
   include?: string[]; // Relationships to include
   search?: string;
-  skipCache?: boolean; // Skip IndexedDB cache and go directly to server
+  
+  serverOnly?: boolean; // Force server-only operation
 }
 
 export interface MutationContext extends BranchContext {

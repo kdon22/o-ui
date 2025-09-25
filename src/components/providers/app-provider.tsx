@@ -198,9 +198,6 @@ const UnifiedAppProviderCore = React.memo(function UnifiedAppProviderCore({
         data: { 
           filters: { isActive: true }
         },
-        options: {
-          skipCache: false // Use IndexedDB first
-        },
         branchContext: sessionState.branchContext
       });
       

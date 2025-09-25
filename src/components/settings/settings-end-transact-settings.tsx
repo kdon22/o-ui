@@ -35,6 +35,7 @@ export function SettingsEndTransactSettings() {
           resourceKey="endTransactSettings"
           customTitle="Transaction Completion Settings"
           customSearchPlaceholder="Search transaction settings..."
+          buttonVariant="black"
         />
       </div>
     </div>

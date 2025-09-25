@@ -68,7 +68,7 @@ const useTableData = (tableId: string) => {
       enabled: !!tableId,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      skipCache: true
+      // Server-only handled by TableData schema (serverOnly: true)
     }
   );
 

@@ -72,8 +72,8 @@ export interface ResourceSchema {
   notHasBranchContext?: boolean; // Disable branch filtering (for non-versioned resources)
   notHasAuditFields?: boolean;   // Disable audit fields (for models without updatedBy/version)
   
-  // Server-only configuration for large datasets
-  serverOnly?: boolean;          // Forces all operations through API, bypasses IndexedDB
+  // Server-side rendering configuration for large datasets
+  serverOnly?: boolean;          // Forces server-side rendering (SSR) execution, SSOT pattern
   cacheStrategy?: 'indexeddb' | 'memory' | 'server-only'; // Caching strategy
   
   // ============================================================================
@@ -1055,6 +1055,126 @@ actions: {
   type: 'json',
   mobile: { priority: 'high', displayFormat: 'text' },       // Large data on mobile
   desktop: { showInTable: true, tableWidth: 'xl' }           // Slows table rendering
+}
+```
+
+---
+
+## Server-Side Rendering (SSR) for serverOnly Resources
+
+### Overview
+
+Resources marked with `serverOnly: true` use **Server-Side Rendering (SSR) execution** as part of the SSOT (Single Source of Truth) pattern. This approach optimizes performance for large datasets and specialized resources by handling all operations server-side.
+
+### When to Use serverOnly
+
+**✅ Recommended for:**
+- **Large datasets** (>10,000 records) that would overwhelm IndexedDB
+- **Global resources** that are not tenant/branch-specific (marketplace packages, settings)
+- **Streaming data** that changes frequently and requires real-time server updates
+- **Complex computed data** that requires server-side processing
+- **Security-sensitive resources** that should not be cached client-side
+
+**❌ Avoid for:**
+- Regular CRUD resources with <1,000 records
+- User-specific data that benefits from offline capabilities
+- Resources that require optimistic updates
+
+### Implementation Pattern
+
+```typescript
+// ✅ SSOT Pattern - Server-Only Resource
+export const TABLE_DATA_SCHEMA: ResourceSchema = {
+  databaseKey: 'tableData',
+  modelName: 'TableData',
+  actionPrefix: 'tableData',
+  
+  // 🚀 SSR Configuration
+  serverOnly: true,                    // Enable server-side rendering
+  cacheStrategy: 'server-only',        // No IndexedDB caching
+  indexedDBKey: null,                  // Disable local storage
+  
+  display: {
+    title: 'Table Data',
+    description: 'Large dataset tables (server-only)'
+  },
+  
+  fields: [
+    { key: 'id', type: 'text', required: true },
+    { key: 'data', type: 'json', required: true },
+    { key: 'metadata', type: 'json' }
+  ],
+  
+  actions: {
+    list: { enabled: true, serverOnly: true },    // Force server execution
+    create: { enabled: true, serverOnly: true },
+    update: { enabled: true, serverOnly: true },
+    delete: { enabled: true, serverOnly: true }
+  }
+};
+```
+
+### Client Usage
+
+```typescript
+// ✅ SSOT Usage - serverOnly automatically applied from schema
+const { data, isLoading } = useActionQuery(
+  'tableData.list',
+  { tableId: 'large-dataset' }
+  // serverOnly: true automatically applied from schema
+);
+
+// ✅ Mutations automatically use server-only execution
+const { mutate: updateData } = useActionMutation('tableData.update');
+```
+
+### Legacy Pattern Migration
+
+```typescript
+// ❌ Legacy Pattern (avoid - manual overrides)
+const { data } = useActionQuery(
+  'tableData.list',
+  { tableId },
+  { /* manual serverOnly overrides */ }
+);
+
+// ✅ SSOT Pattern (preferred)
+const { data } = useActionQuery(
+  'tableData.list', 
+  { tableId }
+  // serverOnly handled automatically by schema
+);
+```
+
+### Performance Benefits
+
+- **Reduced Memory Usage**: Large datasets stay on server
+- **Faster Initial Load**: No IndexedDB population overhead  
+- **Real-time Data**: Always fresh from server
+- **Scalable**: Handles unlimited dataset sizes
+- **Mobile Optimized**: Reduces client storage and processing
+
+### Server-Side Optimizations
+
+For `serverOnly: true` resources, implement these server optimizations:
+
+```typescript
+// API route optimizations for server-only resources
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '50');
+  
+  // 🚀 Server-side pagination for large datasets
+  const result = await prisma.tableData.findMany({
+    skip: (page - 1) * limit,
+    take: limit,
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  return ApiResponseFactory.success(result, {
+    pagination: { page, limit, total: await prisma.tableData.count() }
+  });
 }
 ```
 

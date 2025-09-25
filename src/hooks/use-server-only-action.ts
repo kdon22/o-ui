@@ -1,11 +1,15 @@
 /**
  * Server-Only Action Hook
  * 
- * Specialized hook for large datasets that bypass IndexedDB completely.
- * Optimized for table data with hundreds of thousands of records.
+ * Specialized hook for explicit server-only overrides.
+ * Use this when you need to force server-only behavior regardless of schema configuration.
+ * 
+ * SSOT Pattern:
+ * - Prefer using serverOnly: true in resource schemas for consistent behavior
+ * - Use this hook only for explicit overrides or specialized cases
  * 
  * Features:
- * - Forces all operations through API
+ * - Forces all operations through API (overrides schema settings)
  * - No local caching for data rows
  * - Optimized pagination and filtering
  * - Server-side search and sorting
@@ -88,7 +92,6 @@ export function useServerOnlyQuery(
         options: {
           // ✅ CRITICAL: Force server-only operation
           serverOnly: true,
-          skipCache: true,
           
           // Pagination
           pagination: { page, limit },
@@ -174,7 +177,6 @@ export function useServerOnlyMutation(
         options: {
           // ✅ CRITICAL: Force server-only operation
           serverOnly: true,
-          skipCache: true,
           ...(dynamicOptions || {})
         },
         branchContext
@@ -238,7 +240,6 @@ export function useServerOnlyBulkMutation(
         options: {
           // ✅ CRITICAL: Force server-only operation
           serverOnly: true,
-          skipCache: true,
           
           // Bulk operation metadata
           bulk: true,
@@ -296,7 +297,6 @@ export function useServerOnlyExport(
         options: {
           // ✅ CRITICAL: Force server-only operation
           serverOnly: true,
-          skipCache: true,
           
           // Export-specific options
           timeout: 300000, // 5 minutes for large exports
@@ -371,8 +371,7 @@ export function useServerOnlySearch(
         },
         options: {
           // ✅ CRITICAL: Force server-only operation
-          serverOnly: true,
-          skipCache: true
+          serverOnly: true
         },
         branchContext
       };

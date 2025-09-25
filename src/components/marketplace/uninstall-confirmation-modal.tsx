@@ -94,7 +94,7 @@ export function UninstallConfirmationModal({
 
   // Uninstall mutation via action-system
   const uninstallMutation = useActionMutation('marketplace.uninstallPackage', {
-    ...( { skipCache: true } as any ),
+    ...( {} as any ),
     onMutate: () => {
       setStep('progress');
     },

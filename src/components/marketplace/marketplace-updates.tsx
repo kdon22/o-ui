@@ -37,7 +37,7 @@ export function MarketplaceUpdates({ onPackageSelect }: MarketplaceUpdatesProps)
   const { data: updatesResponse, isActuallyLoading: loadingUpdates } = useActionQuery<PackageInstallation[]>(
     'marketplace.updates',
     {},
-    { skipCache: true }
+    {}
   );
   const availableUpdates = updatesResponse?.data || [];
 
@@ -45,7 +45,7 @@ export function MarketplaceUpdates({ onPackageSelect }: MarketplaceUpdatesProps)
   const { data: recentResponse, isActuallyLoading: loadingRecent } = useActionQuery<PackageInstallation[]>(
     'packageInstallations.list',
     { filters: { recentlyUpdated: true }, limit: 5 },
-    { skipCache: true }
+    {}
   );
   const recentlyUpdated = recentResponse?.data || [];
 

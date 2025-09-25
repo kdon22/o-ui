@@ -17,7 +17,6 @@ import { queryKeys } from './query-keys';
 // ============================================================================
 
 export interface ActionQueryOptions<TData = any> extends Omit<UseQueryOptions<ActionResponse<TData>>, 'queryKey' | 'queryFn'> {
-  skipCache?: boolean;
   background?: boolean;
 }
 
@@ -88,8 +87,7 @@ export function useActionQuery<TData = any>(
       action,
       data,
       options: {
-        ...options,
-        // Pass skipCache directly - SSOT with ActionClient
+        ...options
       },
       branchContext: branchContext || undefined
     };
