@@ -7,7 +7,7 @@
  * - Routine: 61+ minutes (reporting, cleanup, maintenance)
  */
 
-import type { QueueConfig, QueueMessage, QueueWorker } from './queues.schema';
+import type { Queue, QueueMessage, QueueWorker } from './queues.schema';
 
 const now = new Date();
 const tenantId = 'tenant-demo-123';
@@ -20,7 +20,7 @@ const minutesFromNow = (minutes: number) => new Date(now.getTime() + minutes * 6
 // QUEUE CONFIGURATIONS - Frequency-Based Priority System
 // ============================================================================
 
-export const QUEUE_CONFIGS_SEED_DATA: QueueConfig[] = [
+export const QUEUE_CONFIGS_SEED_DATA: Queue[] = [
   // ========== CRITICAL OPERATIONS (0-15 minutes) ==========
   {
     id: 'queue-001',
@@ -391,7 +391,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-001',
     tenantId,
-    queueConfigId: 'queue-001', // Ticketing urgent
+    queueId: 'queue-001', // Ticketing urgent
     jobType: 'gds_queue_check',
     pnr: 'AB4P35',
     gdsLocator: 'AB4P35',
@@ -426,7 +426,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-002',
     tenantId,
-    queueConfigId: 'queue-002', // Payment failures
+    queueId: 'queue-002', // Payment failures
     jobType: 'virtual_scheduled',
     pnr: 'CD789X',
     gdsLocator: null,
@@ -462,7 +462,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-003',
     tenantId,
-    queueConfigId: 'queue-003', // Amadeus urgent
+    queueId: 'queue-003', // Amadeus urgent
     jobType: 'gds_queue_check',
     pnr: 'EF123G',
     gdsLocator: 'EF123G',
@@ -494,7 +494,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-004',
     tenantId,
-    queueConfigId: 'queue-005', // Seat assignments
+    queueId: 'queue-005', // Seat assignments
     jobType: 'virtual_scheduled',
     pnr: 'GH456H',
     gdsLocator: null,
@@ -524,7 +524,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-005',
     tenantId,
-    queueConfigId: 'queue-004', // Cancellation processing
+    queueId: 'queue-004', // Cancellation processing
     jobType: 'virtual_scheduled',
     pnr: 'IJ789K',
     gdsLocator: 'IJ789K',
@@ -556,7 +556,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-006',
     tenantId,
-    queueConfigId: 'queue-011', // Failed test queue
+    queueId: 'queue-011', // Failed test queue
     jobType: 'gds_queue_check',
     pnr: 'TEST123',
     gdsLocator: 'TEST123',
@@ -591,7 +591,7 @@ export const QUEUE_MESSAGES_SEED_DATA: QueueMessage[] = [
   {
     id: 'job-007',
     tenantId,
-    queueConfigId: 'queue-008', // Daily reporting
+    queueId: 'queue-008', // Daily reporting
     jobType: 'virtual_scheduled',
     pnr: null,
     gdsLocator: null,
@@ -720,7 +720,7 @@ export const QUEUE_WORKERS_SEED_DATA: QueueWorker[] = [
 // ============================================================================
 
 export const QUEUE_SEED_DATA = {
-  queueConfigs: QUEUE_CONFIGS_SEED_DATA,
+  queues: QUEUE_CONFIGS_SEED_DATA,
   queueMessages: QUEUE_MESSAGES_SEED_DATA,
   queueWorkers: QUEUE_WORKERS_SEED_DATA
 };

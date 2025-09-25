@@ -42,7 +42,7 @@ import {
 // TYPES
 // ============================================================================
 
-interface QueueConfig {
+interface Queue {
   id: string;
   name: string;
   config: {
@@ -53,7 +53,7 @@ interface QueueConfig {
 }
 
 interface QueueActionPanelProps {
-  queues: QueueConfig[];
+  queues: Queue[];
   selectedQueues: string[];
   onSelectAllByStatus: (status: string) => void;
   onSelectAllByPriority: (priority: string) => void;

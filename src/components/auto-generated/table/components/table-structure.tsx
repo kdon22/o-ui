@@ -20,6 +20,8 @@ const ArrowDown = ((props: any) => <span {...props} />);
 const ArrowUpDown = ((props: any) => <span {...props} />);
 import { ColumnFilter } from '../column-filter';
 import { ContextMenu } from '../context-menu';
+import { RowActions } from './row-actions';
+import { SleepDialog } from './sleep-dialog';
 // TEMP DIAGNOSTIC: avoid importing VersionIndicator to exclude its module from the chunk
 // import { VersionIndicator } from './version-indicator';
 import type { ResourceSchema } from '@/lib/resource-system/schemas';
@@ -124,7 +126,7 @@ export const TableStructure: React.FC<TableStructureProps> = ({
             
             
             {/* Actions Column */}
-            <TableHead className="min-w-20">
+            <TableHead className={resource.rowActions ? "min-w-32" : "min-w-20"}>
               <span className="font-medium text-sm text-gray-900">Actions</span>
             </TableHead>
           </TableRow>
@@ -198,12 +200,28 @@ export const TableStructure: React.FC<TableStructureProps> = ({
                 
                 {/* Actions */}
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <ContextMenu
-                    entity={entity}
-                    resource={resource}
-                    resourceKey={resourceKey}
-                    {...contextMenuActions}
-                  />
+                  <div className="flex items-center gap-2">
+                    {/* Row Actions from Schema */}
+                    {resource.rowActions && resource.rowActions.length > 0 && (
+                      <RowActions
+                        rowData={entity}
+                        rowActions={resource.rowActions}
+                        resourceKey={resourceKey}
+                        dialogComponents={{
+                          SleepDialog: SleepDialog
+                        }}
+                        compact={true}
+                      />
+                    )}
+                    
+                    {/* Traditional Context Menu */}
+                    <ContextMenu
+                      entity={entity}
+                      resource={resource}
+                      resourceKey={resourceKey}
+                      {...contextMenuActions}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
               );

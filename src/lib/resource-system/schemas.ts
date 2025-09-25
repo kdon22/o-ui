@@ -22,6 +22,65 @@ export interface ValidationRule {
 }
 
 // ============================================================================
+// ROW ACTIONS SYSTEM
+// ============================================================================
+
+export interface RowActionCondition {
+  field: string;
+  operator: 'equals' | 'not_equals' | 'in' | 'not_in' | 'exists' | 'not_exists';
+  value?: string | string[] | number | number[] | boolean;
+}
+
+export interface RowActionMutation {
+  action: string;  // e.g., 'queues.update'
+  payload: Record<string, any>;
+  confirmMessage?: string;
+}
+
+export interface RowActionDialog {
+  component: string;  // Component name to render
+  title: string;
+  action: string;     // Action to call after dialog
+  props?: Record<string, any>;
+}
+
+export interface RowActionConfig {
+  key: string;
+  label: string;
+  icon?: string;  // Lucide icon name
+  variant?: 'default' | 'destructive' | 'secondary' | 'ghost' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  actionType: 'mutation' | 'dialog' | 'navigation' | 'custom';
+  
+  // Conditional visibility
+  condition?: RowActionCondition;
+  
+  // For mutation actions
+  mutation?: RowActionMutation;
+  
+  // For dialog actions  
+  dialog?: RowActionDialog;
+  
+  // For navigation actions
+  navigation?: {
+    path: string;
+    target?: '_self' | '_blank';
+  };
+  
+  // For custom actions - handled by parent component
+  customHandler?: string; // Key to match with customHandlers prop
+  
+  // Permissions
+  permission?: string;
+  
+  // Tooltip
+  tooltip?: string;
+  
+  // Loading state
+  loadingText?: string;
+}
+
+// ============================================================================
 // FIELD TYPES AND CONFIGURATION
 // ============================================================================
 
@@ -534,6 +593,9 @@ export interface ResourceSchema {
   
   // Actions configuration
   actions: ActionsConfig;
+  
+  // Row-level actions (for table rows)
+  rowActions?: RowActionConfig[];
   
   // Mobile-first layout
   mobile: MobileConfig;

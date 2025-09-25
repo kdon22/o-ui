@@ -138,7 +138,7 @@ const MainLayout = React.memo(function MainLayout({ initialSelectedNodeId }: Mai
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Tree Navigation */}
-        {topLevelTab !== 'tables' && topLevelTab !== 'marketplace' && topLevelTab !== 'settings' && (
+        {topLevelTab !== 'tables' && topLevelTab !== 'marketplace' && topLevelTab !== 'settings' && topLevelTab !== 'queues' && (
           <TreeNavigation
             userRootNodeId={userRootNodeId}
             currentBranch={currentBranch || undefined}

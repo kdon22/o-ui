@@ -1,11 +1,15 @@
 /**
- * Travel Queue Management - Main Application Page
+ * Queue Management - Unified Tab Interface
  * 
- * Full-page travel operations control center replacing the legacy queue system.
- * Features frequency-based priority zones and real-time operational monitoring.
+ * Complete queue management system with three integrated tabs:
+ * - Queue List: Live queue monitoring with row actions  
+ * - Activity Stream: Real-time event streaming and metrics
+ * - Scheduled Jobs: Job management and cron scheduling
  * 
- * Migration Note: This replaces the old AutoTable-based queue display with a 
- * dedicated travel operations workspace designed for operational efficiency.
+ * Features:
+ * - AutoTable-driven with schema-based row actions
+ * - Real-time updates and live streaming
+ * - Clean architecture with no legacy code
  */
 
 import QueueManagement from '@/features/queues/pages/queue-management'

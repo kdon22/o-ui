@@ -6,6 +6,8 @@ export { TableHeader } from './table-header';
 export { Level1FilterTabs } from './level1-filter-tabs';
 export { TableStructure } from './table-structure';
 export { LoadingStates } from './loading-states';
+export { RowActions } from './row-actions';
+export { SleepDialog } from './sleep-dialog';
 
 // Re-export existing components
 export { InlineForm } from '../inline-form';

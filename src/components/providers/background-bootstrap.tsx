@@ -185,7 +185,7 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
       { type: 'classes', limit: 50 },
       
       // Queue system (server-only)
-      { type: 'queueConfigs', limit: 10 },
+      { type: 'queues', limit: 10 },
       { type: 'queueMessages', limit: 50 },
       { type: 'queueWorkers', limit: 10 },
       

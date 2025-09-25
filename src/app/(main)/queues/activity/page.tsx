@@ -38,7 +38,7 @@ export default function QueuesActivityPage() {
 
   const filteredJobs: any[] = React.useMemo(() => {
     return jobs.filter(j => {
-      if (queueFilter !== 'all' && (j.queueConfigId || 'unassigned') !== queueFilter) return false
+      if (queueFilter !== 'all' && (j.queueId || 'unassigned') !== queueFilter) return false
       if (statusFilter !== 'all' && j.status !== statusFilter) return false
       return true
     })
@@ -114,7 +114,7 @@ export default function QueuesActivityPage() {
   const perQueue = React.useMemo(() => {
     const m: Record<string, any> = {}
     for (const j of filteredJobs) {
-      const key = j.queueConfigId || 'unassigned'
+      const key = j.queueId || 'unassigned'
       if (!m[key]) m[key] = { id: key, total: 0, completed: 0, failed: 0, in_progress: 0, queued: 0, cancelled: 0, retries: 0, procMs: [] as number[], slaBreaches: 0 }
       const q = m[key]
       q.total++

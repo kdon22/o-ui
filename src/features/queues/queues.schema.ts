@@ -73,6 +73,34 @@ export const QueueEventSchema = z.object({
 
 export type QueueEvent = z.infer<typeof QueueEventSchema>
 
+/**
+ * Queue Worker Schema
+ * Represents a worker processing queue messages
+ */
+export const QueueWorkerSchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  name: z.string(),
+  host: z.string(),
+  pid: z.number().nullable(),
+  version: z.string(),
+  status: z.enum(['idle', 'busy', 'offline', 'error']),
+  lastHeartbeat: z.string(),
+  startedAt: z.string(),
+  currentJobId: z.string().nullable(),
+  currentJobType: z.string().nullable(),
+  currentJobStarted: z.string().nullable(),
+  jobsCompleted: z.number().default(0),
+  jobsFailed: z.number().default(0),
+  averageJobTime: z.number().default(0), // milliseconds
+  capabilities: z.array(z.string()),
+  maxConcurrentJobs: z.number().default(1),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type QueueWorker = z.infer<typeof QueueWorkerSchema>
+
 // ============================================================================
 // RESOURCE SCHEMA DEFINITIONS
 // ============================================================================
@@ -86,9 +114,10 @@ export const QUEUE_SCHEMA: ResourceSchema = {
   actionPrefix: 'queues',
   
   // ============================================================================
-  // SERVER-ONLY CONFIGURATION
+  // SERVER-ONLY CONFIGURATION (Non-Branch-Aware)
   // ============================================================================
   serverOnly: true, // Large dataset - server-side rendering only
+  // Queue configs are tenant-level, not branch-specific
   cacheStrategy: 'server-only' as const,
   
   // ============================================================================
@@ -117,13 +146,16 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       label: 'Queue Name',
       type: 'text' as const,
       required: true,
+      table: {
+        width: 'md'
+      },
       validation: [
         { type: 'required' as const, message: 'Queue name is required' },
         { type: 'minLength' as const, value: 3, message: 'Name too short' },
         { type: 'maxLength' as const, value: 100, message: 'Name too long' }
       ],
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const, sortable: true }
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
     },
     {
       key: 'displayName',
@@ -136,7 +168,7 @@ export const QUEUE_SCHEMA: ResourceSchema = {
         { type: 'maxLength' as const, value: 150, message: 'Display name too long' }
       ],
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const, sortable: true }
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
     },
     {
       key: 'queueType',
@@ -153,36 +185,50 @@ export const QUEUE_SCHEMA: ResourceSchema = {
         ]
       },
       mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'md' as const },
+      table: {
+        width: 'md',
+        filterable: true
+      }
     },
     {
       key: 'queueNumber',
       label: 'Queue #',
       type: 'number' as const,
       required: true,
+      table: {
+        width: 'sm'
+      },
       validation: [
         { type: 'required' as const, message: 'Queue number is required' },
         { type: 'min' as const, value: 1, message: 'Queue number must be positive' },
         { type: 'max' as const, value: 999, message: 'Queue number too large' }
       ],
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const, sortable: true }
-    },
-    {
-      key: 'office',
-      label: 'Office',
-      type: 'text' as const,
-      required: false,
-      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
     },
     {
       key: 'category',
       label: 'Category',
       type: 'text' as const,
       required: false,
+      table: {
+        width: 'md'
+      },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
       desktop: { showInTable: false, tableWidth: 'md' as const }
+    },
+    {
+      key: 'office',
+      label: 'Office',
+      type: 'text' as const,
+      required: false,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const }
     },
     {
       key: 'maxAge',
@@ -190,6 +236,9 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       type: 'number' as const,
       required: true,
       defaultValue: 0,
+      table: {
+        width: 'sm'
+      },
       validation: [
         { type: 'min' as const, value: 0, message: 'Max age must be non-negative' }
       ],
@@ -202,14 +251,21 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       type: 'number' as const,
       required: false,
       defaultValue: 0,
+      table: {
+        width: 'sm'
+      },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const, sortable: true }
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
     },
     {
       key: 'healthStatus',
       label: 'Health',
       type: 'select' as const,
       required: true,
+      table: {
+        width: 'md',
+        filterable: true
+      },
       defaultValue: 'HEALTHY',
       options: {
         static: [
@@ -220,23 +276,23 @@ export const QUEUE_SCHEMA: ResourceSchema = {
         ]
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'md' as const }
     },
     {
       key: 'isActive',
       label: 'Active',
-      type: 'boolean' as const,
+      type: 'switch' as const,
       required: true,
       defaultValue: true,
       mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
     },
     // System fields
     {
       key: 'tenantId',
       label: 'Tenant ID',
       type: 'text' as const,
-      autoValue: { source: 'context.tenantId' as const },
+      autoValue: { source: 'session.user.tenantId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
       desktop: { showInTable: false, tableWidth: 'xs' as const }
     },
@@ -244,7 +300,7 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       key: 'branchId', 
       label: 'Branch ID',
       type: 'text' as const,
-      autoValue: { source: 'context.branchId' as const },
+      autoValue: { source: 'session.user.branchContext.currentBranchId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
       desktop: { showInTable: false, tableWidth: 'xs' as const }
     }
@@ -271,6 +327,103 @@ export const QUEUE_SCHEMA: ResourceSchema = {
     optimistic: false, // Real-time data - server-only operations
     serverOnly: true
   },
+
+  // ============================================================================
+  // ROW-LEVEL ACTIONS - Individual Queue Controls
+  // ============================================================================
+  rowActions: [
+    {
+      key: 'resume',
+      label: 'Resume',
+      icon: 'Play',
+      variant: 'default' as const,
+      size: 'sm' as const,
+      actionType: 'mutation' as const,
+      condition: {
+        field: 'healthStatus',
+        operator: 'in' as const,
+        value: ['WARNING', 'CRITICAL', 'OFFLINE']
+      },
+      mutation: {
+        action: 'queues.update',
+        payload: { 
+          healthStatus: 'HEALTHY',
+          isActive: true 
+        }
+      },
+      tooltip: 'Resume queue processing',
+      loadingText: 'Resuming...'
+    },
+    {
+      key: 'pause',
+      label: 'Pause',
+      icon: 'Pause',
+      variant: 'secondary' as const,
+      size: 'sm' as const,
+      actionType: 'mutation' as const,
+      condition: {
+        field: 'healthStatus',
+        operator: 'equals' as const,
+        value: 'HEALTHY'
+      },
+      mutation: {
+        action: 'queues.update',
+        payload: { 
+          healthStatus: 'WARNING',
+          isActive: false 
+        },
+        confirmMessage: 'This will temporarily stop processing for this queue.'
+      },
+      tooltip: 'Pause queue processing',
+      loadingText: 'Pausing...'
+    },
+    {
+      key: 'sleep',
+      label: 'Sleep',
+      icon: 'Moon',
+      variant: 'secondary' as const,
+      size: 'sm' as const,
+      actionType: 'dialog' as const,
+      condition: {
+        field: 'healthStatus',
+        operator: 'not_equals' as const,
+        value: 'OFFLINE'
+      },
+      dialog: {
+        component: 'SleepDialog',
+        title: 'Schedule Queue Sleep',
+        action: 'queues.update',
+        props: {
+          defaultReason: 'Scheduled maintenance'
+        }
+      },
+      tooltip: 'Schedule queue sleep',
+      loadingText: 'Scheduling...'
+    },
+    {
+      key: 'fail',
+      label: 'Stop',
+      icon: 'XCircle',
+      variant: 'destructive' as const,
+      size: 'sm' as const,
+      actionType: 'mutation' as const,
+      condition: {
+        field: 'healthStatus',
+        operator: 'in' as const,
+        value: ['HEALTHY', 'WARNING']
+      },
+      mutation: {
+        action: 'queues.update',
+        payload: { 
+          healthStatus: 'CRITICAL',
+          isActive: false 
+        },
+        confirmMessage: 'This will immediately stop queue processing and mark it as failed. Are you sure?'
+      },
+      tooltip: 'Stop queue and mark as failed',
+      loadingText: 'Stopping...'
+    }
+  ],
   
   // ============================================================================
   // MOBILE CONFIGURATION
@@ -292,8 +445,42 @@ export const QUEUE_SCHEMA: ResourceSchema = {
     sortOrder: 'asc' as const,
     editableField: 'displayName',
     rowActions: true,
-    bulkActions: false, // Critical infrastructure - no bulk operations
+    bulkActions: true, // Enable bulk operations
     density: 'normal' as const
+  },
+  
+  // ============================================================================
+  // TABLE CONFIGURATION
+  // ============================================================================
+  table: {
+    width: 'full',
+    bulkSelect: true,        // ✅ Enables select checkboxes
+    columnFilter: true,      // ✅ Enables column filters
+    sortableColumns: true,
+    bulkSelectOptions: [
+      {
+        id: 'resume',
+        label: 'Resume Selected',
+        icon: 'Play',
+        description: 'Resume selected queues',
+        handler: 'bulkResumeQueues'
+      },
+      {
+        id: 'pause',
+        label: 'Pause Selected', 
+        icon: 'Pause',
+        description: 'Pause selected queues',
+        handler: 'bulkPauseQueues',
+        confirmMessage: 'Are you sure you want to pause the selected queues?'
+      },
+      {
+        id: 'export',
+        label: 'Export Selected',
+        icon: 'download',
+        description: 'Export selected queues to CSV',
+        handler: 'bulkExportQueues'
+      }
+    ]
   },
   
   // ============================================================================
@@ -302,10 +489,10 @@ export const QUEUE_SCHEMA: ResourceSchema = {
   indexedDBKey: (record: any) => record.id,
   
   // ============================================================================
-  // REAL-TIME CAPABILITIES
+  // REAL-TIME CAPABILITIES (Comment only - not implemented in schema yet)
   // ============================================================================
-  enableRealTimeUpdates: true,
-  updateInterval: 5000 // 5 seconds
+  // enableRealTimeUpdates: true,
+  // updateInterval: 5000 // 5 seconds
 }
 
 export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
@@ -313,7 +500,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
   // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
   // ============================================================================
   databaseKey: 'queueEvents',
-  modelName: 'QueueEvent',
+  modelName: 'QueueMessage',
   actionPrefix: 'queueEvents',
   
   // ============================================================================
@@ -349,7 +536,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       required: true,
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'md' as const }
     },
     {
       key: 'eventType',
@@ -368,7 +555,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
         ]
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
     },
     {
       key: 'message',
@@ -393,7 +580,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
         ]
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
+      desktop: { showInTable: true, tableWidth: 'md' as const }
     },
     {
       key: 'timestamp',
@@ -401,14 +588,14 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'datetime' as const,
       required: true,
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const, sortable: true }
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
     },
     // System fields
     {
       key: 'tenantId',
       label: 'Tenant ID',
       type: 'text' as const,
-      autoValue: { source: 'context.tenantId' as const },
+      autoValue: { source: 'session.user.tenantId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
       desktop: { showInTable: false, tableWidth: 'xs' as const }
     },
@@ -416,7 +603,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       key: 'branchId',
       label: 'Branch ID',
       type: 'text' as const,
-      autoValue: { source: 'context.branchId' as const },
+      autoValue: { source: 'session.user.branchContext.currentBranchId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
       desktop: { showInTable: false, tableWidth: 'xs' as const }
     }
@@ -462,7 +649,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
   desktop: {
     sortField: 'timestamp',
     sortOrder: 'desc' as const, // Latest events first
-    editableField: null, // Events are read-only
+    editableField: undefined, // Events are read-only
     rowActions: false, // No row actions for events
     bulkActions: false,
     density: 'compact' as const // More events visible
@@ -474,18 +661,17 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
   indexedDBKey: (record: any) => record.id,
   
   // ============================================================================
-  // REAL-TIME CAPABILITIES
+  // REAL-TIME CAPABILITIES (Comment only - not implemented in schema yet)
   // ============================================================================
-  enableRealTimeStream: true,
-  streamChannel: 'queue-events',
+  // streamChannel: 'queue-events',
   
   // ============================================================================
-  // AUTO-CLEANUP CONFIGURATION
+  // AUTO-CLEANUP CONFIGURATION (Comment only - not implemented in schema yet)
   // ============================================================================
-  autoCleanup: {
-    enabled: true,
-    retentionDays: 7 // Keep events for 7 days
-  }
+  // autoCleanup: {
+  //   enabled: true,
+  //   retentionDays: 7 // Keep events for 7 days
+  // }
 }
 
 // ============================================================================

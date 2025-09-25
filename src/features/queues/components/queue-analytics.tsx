@@ -464,3 +464,5 @@ export function QueueAnalytics({ queues, tenantId, branchId }: QueueAnalyticsPro
     </div>
   )
 }
+
+

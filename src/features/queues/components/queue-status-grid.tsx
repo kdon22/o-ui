@@ -38,7 +38,7 @@ import {
 // TYPES
 // ============================================================================
 
-interface QueueConfig {
+interface Queue {
   id: string;
   name: string;
   config: {
@@ -63,11 +63,11 @@ interface QueueMessage {
   id: string;
   type: string;
   status: 'queued' | 'in_progress' | 'completed' | 'failed';
-  queueConfigId?: string;
+  queueId?: string;
 }
 
 interface QueueStatusGridProps {
-  queues: QueueConfig[];
+  queues: Queue[];
   messages: QueueMessage[];
   selectedPriority: string | null;
   selectedQueues: string[];
@@ -133,7 +133,7 @@ export function QueueStatusGrid({
 
   const getActiveJobsCount = (queueId: string) => {
     return messages.filter(m => 
-      m.queueConfigId === queueId && 
+      m.queueId === queueId && 
       (m.status === 'queued' || m.status === 'in_progress')
     ).length;
   };

@@ -35,7 +35,7 @@ import {
 // TYPES
 // ============================================================================
 
-interface QueueConfig {
+interface Queue {
   id: string;
   name: string;
   config: {
@@ -53,14 +53,14 @@ interface QueueMessage {
   type: string;
   status: 'queued' | 'in_progress' | 'completed' | 'failed';
   priority: number;
-  queueConfigId?: string;
+  queueId?: string;
   scheduledAt?: string;
   processedAt?: string;
   lockedBy?: string;
 }
 
 interface OperationalMetricsProps {
-  queues: QueueConfig[];
+  queues: Queue[];
   messages: QueueMessage[];
 }
 
@@ -104,17 +104,17 @@ export function OperationalMetrics({ queues, messages }: OperationalMetricsProps
 
     // Priority distribution
     const criticalJobs = messages.filter(m => {
-      const queue = queues.find(q => q.id === m.queueConfigId);
+      const queue = queues.find(q => q.id === m.queueId);
       return queue?.config.priority === 'critical';
     }).length;
 
     const standardJobs = messages.filter(m => {
-      const queue = queues.find(q => q.id === m.queueConfigId);
+      const queue = queues.find(q => q.id === m.queueId);
       return queue?.config.priority === 'standard';
     }).length;
 
     const routineJobs = messages.filter(m => {
-      const queue = queues.find(q => q.id === m.queueConfigId);
+      const queue = queues.find(q => q.id === m.queueId);
       return queue?.config.priority === 'routine';
     }).length;
 

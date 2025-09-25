@@ -323,3 +323,5 @@ function QueueEventCard({ event }: QueueEventCardProps) {
     </motion.div>
   )
 }
+
+
