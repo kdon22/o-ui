@@ -33,6 +33,7 @@ export const GROUP_SCHEMA: ResourceSchema = {
   modelName: 'Group',             // Prisma model name
   actionPrefix: 'group',          // Action prefix (group.list, group.create, etc.)
   primaryKey: 'id',               // Primary key field
+  serverOnly: true,               // Groups are server-only (no IndexedDB caching for security)
   
   // ============================================================================
   // THREE-TAB INTERFACE CONFIGURATION

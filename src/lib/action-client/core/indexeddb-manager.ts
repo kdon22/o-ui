@@ -25,7 +25,7 @@ const dbInstances = new Map<string, IDBDatabase>();
 export class IndexedDBManager {
   private db: IDBDatabase | null = null;
   private dbName: string;
-  private version = 19; // 🚀 EXPANDED STORES: Increment to create commonly accessed stores (settings, user, credential, etc.)
+  private version = 20; // 🚀 GROUPS SERVERONLY: Removed groups from IndexedDB, applied serverOnly schema changes
   private isReady = false;
   private readyPromise: Promise<void>;
   private tenantId: string;
