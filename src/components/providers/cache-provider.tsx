@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useCallback, useEffect, useState, useMemo } from 'react'
+import React, { createContext, useContext, useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { useBranchContext } from '@/lib/session'
 import { getActionClient } from '@/lib/action-client'
 import workspaceBootstrap from '@/lib/services/workspace-bootstrap'
@@ -24,6 +24,7 @@ const CacheContext = createContext<CacheContextValue | null>(null)
 export function CacheProvider({ children, tenantId }: CacheProviderProps) {
   const branchContext = useBranchContext()
   const [isBootstrapping, setIsBootstrapping] = useState(false)
+  const bootstrapAttempted = useRef<string | null>(null) // Track last attempted bootstrap context
 
   // ============================================================================
   // CLEAN BOOTSTRAP - SSOT VIA INDEXEDDB MANAGER
@@ -36,16 +37,7 @@ export function CacheProvider({ children, tenantId }: CacheProviderProps) {
     try {
       console.log('🚀 [CacheProvider] Clean bootstrap starting')
       
-      const actionClient = getActionClient(tenantId, branchContext)
-      
-      // Check SSOT bootstrap status
-      const alreadyBootstrapped = await actionClient.indexedDB.isBootstrapped()
-      if (alreadyBootstrapped) {
-        console.log('✅ [CacheProvider] Already bootstrapped via SSOT')
-        return
-      }
-      
-      // Perform bootstrap
+      // Perform bootstrap - simplified without IndexedDB bootstrap checking
       const result = await workspaceBootstrap.bootstrap({
         tenantId,
         branchContext,
@@ -54,26 +46,32 @@ export function CacheProvider({ children, tenantId }: CacheProviderProps) {
       })
       
       if (result.success) {
-        // Mark as bootstrapped via SSOT
-        await actionClient.indexedDB.setBootstrapped(true)
-        console.log('✅ [CacheProvider] Bootstrap completed via SSOT')
+        console.log('✅ [CacheProvider] Bootstrap completed')
       } else {
         console.error('❌ [CacheProvider] Bootstrap failed:', result.errors)
+        // Reset attempt tracking on failure so it can be retried
+        bootstrapAttempted.current = null
       }
       
     } catch (error) {
       console.error('❌ [CacheProvider] Bootstrap error:', error)
+      // Reset attempt tracking on error so it can be retried  
+      bootstrapAttempted.current = null
     } finally {
       setIsBootstrapping(false)
     }
   }, [tenantId, branchContext]) // Removed isBootstrapping from dependencies
 
-  // Auto-bootstrap when ready
+  // Auto-bootstrap when ready - FIXED: Use ref to prevent infinite loops
   useEffect(() => {
-    if (branchContext.isReady && !isBootstrapping) {
+    const contextKey = `${tenantId}:${branchContext.currentBranchId}:${branchContext.defaultBranchId}`
+    
+    if (branchContext.isReady && !isBootstrapping && bootstrapAttempted.current !== contextKey) {
+      bootstrapAttempted.current = contextKey // Mark this context as attempted
       performBootstrap()
     }
-  }, [branchContext.isReady, performBootstrap]) // Removed isBootstrapping from dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [branchContext.isReady, branchContext.currentBranchId, branchContext.defaultBranchId, tenantId, isBootstrapping]) // ✅ Removed performBootstrap from deps
 
   // Clean context value
   const contextValue = useMemo(() => ({
