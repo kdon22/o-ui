@@ -153,7 +153,7 @@ function initializeActionMappings(): Record<string, ActionMapping> {
         // ✅ SERVER-ONLY SCHEMAS: Generate actions but disable caching and optimistic updates
         if (schema.serverOnly === true) {
           actionMappings[key] = {
-            store: `${schema.databaseKey}-server-only`, // Different store identifier for server-only
+            store: schema.databaseKey, // ✅ SIMPLE: Use original store name, rely on cached/optimistic flags
             method: getMethodForAction(action),
             endpoint: `/api/workspaces/current/actions`,
             requiresAuth: true,

@@ -122,10 +122,6 @@ export const TableStructure: React.FC<TableStructureProps> = ({
               </TableHead>
             ))}
             
-            {/* Version Column */}
-            <TableHead className="w-32">
-              <span className="font-medium text-sm text-gray-900">Version</span>
-            </TableHead>
             
             {/* Actions Column */}
             <TableHead className="min-w-20">
@@ -199,10 +195,6 @@ export const TableStructure: React.FC<TableStructureProps> = ({
                   );
                 })}
                 
-                {/* Version Indicator (temporarily disabled for diagnostics) */}
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <span className="text-xs text-gray-400">v{entity.version || 1}</span>
-                </TableCell>
                 
                 {/* Actions */}
                 <TableCell onClick={(e) => e.stopPropagation()}>

@@ -27,12 +27,7 @@ export class ReadOperations {
    * UNIFIED: Check if we should use server-only execution for read operations (SSOT pattern)
    */
   private shouldBypassIndexedDBForRead(action: string, options?: any): boolean {
-    // SSOT: Only check options.serverOnly
-    if (options?.serverOnly) {
-      return true;
-    }
-    
-    // Check schema serverOnly property
+    // Check schema serverOnly property (SSOT schema-driven approach)
     const resourceType = action.split('.')[0];
     const schema = getResourceByActionPrefix(resourceType);
     return schema?.serverOnly === true;
@@ -42,7 +37,7 @@ export class ReadOperations {
    * Get reason for server-only execution (for debugging)
    */
   private getBypassReason(action: string, options?: any): string {
-    if (options?.serverOnly) return 'options.serverOnly=true';
+    // Manual serverOnly override removed - use schema configuration
     
     const resourceType = action.split('.')[0];
     const schema = getResourceByActionPrefix(resourceType);

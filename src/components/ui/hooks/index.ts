@@ -5,5 +5,4 @@
  * These hooks provide reusable functionality for UI components.
  */
 
-export { useConfirmDialog } from './useConfirmDialog';
-export type { UseConfirmDialogOptions, UseConfirmDialogReturn } from './types'; 
+export { useConfirmDialog } from './useConfirmDialog'; 

@@ -13,6 +13,8 @@ import { useRouter } from 'next/navigation';
 import type { FieldSchema } from '@/lib/resource-system/schemas';
 import type { SortConfig } from '../types';
 import { useNavigationContext } from '@/lib/context/navigation-context';
+import { useConfirmDialog } from '@/components/ui/hooks/useConfirmDialog';
+import { confirm } from '@/components/ui/confirm';
 
 interface UseTableActionsProps {
   resource: any;
@@ -73,6 +75,9 @@ export const useTableActions = ({
   const { createMutation, updateMutation, deleteMutation } = mutations;
   const { editingEntity, setEditingEntity, formMode, setFormMode, setShowInlineForm } = formState;
   const { sortConfig, setSortConfig, setColumnFilters, selectedRows, setSelectedRows } = tableState;
+  
+  // Add confirmation dialog support
+  const { showConfirmDialog, modal } = useConfirmDialog();
 
   // Scroll to form helper
   const scrollToForm = useCallback(() => {
@@ -132,11 +137,32 @@ export const useTableActions = ({
     const selectedEntities = processedEntities.filter((entity: any) => selectedRows.has(entity.id));
     
     if (bulkOption.confirmMessage) {
-      const confirmed = window.confirm(bulkOption.confirmMessage);
-      if (!confirmed) return;
+      showConfirmDialog(
+        () => {
+          // Handle different bulk actions
+          switch (actionId) {
+            case 'delete':
+              selectedEntities.forEach((entity: any) => {
+                deleteMutation.mutate({ id: entity.id });
+              });
+              break;
+            // Add other bulk actions as needed
+          }
+
+          // Clear selection after action
+          setSelectedRows(new Set());
+        },
+        confirm.custom({
+          title: `Bulk ${actionId.charAt(0).toUpperCase() + actionId.slice(1)}`,
+          description: bulkOption.confirmMessage,
+          variant: actionId === 'delete' ? 'destructive' : 'default',
+          confirmLabel: actionId.charAt(0).toUpperCase() + actionId.slice(1)
+        })
+      );
+      return;
     }
 
-    // Handle different bulk actions
+    // Handle different bulk actions (no confirmation needed)
     switch (actionId) {
       case 'delete':
         selectedEntities.forEach((entity: any) => {
@@ -148,7 +174,7 @@ export const useTableActions = ({
 
     // Clear selection after action
     setSelectedRows(new Set());
-  }, [resource.table?.bulkSelectOptions, processedEntities, selectedRows, deleteMutation, setSelectedRows]);
+  }, [resource.table?.bulkSelectOptions, processedEntities, selectedRows, deleteMutation, setSelectedRows, showConfirmDialog]);
 
   // CRUD action handlers
   const handleAdd = useCallback(() => {
@@ -254,17 +280,35 @@ export const useTableActions = ({
     scrollToForm();
   }, [setEditingEntity, setFormMode, setShowInlineForm, scrollToForm, resourceKey, router, navigationContext?.tenantId]);
 
-  const handleDelete = useCallback((entity: any) => {
-    if (window.confirm(`Are you sure you want to delete this ${resource.modelName}?`)) {
-      console.log('🔥 [TableActions] Starting delete operation', {
-        resourceKey,
-        entityId: entity.id,
-        timestamp: new Date().toISOString()
-      });
-      
-      deleteMutation.mutate({ id: entity.id });
+  const handleDelete = useCallback((entity: any, skipConfirmation = false) => {
+    // Skip confirmation if already handled by context menu system
+    if (!skipConfirmation) {
+      showConfirmDialog(
+        () => {
+          console.log('🔥 [TableActions] Starting delete operation', {
+            resourceKey,
+            entityId: entity.id,
+            skipConfirmation: true, // Now confirmed
+            timestamp: new Date().toISOString()
+          });
+          
+          deleteMutation.mutate({ id: entity.id });
+        },
+        confirm.delete(entity.name || entity.id, resource.modelName || 'item')
+      );
+      return;
     }
-  }, [resource.modelName, deleteMutation, resourceKey]);
+    
+    // Direct delete (confirmation already handled)
+    console.log('🔥 [TableActions] Starting delete operation', {
+      resourceKey,
+      entityId: entity.id,
+      skipConfirmation,
+      timestamp: new Date().toISOString()
+    });
+    
+    deleteMutation.mutate({ id: entity.id });
+  }, [resource.modelName, deleteMutation, resourceKey, showConfirmDialog]);
 
   const handleDuplicate = useCallback((entity: any) => {
     console.log('🔥 [TableActions] Starting duplicate operation', {
@@ -456,6 +500,9 @@ export const useTableActions = ({
     // Selection state
     hasSelectedRows,
     isAllSelected,
-    isIndeterminate
+    isIndeterminate,
+    
+    // Confirmation modal
+    confirmationModal: modal
   };
 };

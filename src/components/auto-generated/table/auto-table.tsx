@@ -338,6 +338,9 @@ export const AutoTable: React.FC<AutoTableProps> = ({
       
       {/* 🏆 GOLD STANDARD: Change History Modal */}
       <ChangeHistoryModal {...changeHistory.modalProps} />
+      
+      {/* Render confirmation modal from table actions */}
+      {actions.confirmationModal}
     </div>
   );
 };

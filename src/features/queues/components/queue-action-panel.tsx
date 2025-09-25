@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useServerOnlyMutation } from '@/hooks/use-server-only-action';
+import { useActionMutation } from '@/hooks/use-action-api';
 import {
   Play,
   Pause,
@@ -80,7 +80,7 @@ export function QueueActionPanel({
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   // Mutation for bulk queue operations
-  const bulkOperationMutation = useServerOnlyMutation('queues.bulkUpdate', {
+  const bulkOperationMutation = useActionMutation('queues.bulkUpdate', {
     onSuccess: () => {
       setIsProcessing(null);
       onRefresh();

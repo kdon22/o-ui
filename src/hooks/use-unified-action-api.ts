@@ -27,8 +27,7 @@ export interface UnifiedActionQueryOptions {
   search?: string;
   searchFields?: string[];
   
-  // Behavior overrides
-  serverOnly?: boolean;  // SSOT: Force server-only operation
+  // Query control
   enabled?: boolean;
   
   // React Query options
@@ -65,9 +64,9 @@ export function useUnifiedActionQuery(
   // Extract resource type from action
   const resourceType = action.split('.')[0];
   
-  // Check if this should be server-only based on schema or options
+  // Check schema configuration for server-only behavior
   const schema = getResourceByActionPrefix(resourceType);
-  const isServerOnly = options.serverOnly || schema?.serverOnly === true;
+  const isServerOnly = schema?.serverOnly === true;
   
   // Get performance config (simple defaults)
   const perfConfig = {
@@ -120,7 +119,7 @@ export function useUnifiedActionQuery(
         ...(search && { search }),
         
         // Force server-only if requested or if schema specifies it
-        ...(isServerOnly && { serverOnly: true }),
+        // serverOnly configuration handled by ActionClient based on schema
         
         // Performance
         ...(timeout && { timeout }),
@@ -144,7 +143,7 @@ export function useUnifiedActionQuery(
         hasFilters: !!filters,
         hasSort: !!sort,
         hasSearch: !!search,
-        serverOnly: options.serverOnly,
+        // serverOnly configuration handled by ActionClient based on schema
         timeout,
         retries
       });

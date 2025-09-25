@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useServerOnlyQuery } from '@/hooks/use-server-only-action'
+import { useActionQuery } from '@/hooks/use-action-api'
 
 function formatMs(ms: number) {
   if (!isFinite(ms) || ms <= 0) return '0s'
@@ -27,8 +27,8 @@ export default function QueuesActivityPage() {
   const toIso = now.toISOString()
 
   // Fetch queues and jobs (server-only via schema)
-  const { data: queuesRes } = useServerOnlyQuery('queues.list', {}, { refetchInterval: 15000, refetchOnWindowFocus: true })
-  const { data: jobsRes } = useServerOnlyQuery(
+  const { data: queuesRes } = useActionQuery('queues.list', {}, { refetchInterval: 15000, refetchOnWindowFocus: true })
+  const { data: jobsRes } = useActionQuery(
     'queueEvents.list',
     { filters: { createdAt_gte: fromIso, createdAt_lte: toIso } },
     { refetchInterval: 5000, refetchOnWindowFocus: true }

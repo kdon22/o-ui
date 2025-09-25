@@ -20,7 +20,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useServerOnlyQuery, useServerOnlyMutation } from '@/hooks/use-server-only-action';
+import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
+import { useConfirmDialog } from '@/components/ui/hooks/useConfirmDialog';
+import { confirm } from '@/components/ui/confirm';
 import { 
   Clock, 
   AlertTriangle, 
@@ -87,6 +89,9 @@ export default function QueueManagement() {
   const [selectedPriority, setSelectedPriority] = useState<string | null>(null);
   const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
   
+  // Add confirmation dialog support
+  const { showConfirmDialog, modal } = useConfirmDialog();
+  
   // ============================================================================
   // MULTI-SELECT STATE MANAGEMENT
   // ============================================================================
@@ -98,7 +103,7 @@ export default function QueueManagement() {
   // BULK ACTION MUTATION
   // ============================================================================
   
-  const bulkActionMutation = useServerOnlyMutation('queues.bulkUpdate', {
+  const bulkActionMutation = useActionMutation('queues.bulkUpdate', {
     onSuccess: () => {
       setIsPerformingBulkAction(false);
       handleRefresh();
@@ -117,7 +122,7 @@ export default function QueueManagement() {
     isLoading: loadingConfigs,
     error: configError,
     refetch: refetchConfigs
-  } = useServerOnlyQuery<QueueConfig[]>(
+  } = useActionQuery<QueueConfig[]>(
     'queues.list',
     undefined, // No data/filters needed for list all
     {
@@ -132,7 +137,7 @@ export default function QueueManagement() {
     isLoading: loadingMessages,
     error: messageError,
     refetch: refetchMessages
-  } = useServerOnlyQuery<QueueMessage[]>(
+  } = useActionQuery<QueueMessage[]>(
     'queueEvents.list',
     undefined, // No data/filters needed for list all
     {
@@ -282,12 +287,47 @@ export default function QueueManagement() {
     
     // Show confirmation dialog for destructive actions
     if (actionDetails.destructive) {
-      const confirmed = window.confirm(
-        `⚠️ ${actionDetails.confirmMessage}\n\nThis will affect ${selectedQueues.length} queue${selectedQueues.length !== 1 ? 's' : ''}.\n\nAre you sure you want to continue?`
+      showConfirmDialog(
+        async () => {
+          setIsPerformingBulkAction(true);
+
+          try {
+            // Map action to the appropriate operation
+            const operation = mapActionToOperation(action);
+            
+            // Execute bulk operation using action system
+            await bulkActionMutation.mutateAsync({
+              queueIds: selectedQueues,
+              operation,
+              reason: `Bulk ${action} operation`,
+              options: {
+                ...options,
+                timestamp: new Date().toISOString()
+              }
+            });
+
+            console.log(`✅ Bulk ${action} completed:`, selectedQueues.length, 'queues');
+            
+          } catch (error) {
+            console.error(`❌ Bulk ${action} failed:`, error);
+            
+            // Show error message to user
+            alert(`Failed to ${action} selected queues. Please try again or check individual queue statuses.`);
+          } finally {
+            setIsPerformingBulkAction(false);
+          }
+        },
+        confirm.custom({
+          title: `${action.charAt(0).toUpperCase() + action.slice(1)} Queues`,
+          description: `⚠️ ${actionDetails.confirmMessage}\n\nThis will affect ${selectedQueues.length} queue${selectedQueues.length !== 1 ? 's' : ''}.\n\nAre you sure you want to continue?`,
+          variant: 'destructive',
+          confirmLabel: action.charAt(0).toUpperCase() + action.slice(1)
+        })
       );
-      if (!confirmed) return;
+      return;
     }
 
+    // Handle non-destructive actions without confirmation
     setIsPerformingBulkAction(true);
 
     try {
@@ -312,6 +352,8 @@ export default function QueueManagement() {
       
       // Show error message to user
       alert(`Failed to ${action} selected queues. Please try again or check individual queue statuses.`);
+    } finally {
+      setIsPerformingBulkAction(false);
     }
   };
 
@@ -811,6 +853,9 @@ export default function QueueManagement() {
           </Card>
         </div>
       )}
+      
+      {/* Render confirmation modal */}
+      {modal}
     </div>
   );
 }

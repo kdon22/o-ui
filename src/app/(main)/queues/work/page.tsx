@@ -1,12 +1,12 @@
 'use client'
 
 import React from 'react'
-import { useServerOnlyQuery, useServerOnlyMutation } from '@/hooks/use-server-only-action'
+import { useActionQuery, useActionMutation } from '@/hooks/use-action-api'
 
 export default function QueuesWorkPage() {
-  const { data, refetch } = useServerOnlyQuery('queueEvents.list', {}, {})
+  const { data, refetch } = useActionQuery('queueEvents.list', {}, {})
   // Use standard update action to change status/locks  
-  const updateMsg = useServerOnlyMutation('queueEvents.update', { invalidateQueries: ['queueEvents.list'] })
+  const updateMsg = useActionMutation('queueEvents.update', { invalidateQueries: ['queueEvents.list'] })
 
   return (
     <div className="p-4 space-y-4">

@@ -1128,21 +1128,14 @@ const { data, isLoading } = useActionQuery(
 const { mutate: updateData } = useActionMutation('tableData.update');
 ```
 
-### Legacy Pattern Migration
+### Schema-Driven Pattern
 
 ```typescript
-// ❌ Legacy Pattern (avoid - manual overrides)
-const { data } = useActionQuery(
-  'tableData.list',
-  { tableId },
-  { /* manual serverOnly overrides */ }
-);
-
-// ✅ SSOT Pattern (preferred)
+// ✅ Schema-driven approach (recommended)
 const { data } = useActionQuery(
   'tableData.list', 
   { tableId }
-  // serverOnly handled automatically by schema
+  // serverOnly configuration handled automatically by resource schema
 );
 ```
 

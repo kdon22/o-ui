@@ -91,11 +91,15 @@ export const GROUP_SCHEMA: ResourceSchema = {
       type: 'text',
       required: true,
       tab: 'Description',
+      clickable: true,
       placeholder: '',
       form: {
         width: '3quarters',
         row: 1
-      }
+      },
+      table: {
+        width: 'lg'
+      },
     },
     {
       key: 'description',
@@ -106,7 +110,10 @@ export const GROUP_SCHEMA: ResourceSchema = {
       form: {
         width: 'full',
         row: 2
-      }
+      },
+      table: {
+        width: 'lg'
+      },
     },
 
     // ============================================================================
@@ -273,6 +280,70 @@ export const GROUP_SCHEMA: ResourceSchema = {
     density: 'normal'
   },
   
+  // ============================================================================
+  // TABLE CONFIGURATION
+  // ============================================================================
+  table: {
+    width: 'full', // Options: 'sm', 'md', 'lg', 'xl', 'full'
+    bulkSelect: true,
+    columnFilter: true,
+    sortableColumns: true,
+    bulkSelectOptions: [
+      {
+        id: 'delete',
+        label: 'Delete Selected',
+        icon: 'trash',
+        description: 'Delete selected groups',
+        handler: 'bulkDeleteGroups',
+        className: 'text-red-600',
+        confirmMessage: 'Are you sure you want to delete the selected groups?'
+      },
+      {
+        id: 'activate',
+        label: 'Activate Selected',
+        icon: 'check',
+        description: 'Activate selected groups',
+        handler: 'bulkActivateGroups'
+      },
+      {
+        id: 'deactivate',
+        label: 'Deactivate Selected',
+        icon: 'x',
+        description: 'Deactivate selected groups',
+        handler: 'bulkDeactivateGroups'
+      }
+    ],
+    contextMenu: [
+      {
+        id: 'edit',
+        label: 'Edit Group',
+        icon: 'edit',
+        action: 'edit'
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicate Group',
+        icon: 'copy',
+        action: 'duplicate',
+        confirmMessage: 'Create a copy of this group with all its permissions?'
+      },
+      {
+        id: 'separator1',
+        label: '',
+        action: '',
+        separator: true
+      },
+      {
+        id: 'delete',
+        label: 'Delete Group',
+        icon: 'trash',
+        action: 'delete',
+        className: 'text-red-600',
+        confirmMessage: 'Are you sure you want to delete this group?'
+      }
+    ]
+  },
+
   // ============================================================================
   // FORM CONFIGURATION 
   // ============================================================================

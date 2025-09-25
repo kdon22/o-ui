@@ -50,8 +50,8 @@ Auto-generated actions via Resource Registry:
 - `queues.list|read|create|update|delete`
 - `queueMessages.list|read|update`
 
-Use `useActionQuery`/`useActionMutation` to interact:
-- Reads: `useActionQuery('queueMessages.list', { filters: {...} })` (schema serverOnly: true)
+Use standard action hooks (serverOnly handled by schema):
+- Reads: `useActionQuery('queueMessages.list', { filters: {...} })`
 - Writes (update): `useActionMutation('queueMessages.update')`
 
 ## Activity Dashboard (`/queues/activity`)

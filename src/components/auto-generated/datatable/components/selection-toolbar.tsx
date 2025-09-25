@@ -12,6 +12,8 @@ import React from 'react';
 import { Button } from '@/components/ui';
 import { Trash2, X } from 'lucide-react';
 import { useTableSelectionContext } from '../providers/table-provider';
+import { useConfirmDialog } from '@/components/ui/hooks/useConfirmDialog';
+import { confirm } from '@/components/ui/confirm';
 
 export interface SelectionToolbarProps {
   className?: string;
@@ -134,6 +136,9 @@ export const EnhancedSelectionToolbar: React.FC<EnhancedSelectionToolbarProps> =
 }) => {
   const selection = useTableSelectionContext();
   const toolbarProps = selection.getSelectionToolbarProps();
+  
+  // Add Stripe-style confirmation
+  const { showConfirmDialog, modal } = useConfirmDialog();
 
   if (!toolbarProps.isVisible) {
     return null;
@@ -148,13 +153,15 @@ export const EnhancedSelectionToolbar: React.FC<EnhancedSelectionToolbarProps> =
 
   const handleBulkDelete = async () => {
     if (showDeleteConfirmation) {
-      const confirmed = window.confirm(
-        `Are you sure you want to delete ${toolbarProps.selectedCount} selected items?`
+      showConfirmDialog(
+        async () => {
+          await toolbarProps.onBulkDelete();
+        },
+        confirm.delete(`${toolbarProps.selectedCount} selected items`, 'items')
       );
-      if (!confirmed) return;
+    } else {
+      await toolbarProps.onBulkDelete();
     }
-    
-    await toolbarProps.onBulkDelete();
   };
 
   return (
@@ -224,6 +231,9 @@ export const EnhancedSelectionToolbar: React.FC<EnhancedSelectionToolbarProps> =
           <X className="w-4 h-4" />
         </Button>
       </div>
+      
+      {/* Render confirmation modal */}
+      {modal}
     </div>
   );
 };

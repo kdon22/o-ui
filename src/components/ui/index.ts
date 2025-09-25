@@ -39,7 +39,9 @@ export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tool
 // Modal components
 export { Modal, ModalAction, ModalCancelButton } from './modal'
 export { ConfirmModal } from './confirm-modal'
-export { DeleteConfirmationModal } from './delete-confirmation-modal'
+
+// Confirmation presets - Stripe-style API
+export { confirm, confirmBulk } from './confirm'
 
 // Loading components
 export { LoadMore } from './load-more'

@@ -7,6 +7,7 @@
  */
 
 import type { ContextMenuItem } from './schemas';
+import { confirm } from '@/components/ui/confirm';
 
 // ============================================================================
 // ACTION HANDLER INTERFACE
@@ -29,10 +30,21 @@ export interface ActionContext {
   
   // Callbacks
   onEdit?: (entity: any) => void;
-  onDelete?: (entity: any) => void;
+  onDelete?: (entity: any, skipConfirmation?: boolean) => void;
   onDuplicate?: (entity: any) => void;
   onInlineEdit?: (entity: any) => void;
   customHandlers?: Record<string, (entity: any, context?: any) => void>;
+  
+  // Confirmation system - Stripe-style
+  showConfirmDialog?: (
+    action: () => Promise<void> | void,
+    config: {
+      title: string;
+      description: string;
+      variant?: 'default' | 'destructive';
+      confirmLabel?: string;
+    }
+  ) => void;
 }
 
 // ============================================================================
@@ -75,15 +87,54 @@ export class ContextMenuActions {
       return;
     }
 
-    // Handle confirmation if required
+    // Handle confirmation if required - MANDATORY Stripe-style confirm system
     if (menuItem?.confirmMessage) {
-      const confirmed = window.confirm(menuItem.confirmMessage);
-      if (!confirmed) {
-    
+      if (!this.context.showConfirmDialog) {
+        console.error('🎯 [ContextMenuActions] showConfirmDialog is required for confirmation. Component must use useConfirmDialog hook.');
         return;
       }
+      
+      // Use Stripe-style confirmation system
+      const entityName = entity.name || entity.title || entity.id;
+      const entityType = this.context.resource?.display?.title?.slice(0, -1) || 'item'; // Remove 's' from plural
+      
+      // Determine confirmation config based on action
+      let confirmConfig;
+      switch (action) {
+        case 'delete':
+          confirmConfig = confirm.delete(entityName, entityType);
+          break;
+        case 'duplicate':
+          confirmConfig = confirm.duplicate(entityName, entityType);
+          break;
+        default:
+          // Use custom config for other actions
+          confirmConfig = confirm.custom({
+            title: `${action.charAt(0).toUpperCase() + action.slice(1)} ${entityType}`,
+            description: menuItem.confirmMessage,
+            variant: action === 'delete' ? 'destructive' : 'default',
+            confirmLabel: action.charAt(0).toUpperCase() + action.slice(1)
+          });
+      }
+      
+      // Show confirmation dialog and return early - the actual action will run in the callback
+      // Remove confirmMessage from menuItem to prevent double confirmation
+      const menuItemWithoutConfirm = menuItem ? { ...menuItem, confirmMessage: undefined } : undefined;
+      this.context.showConfirmDialog(
+        () => this.executeActionWithoutConfirmation(action, menuItemWithoutConfirm),
+        confirmConfig
+      );
+      return;
     }
 
+    // Execute action without confirmation (confirmation already handled above)
+    await this.executeActionWithoutConfirmation(action, menuItem);
+  }
+
+  /**
+   * Execute action without confirmation check (internal method)
+   */
+  private async executeActionWithoutConfirmation(action: string, menuItem?: ContextMenuItem): Promise<void> {
     try {
       // Handle based on actionType
       switch (menuItem?.actionType) {
@@ -331,7 +382,8 @@ export class ContextMenuActions {
 
   private async handleDelete(): Promise<void> {
     if (this.context.onDelete) {
-      this.context.onDelete(this.context.entity);
+      // Pass skipConfirmation = true since we already handled confirmation
+      this.context.onDelete(this.context.entity, true);
     } else {
       console.warn('🎯 [ContextMenuActions] No delete handler provided');
     }

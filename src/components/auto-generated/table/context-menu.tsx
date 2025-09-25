@@ -33,6 +33,7 @@ import {
 import { createContextMenuActions, type ActionContext } from '@/lib/resource-system/context-menu-actions';
 import type { ContextMenuItem } from '@/lib/resource-system/schemas';
 import type { ContextMenuProps } from './types';
+import { useConfirmDialog } from '@/components/ui/hooks/useConfirmDialog';
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ 
   entity, 
@@ -44,6 +45,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   customHandlers,
   contextData 
 }) => {
+  // Add confirmation dialog support
+  const { showConfirmDialog, modal } = useConfirmDialog();
+  
   const rawContextMenuItems = resource.table?.contextMenu || [];
   
   // Filter context menu items based on entity state
@@ -84,7 +88,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     onEdit,
     onDelete,
     onDuplicate,
-    customHandlers
+    customHandlers,
+    showConfirmDialog // Pass the Stripe-style confirmation dialog
   };
 
   const actionHandler = createContextMenuActions(actionContext);
@@ -125,37 +130,42 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 flex items-center justify-center"
-          aria-label="Open menu"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {contextMenuItems.map((item) => {
-          if (item.separator) {
-            return <DropdownMenuSeparator key={item.id} />;
-          }
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex items-center justify-center"
+            aria-label="Open menu"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          {contextMenuItems.map((item) => {
+            if (item.separator) {
+              return <DropdownMenuSeparator key={item.id} />;
+            }
 
-          const IconComponent = getIcon(item.icon || '');
-          
-          return (
-            <DropdownMenuItem
-              key={item.id}
-              onClick={(event) => handleMenuItemClick(item, event)}
-              className={cn("flex items-center gap-2", item.className)}
-            >
-              <IconComponent className="h-4 w-4" />
-              {item.label}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            const IconComponent = getIcon(item.icon || '');
+            
+            return (
+              <DropdownMenuItem
+                key={item.id}
+                onClick={(event) => handleMenuItemClick(item, event)}
+                className={cn("flex items-center gap-2", item.className)}
+              >
+                <IconComponent className="h-4 w-4" />
+                {item.label}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      {/* Render confirmation modal */}
+      {modal}
+    </>
   );
 }; 

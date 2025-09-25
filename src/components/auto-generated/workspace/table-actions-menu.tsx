@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useConfirmDialog } from '@/components/ui/hooks/useConfirmDialog';
+import { confirm } from '@/components/ui/confirm';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +34,9 @@ export const TableActionsMenu: React.FC<TableActionsMenuProps> = ({
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(table.name);
+  
+  // Add Stripe-style confirmation
+  const { showConfirmDialog, modal } = useConfirmDialog();
 
   // Action System mutations
   const updateTable = useActionMutation('tables.update');
@@ -63,13 +68,18 @@ export const TableActionsMenu: React.FC<TableActionsMenuProps> = ({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this table? This cannot be undone.')) return;
-    await deleteTable.mutateAsync({ id: table.id });
-    onDeleted?.();
+    showConfirmDialog(
+      async () => {
+        await deleteTable.mutateAsync({ id: table.id });
+        onDeleted?.();
+      },
+      confirm.delete(table.name, 'table')
+    );
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         {useSpanTrigger ? (
           <span
@@ -126,7 +136,11 @@ export const TableActionsMenu: React.FC<TableActionsMenuProps> = ({
           </>
         )}
       </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenu>
+      
+      {/* Render confirmation modal */}
+      {modal}
+    </>
   );
 };
 

@@ -1,18 +1,24 @@
 /**
- * Server-Only Action Hook
+ * @deprecated - Use useActionQuery with schema-driven serverOnly configuration
  * 
- * Specialized hook for explicit server-only overrides.
- * Use this when you need to force server-only behavior regardless of schema configuration.
+ * This file is kept for backward compatibility but should be migrated to:
+ * - useActionQuery for reads (serverOnly handled by schema)
+ * - useActionMutation for writes (serverOnly handled by schema)
  * 
- * SSOT Pattern:
- * - Prefer using serverOnly: true in resource schemas for consistent behavior
- * - Use this hook only for explicit overrides or specialized cases
+ * The schema's serverOnly: true configuration automatically handles:
+ * - Bypassing IndexedDB caching
+ * - Server-side operations
+ * - Large dataset optimization
  * 
- * Features:
- * - Forces all operations through API (overrides schema settings)
- * - No local caching for data rows
- * - Optimized pagination and filtering
- * - Server-side search and sorting
+ * Migration example:
+ * ```typescript
+ * // OLD (deprecated):
+ * const { data } = useServerOnlyQuery('groups.list', filters);
+ * 
+ * // NEW (schema-driven):
+ * const { data } = useActionQuery('groups.list', filters);
+ * // serverOnly: true is applied automatically from schema
+ * ```
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

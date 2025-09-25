@@ -34,7 +34,7 @@ export interface ActionMeta {
 }
 
 export interface RequestOptions {
-  serverOnly?: boolean;
+  // serverOnly handled by schema configuration (SSOT pattern)
   timeout?: number;
   retries?: number;
   include?: string[];
