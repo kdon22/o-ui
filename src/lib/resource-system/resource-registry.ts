@@ -23,10 +23,16 @@ import { OFFICE_SCHEMA } from '@/features/offices/offices.schema';
 import { WORKFLOW_SCHEMA } from '@/features/workflows/workflows.schema';
 import { PROMPT_SCHEMA } from '@/features/prompts/prompts.schema';
 import { USER_SCHEMA } from '@/features/users/users.schema';
+import { CREDENTIAL_SCHEMA } from '@/features/credentials/credentials.schema';
 import { BRANCH_SCHEMA } from '@/features/branches/branches.schema';
 import { SESSION_SCHEMA } from '@/features/session/session.schema';
 import { MARKETPLACE_PACKAGE_SCHEMA } from '@/features/marketplace/marketplace.schema';
 import { PACKAGE_INSTALLATION_SCHEMA } from '@/features/marketplace/schemas/package-installation.schema';
+
+// Settings System Imports - Server-Only Configurations
+import { END_TRANSACT_SETTINGS_SCHEMA } from '@/features/end-transact-settings/end-transact-settings.schema';
+import { HIT_SETTINGS_SCHEMA } from '@/features/hit-settings/hit-settings.schema';
+import { RUNTIME_NOTIFICATIONS_SCHEMA } from '@/features/runtime-notifications/runtime-notifications.schema';
 
 // Pull Request System Imports
 import { 
@@ -72,6 +78,7 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   WORKFLOW_SCHEMA,
   PROMPT_SCHEMA,
   USER_SCHEMA,
+  CREDENTIAL_SCHEMA,
   
   // Tag System Entities
   TAG_GROUP_SCHEMA,
@@ -88,11 +95,16 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   QUEUE_MESSAGE_SCHEMA,
   QUEUE_WORKER_SCHEMA,
 
-  // Pull Request System
-  PULL_REQUEST_SCHEMA,
-  PULL_REQUEST_REVIEW_SCHEMA,
-  PULL_REQUEST_COMMENT_SCHEMA,
-  PR_SETTINGS_SCHEMA,
+  // Settings System (server-only configurations) - Cast to ResourceSchema for action generation
+  END_TRANSACT_SETTINGS_SCHEMA as unknown as ResourceSchema,
+  HIT_SETTINGS_SCHEMA as unknown as ResourceSchema, 
+  RUNTIME_NOTIFICATIONS_SCHEMA as unknown as ResourceSchema,
+
+  // Pull Request System - Cast to ResourceSchema for action generation
+  PULL_REQUEST_SCHEMA as unknown as ResourceSchema,
+  PULL_REQUEST_REVIEW_SCHEMA as unknown as ResourceSchema,
+  PULL_REQUEST_COMMENT_SCHEMA as unknown as ResourceSchema,
+  PR_SETTINGS_SCHEMA as unknown as ResourceSchema,
   
   // Marketplace System
   MARKETPLACE_PACKAGE_SCHEMA,
@@ -206,8 +218,19 @@ function initializeIndexedDBStores(): IndexedDBStoreConfig[] {
     
     const stores: IndexedDBStoreConfig[] = [];
 
-    // 🎯 CORE ENTITIES ONLY: Essential for tree navigation and basic functionality
-    const CORE_ENTITY_KEYS = ['nodes', 'processes', 'rules'];
+    // 🎯 EXPANDED CORE ENTITIES: Essential + commonly accessed to prevent "store not found" errors
+    // ✅ IMPORTANT: Must match exact databaseKey values from schemas (not plural forms)
+    // IndexedDB doesn't support lazy loading - all needed stores must be created upfront
+    const CORE_ENTITY_KEYS = [
+      // Essential navigation & business logic
+      'branches', 'node', 'process', 'rule',
+      // User & configuration (commonly accessed)
+      'user', 'credential', 'office', 'workflow', 
+      // Settings (commonly accessed from settings pages)
+      'endTransactSettings', 'hitSettings', 'prSettings',
+      // Data management (table metadata - lightweight)
+      'tableCategory', 'tables', 'session'
+    ];
     
     // Generate stores for CORE entities only (80% reduction in initialization time)
     SCHEMA_RESOURCES.forEach(schema => {
@@ -248,8 +271,8 @@ function initializeIndexedDBStores(): IndexedDBStoreConfig[] {
     // 🎯 CORE JUNCTION TABLES: Essential for tree navigation and basic functionality only
     const CORE_JUNCTION_TABLES = [
       { name: 'nodeProcesses', tenantField: 'tenantId', branchField: 'branchId' },
-      { name: 'processRules', tenantField: 'tenantId', branchField: 'branchId' }
-      // Removed ruleIgnores and other secondary junction tables for performance
+      { name: 'processRules', tenantField: 'tenantId', branchField: 'branchId' },
+      { name: 'ruleIgnores', tenantField: 'tenantId', branchField: 'branchId' } // Rule ignore relationships
     ];
     
     CORE_JUNCTION_TABLES.forEach(junctionConfig => {
@@ -274,12 +297,12 @@ function initializeIndexedDBStores(): IndexedDBStoreConfig[] {
     // 🎉 PERFORMANCE SUMMARY: Show the dramatic reduction in initialization overhead
     const totalStores = stores.length;
     const totalIndexes = stores.reduce((sum, store) => sum + (store.indexes?.length || 0), 0);
-    console.log(`🚀 [IndexedDB] PERFORMANCE-OPTIMIZED schema initialized:`, {
+    console.log(`🚀 [IndexedDB] TWO-PHASE SCHEMA initialized:`, {
       totalStores,
-      totalIndexes,
+      totalIndexes,  
       storeNames: stores.map(s => s.name),
-      optimizationNote: 'Reduced from 25+ stores/100+ indexes to core entities only',
-      expectedInitTime: '<200ms vs >2000ms before'
+      optimizationNote: 'Two-phase: All stores created (prevents errors), but only core populated initially for instant UI',
+      expectedInitTime: '<200ms for core UI, <5s for complete population'
     });
     
     _indexedDbStores = stores;

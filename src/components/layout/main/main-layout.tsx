@@ -20,6 +20,7 @@ import { EmptyState } from './empty-state'
 import { TablesPage } from '../tables'
 import MarketplacePage from '@/app/(main)/marketplace/page'
 import QueuesPage from '@/app/(main)/queues/page'
+import SettingsPage from '@/app/(main)/settings/page'
 
 export interface MainLayoutProps {
   initialSelectedNodeId?: string | null
@@ -137,7 +138,7 @@ const MainLayout = React.memo(function MainLayout({ initialSelectedNodeId }: Mai
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Tree Navigation */}
-        {topLevelTab !== 'tables' && topLevelTab !== 'marketplace' && (
+        {topLevelTab !== 'tables' && topLevelTab !== 'marketplace' && topLevelTab !== 'settings' && (
           <TreeNavigation
             userRootNodeId={userRootNodeId}
             currentBranch={currentBranch || undefined}
@@ -174,6 +175,8 @@ const MainLayout = React.memo(function MainLayout({ initialSelectedNodeId }: Mai
               <TablesPage />
             ) : topLevelTab === 'marketplace' ? (
               <MarketplacePage />
+            ) : topLevelTab === 'settings' ? (
+              <SettingsPage />
             ) : selectedNodeId ? (
               <NodeContent 
                 nodeId={selectedNodeId} 

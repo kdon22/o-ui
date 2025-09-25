@@ -1,140 +1,167 @@
-# Field Configuration Guide
+# Field Configuration Guide - Current Implementation
 
-**Complete reference for all field types, validation, auto-population, and UI configuration options**
+**Complete reference for all field types, validation, auto-population, and UI configuration in the actual system**
 
 ## Table of Contents
 
 1. [Field Types Overview](#field-types-overview)
-2. [Core Field Properties](#core-field-properties)
+2. [FieldSchema Interface](#fieldschema-interface)
 3. [Auto-Value System](#auto-value-system)
 4. [Form Configuration](#form-configuration)
 5. [Table Configuration](#table-configuration)
 6. [Validation System](#validation-system)
-7. [Field Options (Dropdowns)](#field-options-dropdowns)
+7. [Field Options](#field-options)
 8. [Mobile & Desktop Config](#mobile--desktop-config)
-9. [Advanced Features](#advanced-features)
-10. [Field Examples](#field-examples)
+9. [Advanced Field Features](#advanced-field-features)
+10. [Complete Field Examples](#complete-field-examples)
 
 ---
 
 ## Field Types Overview
 
-### **Available Field Types**
-
-The system supports 25+ field types with automatic Input/Display components:
-
-```typescript
-// Text & Content Fields
-'text'        // Single-line text input
-'textarea'    // Multi-line text input  
-'richText'    // Rich text editor with formatting
-'email'       // Email input with validation
-'url'         // URL input with validation
-'tel'         // Phone number input
-'password'    // Password input (hidden)
-'code'        // Code editor with syntax highlighting
-
-// Selection Fields
-'select'      // Single dropdown selection
-'multiSelect' // Multiple dropdown selection
-'tags'        // Tag selection with creation
-'switch'      // Boolean toggle switch
-'checkbox'    // Boolean checkbox
-// (Note: Radio is not a built-in FieldType. Use 'select' with static options for radio-like UX.)
-
-// Number & Range Fields
-'number'      // Number input with validation
-'range'       // Slider input
-
-// Date & Time Fields
-'date'        // Date picker
-'datetime'    // Date and time picker
-'time'        // Time picker
-
-// Media & Visual Fields
-'color'       // Color picker
-'icon'        // Icon selector (Lucide icons)
-'avatar'      // Avatar/image upload
-'image'       // Image upload
-'file'        // File upload
-
-// Data Fields
-'json'        // JSON editor with validation
-```
-
-### **Field Type Mapping**
-
-Each field type automatically maps to Input and Display components:
+### **Available Field Types** (From `src/lib/resource-system/schemas.ts`)
 
 ```typescript
 export const FIELD_TYPES = {
+  // Text & Content Fields
   text: { input: 'TextInput', display: 'TextDisplay' },
+  textarea: { input: 'TextareaInput', display: 'TextDisplay' },
+  richText: { input: 'RichTextInput', display: 'RichTextDisplay' },
+  email: { input: 'EmailInput', display: 'TextDisplay' },
+  url: { input: 'UrlInput', display: 'LinkDisplay' },
+  tel: { input: 'TextInput', display: 'TextDisplay' },
+  password: { input: 'PasswordInput', display: 'TextDisplay' },
+  code: { input: 'CodeInput', display: 'CodeDisplay' },
+
+  // Selection Fields
   select: { input: 'SelectInput', display: 'BadgeDisplay' },
-  switch: { input: 'SwitchInput', display: 'BadgeDisplay' },
+  multiSelect: { input: 'MultiSelectInput', display: 'BadgeListDisplay' },
+  multiselect: { input: 'MultiSelectInput', display: 'BadgeListDisplay' }, // Alias
   tags: { input: 'TagInput', display: 'TagDisplay' },
-  // ... all other types
-};
+  switch: { input: 'SwitchInput', display: 'BadgeDisplay' },
+  checkbox: { input: 'CheckboxInput', display: 'BadgeDisplay' },
+
+  // Number & Range Fields
+  number: { input: 'NumberInput', display: 'TextDisplay' },
+  range: { input: 'RangeInput', display: 'TextDisplay' },
+  currency: { input: 'CurrencyInput', display: 'CurrencyDisplay' },
+
+  // Date & Time Fields
+  date: { input: 'DateInput', display: 'DateDisplay' },
+  datetime: { input: 'DateTimeInput', display: 'DateDisplay' },
+  time: { input: 'TimeInput', display: 'TextDisplay' },
+
+  // Media & Visual Fields
+  color: { input: 'ColorInput', display: 'ColorDisplay' },
+  icon: { input: 'IconInput', display: 'IconDisplay' },
+  avatar: { input: 'AvatarInput', display: 'AvatarDisplay' },
+  image: { input: 'ImageInput', display: 'ImageDisplay' },
+  file: { input: 'FileInput', display: 'FileDisplay' },
+
+  // Data Fields
+  json: { input: 'JsonInput', display: 'JsonDisplay' },
+  
+  // Marketplace-specific
+  'component-selector': { input: 'ComponentSelectorInput', display: 'ComponentSelectorDisplay' },
+} as const;
 ```
+
+### **Field Type Usage**
+
+Each field type automatically maps to:
+- **Input Component** - Used in forms (AutoForm)
+- **Display Component** - Used in tables (AutoTable) and read-only views
 
 ---
 
-## Core Field Properties
+## FieldSchema Interface
 
-### **Required Properties**
-
-Every field must have these core properties:
+### **Complete FieldSchema** (Current Implementation)
 
 ```typescript
-interface FieldSchema {
+export interface FieldSchema {
+  // ✅ REQUIRED: Core Properties
   key: string;           // Database field name (must match Prisma model)
   label: string;         // Human-readable label for UI
-  type: FieldType;       // Field type (see above)
+  type: FieldType;       // Field type from FIELD_TYPES
   required?: boolean;    // Whether field is required
-}
-```
 
-### **Common Properties**
-
-```typescript
-interface FieldSchema {
-  // Core properties
-  key: string;
-  label: string;
-  type: FieldType;
-  required?: boolean;
-  
-  // UI Properties
-  placeholder?: string;     // Input placeholder text
-  description?: string;     // Help text shown below field
-  tab?: string;            // Tab name for multi-tab forms
-  
-  // Data Handling
-  defaultValue?: any;      // Static default value
-  autoValue?: AutoValueConfig; // Dynamic auto-population
-  
-  // Behavior
-  transient?: boolean;     // UI-only field, never persisted
-  computed?: boolean;      // Server-computed, stripped on write
-  stripOn?: {             // Fine-grained control per operation
+  // ✅ Data Handling
+  transient?: boolean;   // UI-only field, never persisted
+  computed?: boolean;    // Server-computed, always stripped on write
+  stripOn?: {           // Fine-grained control per operation
     create?: boolean;
     update?: boolean;
   };
-  
-  // Interactive Features
+
+  // ✅ Auto-Population System
+  autoValue?: AutoValueConfig;  // Dynamic auto-population from context
+  defaultValue?: any;          // Static default value
+
+  // ✅ UI Properties
+  placeholder?: string;    // Input placeholder text
+  description?: string;    // Help text shown below field
+  tab?: string;           // Tab name for multi-tab forms
+
+  // ✅ Interactive Features
   clickable?: boolean;     // Makes table column clickable
   clickAction?: {         // Action when clicked
     type: 'edit' | 'navigate';
     url?: string;         // URL pattern (e.g., "/rules/{idShort}")
     target?: '_self' | '_blank';
   };
-  
-  // Configuration Objects
+
+  // ✅ Layout Configuration
   form?: FieldFormConfig;     // Form layout configuration
   table?: FieldTableConfig;   // Table display configuration
+
+  // ✅ Validation & Options
   validation?: ValidationRule[]; // Validation rules
-  options?: FieldOptions;     // Dropdown options
-  mobile?: MobileConfig;      // Mobile-specific settings
-  desktop?: DesktopConfig;    // Desktop-specific settings
+  options?: FieldOptions;       // Dropdown options
+
+  // ✅ Responsive Design
+  mobile?: {              // Mobile-specific settings
+    priority?: 'high' | 'medium' | 'low';
+    displayFormat?: string;
+    showInTable?: boolean;
+    tableWidth?: string | number;
+  };
+  desktop?: {             // Desktop-specific settings
+    showInTable?: boolean;
+    tableWidth?: string | number;
+  };
+}
+```
+
+### **Key Field Properties**
+
+#### **Data Handling Flags**
+```typescript
+// UI-only field (never saved to database)
+transient: true
+
+// Server-computed field (stripped on all writes)
+computed: true
+
+// Fine-grained control
+stripOn: { 
+  create: true,   // Strip on create operations
+  update: false   // Include on update operations
+}
+```
+
+#### **Interactive Features**
+```typescript
+// Make column clickable for editing
+clickable: true,
+clickAction: { type: 'edit' }
+
+// Make column clickable for navigation
+clickable: true,
+clickAction: { 
+  type: 'navigate',
+  url: '/rules/{idShort}',  // {idShort} replaced with actual value
+  target: '_self'
 }
 ```
 
@@ -142,23 +169,27 @@ interface FieldSchema {
 
 ## Auto-Value System
 
-The auto-value system provides dynamic field population from various sources:
-
-### **Auto-Value Sources**
+### **Context Sources** (Current Implementation)
 
 ```typescript
-// Source of truth: o-ui/src/lib/resource-system/schemas.ts (ContextSource)
 export type ContextSource = 
+  // Session Context
   | 'session.user.tenantId'
   | 'session.user.branchContext.currentBranchId'
   | 'session.user.branchContext.defaultBranchId'
   | 'session.user.id'
   | 'session.context.originalId'
+  
+  // Navigation Context
   | 'navigation.nodeId'
   | 'navigation.parentId'
   | 'navigation.selectedId'
+  
+  // Component Context
   | 'component.parentData'
   | 'component.contextId'
+  
+  // Auto-Generation
   | 'auto.timestamp'
   | 'auto.uuid'
   | 'auto.nodeShortId'
@@ -168,22 +199,24 @@ export type ContextSource =
   | 'self.id';
 ```
 
-### **Auto-Value Configuration**
+### **AutoValueConfig Interface**
 
 ```typescript
-// Source of truth: o-ui/src/lib/resource-system/schemas.ts (AutoValueConfig)
-interface AutoValueConfig {
+export interface AutoValueConfig {
   source: ContextSource;
   fallback?: any;
   transform?: (value: any) => any;
   required?: boolean;
-  onlyIfAvailable?: boolean; // Apply only when context value exists
-  condition?: (value: any) => boolean; // Custom predicate
+  
+  // 🔥 NEW: Conditional auto-population
+  onlyIfAvailable?: boolean; // Only apply if context value exists and is not empty
+  condition?: (value: any) => boolean; // Custom condition for applying auto-value
 }
 ```
 
 ### **Auto-Value Examples**
 
+#### **Standard System Fields**
 ```typescript
 // UUID Generation
 {
@@ -194,16 +227,16 @@ interface AutoValueConfig {
   }
 }
 
-// Session Context
+// Tenant Context
 {
-  key: 'tenantId', 
+  key: 'tenantId',
   autoValue: {
     source: 'session.user.tenantId',
     required: true
   }
 }
 
-// Navigation Context with Fallback
+// Branch Context
 {
   key: 'branchId',
   autoValue: {
@@ -213,12 +246,47 @@ interface AutoValueConfig {
   }
 }
 
-// Default Values (use FieldSchema.defaultValue instead of autoValue)
+// User Context
+{
+  key: 'createdById',
+  autoValue: {
+    source: 'session.user.id',
+    required: true
+  }
+}
+```
+
+#### **Navigation Context**
+```typescript
+// Auto-populate from selected node
+{
+  key: 'nodeId',
+  autoValue: {
+    source: 'navigation.nodeId',
+    onlyIfAvailable: true, // Only set if nodeId is available
+    required: false
+  }
+}
+
+// Auto-populate from component context
+{
+  key: 'parentId',
+  autoValue: {
+    source: 'component.parentData',
+    transform: (parentData) => parentData?.id,
+    condition: (value) => value && typeof value === 'string'
+  }
+}
+```
+
+#### **Static Default Values**
+```typescript
+// Static default (prefer this over autoValue for static values)
 {
   key: 'isActive',
   label: 'Active',
   type: 'switch',
-  defaultValue: true
+  defaultValue: true // Simple static default
 }
 ```
 
@@ -226,21 +294,24 @@ interface AutoValueConfig {
 
 ## Form Configuration
 
-### **Form Layout System**
-
-Fields are organized in a responsive grid system:
+### **FieldFormConfig Interface**
 
 ```typescript
-interface FieldFormConfig {
-  row: number;                    // Row number (1, 2, 3, etc.)
-  width: 'full' | 'half' | 'third' | 'quarter'; // Column width
-  order: number;                  // Order within row
-  showInForm: boolean;           // Whether to show in form
+export interface FieldFormConfig {
+  row: number;
+  width: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'half' | 'third' | 'quarter';
+  order?: number;
+  showInForm?: boolean;
+  mobile?: {
+    row?: number;
+    width?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'half' | 'third' | 'quarter' | 'hidden';
+  };
 }
 ```
 
 ### **Form Layout Examples**
 
+#### **Basic Form Layout**
 ```typescript
 // Row 1: Full width field
 {
@@ -259,7 +330,7 @@ interface FieldFormConfig {
   form: { row: 2, width: 'half', order: 1, showInForm: true }
 }
 {
-  key: 'status', 
+  key: 'status',
   form: { row: 2, width: 'half', order: 2, showInForm: true }
 }
 
@@ -278,26 +349,42 @@ interface FieldFormConfig {
 }
 ```
 
+#### **Responsive Form Configuration**
+```typescript
+{
+  key: 'description',
+  form: {
+    row: 4,
+    width: 'full',
+    showInForm: true,
+    mobile: {
+      row: 5,          // Different row on mobile
+      width: 'full'    // Full width on mobile
+    }
+  }
+}
+```
+
 ### **Multi-Tab Forms**
 
-Organize fields into tabs for better UX:
+Organize fields into tabs using the `tab` property:
 
 ```typescript
-// Tab 1: Basic Information
+// Basic Information Tab
 {
   key: 'name',
   tab: 'basic',
   form: { row: 1, width: 'full', order: 1, showInForm: true }
 }
 
-// Tab 2: Configuration
+// Configuration Tab
 {
   key: 'settings',
   tab: 'config',
   form: { row: 1, width: 'full', order: 1, showInForm: true }
 }
 
-// Tab 3: Advanced Options
+// Advanced Tab
 {
   key: 'metadata',
   tab: 'advanced',
@@ -309,27 +396,56 @@ Organize fields into tabs for better UX:
 
 ## Table Configuration
 
-### **Table Display Options**
+### **FieldTableConfig Interface**
 
 ```typescript
-interface FieldTableConfig {
+export interface FieldTableConfig {
   width: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'auto';
+  showInTable?: boolean;
   sortable?: boolean;
   filterable?: boolean;
-  clickable?: boolean;    // Makes column clickable for editing
+  mobile?: {
+    width?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'auto' | 'hidden';
+  };
 }
 ```
 
-### **Clickable Columns**
+### **Table Configuration Examples**
 
-Make table columns clickable for instant editing:
+#### **Basic Table Configuration**
+```typescript
+{
+  key: 'name',
+  table: {
+    width: 'lg',
+    showInTable: true,
+    sortable: true,
+    filterable: true
+  }
+}
+```
 
+#### **Responsive Table Configuration**
+```typescript
+{
+  key: 'description',
+  table: {
+    width: 'xl',
+    showInTable: true,
+    mobile: {
+      width: 'hidden' // Hide on mobile
+    }
+  }
+}
+```
+
+#### **Clickable Column Configuration**
 ```typescript
 {
   key: 'name',
   clickable: true,
   clickAction: {
-    type: 'edit'  // Opens inline edit mode
+    type: 'edit' // Opens inline edit mode
   },
   table: {
     width: 'lg',
@@ -344,7 +460,7 @@ Make table columns clickable for instant editing:
   clickable: true,
   clickAction: {
     type: 'navigate',
-    url: '/rules/{idShort}',  // {idShort} gets replaced with actual value
+    url: '/rules/{idShort}',
     target: '_self'
   },
   table: {
@@ -357,58 +473,65 @@ Make table columns clickable for instant editing:
 
 ## Validation System
 
-### **Validation Rule Types**
+### **ValidationRule Interface**
 
 ```typescript
-interface ValidationRule {
-  type: 'required' | 'minLength' | 'maxLength' | 'pattern' | 'min' | 'max' | 'email' | 'url' | 'custom';
+export interface ValidationRule {
+  type: 'required' | 'minLength' | 'maxLength' | 'pattern' | 'email' | 'url' | 'min' | 'max' | 'custom';
+  value?: any;
   message: string;
-  value?: string | number;
   validator?: (value: any) => boolean | Promise<boolean>;
 }
 ```
 
 ### **Built-in Validation Rules**
 
+#### **Required Validation**
 ```typescript
-// Required field
 { type: 'required', message: 'This field is required' }
+```
 
-// String length
+#### **String Length Validation**
+```typescript
 { type: 'minLength', value: 3, message: 'Must be at least 3 characters' }
 { type: 'maxLength', value: 100, message: 'Cannot exceed 100 characters' }
+```
 
-// Number range
+#### **Number Range Validation**
+```typescript
 { type: 'min', value: 0, message: 'Must be at least 0' }
 { type: 'max', value: 999, message: 'Cannot exceed 999' }
+```
 
-// Pattern matching
-{ 
-  type: 'pattern', 
-  value: '^[a-zA-Z0-9_]+$', 
-  message: 'Only letters, numbers, and underscores allowed' 
+#### **Pattern Validation**
+```typescript
+{
+  type: 'pattern',
+  value: '^[a-zA-Z0-9_]+$',
+  message: 'Only letters, numbers, and underscores allowed'
 }
+```
 
-// Email validation
+#### **Email & URL Validation**
+```typescript
 { type: 'email', message: 'Must be a valid email address' }
-
-// URL validation  
 { type: 'url', message: 'Must be a valid URL' }
+```
 
-// Custom validation
+#### **Custom Validation**
+```typescript
 {
   type: 'custom',
   message: 'Custom validation failed',
   validator: (value) => {
-    return value && value.length > 0 && !value.includes('bad');
+    return value && value.length > 0 && !value.includes('forbidden');
   }
 }
 ```
 
-### **Validation Examples**
+### **Complete Validation Example**
 
 ```typescript
-// Text field with multiple validations
 {
   key: 'name',
   label: 'Rule Name',
@@ -421,69 +544,34 @@ interface ValidationRule {
     { type: 'pattern', value: '^[a-zA-Z0-9\\s._-]+$', message: 'Only letters, numbers, spaces, dots, hyphens, and underscores allowed' }
   ]
 }
-
-// Email field
-{
-  key: 'email',
-  label: 'Email Address',
-  type: 'email',
-  required: true,
-  validation: [
-    { type: 'required', message: 'Email is required' },
-    { type: 'email', message: 'Must be a valid email address' }
-  ]
-}
-
-// Number field with range
-{
-  key: 'priority',
-  label: 'Priority',
-  type: 'number',
-  validation: [
-    { type: 'min', value: 1, message: 'Priority must be at least 1' },
-    { type: 'max', value: 10, message: 'Priority cannot exceed 10' }
-  ]
-}
 ```
 
 ---
 
-## Field Options (Dropdowns)
+## Field Options
+
+### **FieldOptions Interface**
+
+```typescript
+export interface FieldOptions {
+  static?: Array<{label: string; value: string; icon?: string}>;
+  dynamic?: {
+    resource: string;
+    valueField: string;
+    labelField: string;
+    displayField?: string;
+    filter?: (item: any) => boolean;
+  };
+  // Component selector options
+  componentType?: 'rules' | 'classes' | 'tables' | 'workflows';
+  multiSelect?: boolean;
+  showPreview?: boolean;
+}
+```
 
 ### **Static Options**
 
-Define fixed dropdown options:
-
 ```typescript
-interface FieldOptions {
-  static?: Array<{
-    label: string;
-    value: string;
-    icon?: string;  // Optional Lucide icon name
-  }>;
-}
-```
-
-### **Dynamic Options**
-
-Load options from other resources:
-
-```typescript
-interface FieldOptions {
-  dynamic?: {
-    resource: string;        // Resource to load from (e.g., 'nodes')
-    valueField: string;      // Field to use as value (e.g., 'id')
-    labelField: string;      // Field to use as label (e.g., 'name')
-    displayField?: string;   // Field to display in UI (optional)
-    filter?: (item: any) => boolean; // Filter function
-  };
-}
-```
-
-### **Options Examples**
-
-```typescript
-// Static options
 {
   key: 'type',
   label: 'Rule Type',
@@ -496,8 +584,11 @@ interface FieldOptions {
     ]
   }
 }
+```
 
-// Dynamic options from nodes
+### **Dynamic Options**
+
+```typescript
 {
   key: 'nodeId',
   label: 'Node',
@@ -512,8 +603,11 @@ interface FieldOptions {
     }
   }
 }
+```
 
-// Multi-select with tags
+### **Multi-Select Options**
+
+```typescript
 {
   key: 'tagIds',
   label: 'Tags',
@@ -523,7 +617,23 @@ interface FieldOptions {
       resource: 'tags',
       valueField: 'id',
       labelField: 'name'
-    }
+    },
+    multiSelect: true
+  }
+}
+```
+
+### **Component Selector Options**
+
+```typescript
+{
+  key: 'selectedRules',
+  label: 'Rules',
+  type: 'component-selector',
+  options: {
+    componentType: 'rules',
+    multiSelect: true,
+    showPreview: true
   }
 }
 ```
@@ -535,7 +645,7 @@ interface FieldOptions {
 ### **Mobile Configuration**
 
 ```typescript
-interface MobileConfig {
+mobile?: {
   priority?: 'high' | 'medium' | 'low';  // Display priority on mobile
   displayFormat?: string;                // Custom display format
   showInTable?: boolean;                 // Show in mobile table view
@@ -546,7 +656,7 @@ interface MobileConfig {
 ### **Desktop Configuration**
 
 ```typescript
-interface DesktopConfig {
+desktop?: {
   showInTable?: boolean;        // Show in desktop table
   tableWidth?: string | number; // Column width on desktop
 }
@@ -554,8 +664,8 @@ interface DesktopConfig {
 
 ### **Responsive Examples**
 
+#### **High Priority Mobile Field**
 ```typescript
-// High priority on mobile, always visible
 {
   key: 'name',
   mobile: {
@@ -568,8 +678,10 @@ interface DesktopConfig {
     tableWidth: 'lg'
   }
 }
+```
 
-// Hidden on mobile, visible on desktop
+#### **Desktop-Only Field**
+```typescript
 {
   key: 'metadata',
   mobile: {
@@ -585,11 +697,11 @@ interface DesktopConfig {
 
 ---
 
-## Advanced Features
+## Advanced Field Features
 
 ### **Computed Fields**
 
-Fields that are calculated server-side and read-only:
+Fields calculated server-side and read-only:
 
 ```typescript
 {
@@ -603,7 +715,7 @@ Fields that are calculated server-side and read-only:
 
 ### **Transient Fields**
 
-UI-only fields that are never persisted:
+UI-only fields never persisted to database:
 
 ```typescript
 {
@@ -635,13 +747,24 @@ Fine-grained control over when fields are included:
 }
 ```
 
+### **Context-Aware Auto-Population**
+
+```typescript
+{
+  key: 'nodeId',
+  autoValue: {
+    source: 'navigation.nodeId',
+    onlyIfAvailable: true, // Only set if navigation context has nodeId
+    condition: (value) => value && typeof value === 'string'
+  }
+}
+```
+
 ---
 
-## Field Examples
+## Complete Field Examples
 
-### **Complete Field Examples**
-
-#### **Text Field with Full Configuration**
+### **Text Field with Full Configuration**
 
 ```typescript
 {
@@ -693,7 +816,7 @@ Fine-grained control over when fields are included:
 }
 ```
 
-#### **Select Field with Dynamic Options**
+### **Select Field with Dynamic Options**
 
 ```typescript
 {
@@ -707,7 +830,7 @@ Fine-grained control over when fields are included:
   // Auto-populate from navigation
   autoValue: {
     source: 'navigation.nodeId',
-    required: false
+    onlyIfAvailable: true
   },
   
   // Dynamic options from nodes resource
@@ -734,7 +857,7 @@ Fine-grained control over when fields are included:
 }
 ```
 
-#### **Switch Field with Default Value**
+### **Switch Field with Default Value**
 
 ```typescript
 {
@@ -766,7 +889,7 @@ Fine-grained control over when fields are included:
 }
 ```
 
-#### **Rich Text Field**
+### **Rich Text Field**
 
 ```typescript
 {
@@ -801,65 +924,123 @@ Fine-grained control over when fields are included:
 }
 ```
 
+### **System Fields Template**
+
+Every schema should include these standard system fields:
+
+```typescript
+fields: [
+  // Core Identity
+  {
+    key: 'id',
+    label: 'ID',
+    type: 'text',
+    autoValue: { source: 'auto.uuid', required: true },
+    stripOn: { create: true, update: false },
+    form: { showInForm: false },
+    computed: true
+  },
+
+  // Tenant Context
+  {
+    key: 'tenantId',
+    label: 'Tenant ID',
+    type: 'text',
+    autoValue: { source: 'session.user.tenantId', required: true },
+    form: { showInForm: false },
+    computed: true
+  },
+
+  // Branch Context
+  {
+    key: 'branchId',
+    label: 'Branch ID',
+    type: 'text',
+    autoValue: { 
+      source: 'session.user.branchContext.currentBranchId',
+      fallback: 'main',
+      required: true 
+    },
+    form: { showInForm: false },
+    computed: true
+  },
+
+  // Audit Fields
+  {
+    key: 'createdAt',
+    label: 'Created At',
+    type: 'datetime',
+    computed: true,
+    form: { showInForm: false },
+    mobile: { showInTable: false },
+    desktop: { showInTable: true, tableWidth: 'sm' }
+  },
+
+  {
+    key: 'updatedAt',
+    label: 'Updated At',
+    type: 'datetime',
+    computed: true,
+    form: { showInForm: false },
+    mobile: { showInTable: false },
+    desktop: { showInTable: true, tableWidth: 'sm' }
+  },
+
+  {
+    key: 'createdById',
+    label: 'Created By',
+    type: 'text',
+    autoValue: { source: 'session.user.id', required: true },
+    form: { showInForm: false },
+    computed: true
+  },
+
+  {
+    key: 'updatedById',
+    label: 'Updated By', 
+    type: 'text',
+    autoValue: { source: 'session.user.id', required: true },
+    form: { showInForm: false },
+    computed: true
+  },
+
+  // Your custom fields here...
+]
+```
+
 ---
 
-## Field Type Reference
+## Field Type Quick Reference
 
-### **Text Fields**
-
-| Type | Input Component | Display Component | Use Case |
-|------|----------------|-------------------|----------|
-| `text` | TextInput | TextDisplay | Single-line text |
-| `textarea` | TextareaInput | TextDisplay | Multi-line text |
-| `richText` | RichTextInput | RichTextDisplay | Formatted text with editor |
-| `email` | EmailInput | TextDisplay | Email addresses |
-| `url` | UrlInput | LinkDisplay | URLs with link display |
-| `tel` | TextInput | TextDisplay | Phone numbers |
-| `password` | PasswordInput | TextDisplay | Password fields |
-| `code` | CodeInput | CodeDisplay | Code with syntax highlighting |
-
-### **Selection Fields**
-
-| Type | Input Component | Display Component | Use Case |
-|------|----------------|-------------------|----------|
-| `select` | SelectInput | BadgeDisplay | Single selection dropdown |
-| `multiSelect` | MultiSelectInput | BadgeListDisplay | Multiple selection dropdown |
-| `tags` | TagInput | TagDisplay | Tag selection with creation |
-| `switch` | SwitchInput | BadgeDisplay | Boolean toggle |
-| `checkbox` | CheckboxInput | BadgeDisplay | Boolean checkbox |
-| `radio` | RadioInput | BadgeDisplay | Radio button group |
-
-### **Number Fields**
-
-| Type | Input Component | Display Component | Use Case |
-|------|----------------|-------------------|----------|
-| `number` | NumberInput | TextDisplay | Numeric input |
-| `range` | RangeInput | TextDisplay | Slider input |
-
-### **Date/Time Fields**
-
-| Type | Input Component | Display Component | Use Case |
-|------|----------------|-------------------|----------|
-| `date` | DateInput | DateDisplay | Date picker |
-| `datetime` | DateTimeInput | DateDisplay | Date and time picker |
-| `time` | TimeInput | TextDisplay | Time picker |
-
-### **Media Fields**
-
-| Type | Input Component | Display Component | Use Case |
-|------|----------------|-------------------|----------|
-| `color` | ColorInput | ColorDisplay | Color picker |
-| `icon` | IconInput | IconDisplay | Icon selector |
-| `avatar` | AvatarInput | AvatarDisplay | Avatar/profile image |
-| `image` | ImageInput | ImageDisplay | Image upload |
-| `file` | FileInput | FileDisplay | File upload |
-
-### **Data Fields**
-
-| Type | Input Component | Display Component | Use Case |
-|------|----------------|-------------------|----------|
-| `json` | JsonInput | JsonDisplay | JSON data editor |
+| Type | Use Case | Input Component | Display Component |
+|------|----------|----------------|-------------------|
+| `text` | Single-line text | TextInput | TextDisplay |
+| `textarea` | Multi-line text | TextareaInput | TextDisplay |
+| `richText` | Formatted text | RichTextInput | RichTextDisplay |
+| `email` | Email addresses | EmailInput | TextDisplay |
+| `url` | URLs | UrlInput | LinkDisplay |
+| `tel` | Phone numbers | TextInput | TextDisplay |
+| `password` | Passwords | PasswordInput | TextDisplay |
+| `code` | Code/syntax | CodeInput | CodeDisplay |
+| `select` | Single selection | SelectInput | BadgeDisplay |
+| `multiSelect` | Multiple selection | MultiSelectInput | BadgeListDisplay |
+| `tags` | Tag selection | TagInput | TagDisplay |
+| `switch` | Boolean toggle | SwitchInput | BadgeDisplay |
+| `checkbox` | Boolean checkbox | CheckboxInput | BadgeDisplay |
+| `number` | Numbers | NumberInput | TextDisplay |
+| `range` | Slider | RangeInput | TextDisplay |
+| `currency` | Money amounts | CurrencyInput | CurrencyDisplay |
+| `date` | Dates | DateInput | DateDisplay |
+| `datetime` | Date + time | DateTimeInput | DateDisplay |
+| `time` | Time only | TimeInput | TextDisplay |
+| `color` | Color picker | ColorInput | ColorDisplay |
+| `icon` | Icon selector | IconInput | IconDisplay |
+| `avatar` | Avatar/image | AvatarInput | AvatarDisplay |
+| `image` | Image upload | ImageInput | ImageDisplay |
+| `file` | File upload | FileInput | FileDisplay |
+| `json` | JSON data | JsonInput | JsonDisplay |
+| `component-selector` | Component picker | ComponentSelectorInput | ComponentSelectorDisplay |
 
 ---
 
-**Next**: Read [Registration & Integration Guide](./02-registration-integration.md) to learn how to register schemas and integrate with the action system.
+**Next**: Learn about [Registration & Integration](./02-registration-integration.md) to register your schema and integrate with the action system.

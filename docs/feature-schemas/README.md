@@ -1,374 +1,407 @@
-# Feature Schema System Documentation
+# Complete Resource Development Guide
 
-**Complete developer guide for schema-driven development with auto-generated components**
+**Schema-driven development with auto-generated components, IndexedDB caching, and branch-aware operations**
 
-## 🎯 Overview
+## 🎯 System Overview
 
-The Feature Schema System is the **Single Source of Truth (SSOT)** for all data structures, UI components, and business logic in the application. Define a schema once, get complete CRUD systems automatically.
+The Feature Schema System is the **Single Source of Truth (SSOT)** that powers the entire application. From one schema definition, you get:
 
-### **What You Get**
+- ✅ **Complete CRUD System** - Forms, tables, modals, API endpoints
+- ✅ **IndexedDB Caching** - <50ms reads with offline support
+- ✅ **Branch-Aware Operations** - Workspace isolation with Copy-on-Write
+- ✅ **Mobile-First UI** - Responsive components out of the box
+- ✅ **Action System Integration** - Optimistic updates and background sync
+- ✅ **Junction Auto-Discovery** - Relationship management without configuration
+- ✅ **Background Bootstrap** - Non-blocking initialization of critical resources
 
-From a single schema definition, the system automatically generates:
-
-- ✅ **React Components**: AutoForm, AutoTable, AutoModal, AutoTree
-- ✅ **API Endpoints**: RESTful endpoints with validation
-- ✅ **IndexedDB Stores**: Optimized with <50ms read performance
-- ✅ **TypeScript Types**: Complete type definitions
-- ✅ **Action System**: CRUD operations with optimistic updates
-- ✅ **Validation**: Zod schemas with custom rules
-- ✅ **Mobile-First UI**: Responsive components out of the box
-
-### **Zero-Code Example**
-
-```typescript
-// 1. Define Schema
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  databaseKey: 'products',
-  modelName: 'Product',
-  actionPrefix: 'products',
-  fields: [/* field definitions */],
-  indexedDBKey: (record: any) => record.id
-};
-
-// 2. Register Schema
-// Add to resource-registry.ts
-
-// 3. Use Auto-Generated Components
-<AutoTable resourceKey="products" />
-<AutoForm schema={PRODUCT_SCHEMA} mode="create" />
-<AutoModal schema={PRODUCT_SCHEMA} config={{ resource: 'products', action: 'create' }} />
-```
-
-**Result**: Complete CRUD interface with forms, tables, modals, validation, offline support, and mobile-responsive design!
+### **Current Scale**
+- **93 Resource Schemas** across 12+ feature directories
+- **400+ Auto-Generated Actions** (create, read, update, delete, list + custom)
+- **Background Bootstrap** loading critical resources (branches, nodes) in <3 seconds
+- **Junction Auto-Discovery** from relationship definitions
+- **Unified Action Client** with branch context and tenant isolation
 
 ---
 
-## 📚 Documentation Structure
+## 📚 Complete Development Guide
 
-### **Core Guides** (Read in Order)
+### **Phase 1: Understanding the System**
 
-| Guide | Description | When to Read |
-|-------|-------------|--------------|
-| **[00-system-overview.md](./00-system-overview.md)** | Architecture, concepts, quick start | **Start here** - Essential foundation |
-| **[01-field-configuration.md](./01-field-configuration.md)** | Complete field types and options reference | When defining schema fields |
-| **[02-registration-integration.md](./02-registration-integration.md)** | How to register and integrate schemas | When adding new features |
-| **[03-auto-generated-integration.md](./03-auto-generated-integration.md)** | Using AutoForm, AutoTable, AutoModal, AutoTree | When building UI components |
-| **[04-examples-recipes.md](./04-examples-recipes.md)** | Real-world patterns and solutions | When solving complex scenarios |
+| Guide | Description | Essential For |
+|-------|-------------|---------------|
+| **[00-system-overview.md](./00-system-overview.md)** | Current architecture and data flow | **Everyone** - Start here |
+| **[01-field-configuration.md](./01-field-configuration.md)** | Field types, validation, auto-population | Schema design |
+| **[02-registration-integration.md](./02-registration-integration.md)** | Registration process and action system | Adding new resources |
+| **[03-auto-generated-integration.md](./03-auto-generated-integration.md)** | Using AutoForm, AutoTable, AutoModal, AutoTree | Building UI |
+| **[04-examples-recipes.md](./04-examples-recipes.md)** | Real-world patterns and complete examples | Complex scenarios |
 
-### **Reference Documentation**
+### **Phase 2: Development Workflow**
 
-| Document | Description |
-|----------|-------------|
-| **[AutoForm Documentation](../auto-generated/auto-form.md)** | Complete form system reference |
-| **[AutoTable Documentation](../auto-generated/auto-table.md)** | Complete table system reference |
-| **[Action System Guide](../action-system/)** | Backend integration and API |
-| **[Architecture Guides](../architecture/)** | System design and patterns |
-
----
-
-## 🚀 Quick Start Paths
-
-### **Path 1: I'm New to the System**
-
-1. **[System Overview](./00-system-overview.md)** - Understand the architecture
-2. **[Field Configuration](./01-field-configuration.md)** - Learn field types and options
-3. **[Registration Guide](./02-registration-integration.md)** - Register your first schema
-4. **[AutoForm Integration](./03-auto-generated-integration.md#autoform-integration)** - Build your first form
-
-### **Path 2: I Need to Add a New Feature**
-
-1. **[Registration Guide](./02-registration-integration.md)** - Registration process
-2. **[Field Configuration](./01-field-configuration.md)** - Configure your fields
-3. **[Examples & Recipes](./04-examples-recipes.md#complete-feature-examples)** - Follow proven patterns
-
-### **Path 3: I'm Building Complex UI**
-
-1. **[AutoTable Integration](./03-auto-generated-integration.md#autotable-integration)** - Data tables
-2. **[AutoModal Integration](./03-auto-generated-integration.md#automodal-integration)** - Modal dialogs
-3. **[Advanced Patterns](./04-examples-recipes.md#ui-pattern-recipes)** - Complex UI patterns
-
-### **Path 4: I'm Working with Relationships**
-
-1. **[Junction Table Recipes](./04-examples-recipes.md#junction-table-recipes)** - Many-to-many relationships
-2. **[Advanced Relationships](./04-examples-recipes.md#advanced-relationship-patterns)** - Complex relationships
-3. **[Registration Guide](./02-registration-integration.md#junction-table-registration)** - Junction registration
-
----
-
-## 🛠️ Common Tasks
-
-### **Create a New Feature**
-
+#### **🚀 Quick Start (15 minutes)**
 ```bash
 # 1. Create schema file
 mkdir src/features/products
 touch src/features/products/products.schema.ts
 
-# 2. Define schema (see examples in guides)
+# 2. Define schema (copy from examples)
 # 3. Register in resource-registry.ts
 # 4. Use auto-generated components
 ```
 
-**Guides**: [Registration Guide](./02-registration-integration.md) → [Examples](./04-examples-recipes.md#complete-feature-examples)
-
-### **Add New Field Types**
-
-**Guide**: [Field Configuration](./01-field-configuration.md#field-types-overview)
-
-### **Create Custom Validation**
-
-**Guide**: [Validation Recipes](./04-examples-recipes.md#validation-recipes)
-
-### **Build Master-Detail UI**
-
-**Guide**: [UI Pattern Recipes](./04-examples-recipes.md#ui-pattern-recipes)
-
-### **Handle Junction Tables**
-
-**Guide**: [Junction Table Recipes](./04-examples-recipes.md#junction-table-recipes)
-
-### **Optimize Performance**
-
-**Guide**: [Performance Patterns](./04-examples-recipes.md#performance-patterns)
-
-### **Migrate Existing Code**
-
-**Guide**: [Migration Patterns](./04-examples-recipes.md#migration-patterns)
+#### **📋 Complete Development Checklist**
+- [ ] Create feature directory and schema file
+- [ ] Implement ResourceSchema with all required fields
+- [ ] Register schema in `src/lib/resource-system/resource-registry.ts`
+- [ ] Add Prisma model (for server persistence)
+- [ ] Test with AutoForm, AutoTable, AutoModal components
+- [ ] Verify IndexedDB initialization and caching
+- [ ] Test branch-aware operations
+- [ ] Add junction relationships (if needed)
 
 ---
 
-## 🔧 Troubleshooting
+## 🏗️ Current Architecture
 
-### **Common Issues**
+### **Data Flow (Actual Implementation)**
 
-| Issue | Solution | Guide |
-|-------|----------|-------|
-| "Store not found" error | Check schema registration | [Registration Guide](./02-registration-integration.md#troubleshooting) |
-| Form fields not showing | Add form configuration | [Field Configuration](./01-field-configuration.md#form-configuration) |
-| Table columns missing | Add display configuration | [Field Configuration](./01-field-configuration.md#table-configuration) |
-| Validation not working | Check validation rules | [Validation Recipes](./04-examples-recipes.md#validation-recipes) |
-| Junction tables not working | Verify junction registration | [Registration Guide](./02-registration-integration.md#junction-table-registration) |
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Schema Definition                                │
+│               src/features/*/**.schema.ts                          │
+└──────────────────────┬──────────────────────────────────────────────┘
+                       │
+┌─────────────────────────────────────────────────────────────────────┐
+│              Resource Registry (SSOT)                              │
+│         src/lib/resource-system/resource-registry.ts               │
+│    • Auto-discovers 93 schemas                                     │
+│    • Generates 400+ action mappings                                │
+│    • Creates IndexedDB store configurations                        │
+└──────────────────────┬──────────────────────────────────────────────┘
+                       │
+┌─────────────────────────────────────────────────────────────────────┐
+│               Background Bootstrap                                  │
+│       src/components/providers/background-bootstrap.tsx            │
+│    • Loads critical resources (branches, nodes) in background      │
+│    • 3-second timeout per resource with fail-open strategy         │
+│    • Progressively loads non-critical resources                    │
+└──────────────────────┬──────────────────────────────────────────────┘
+                       │
+┌─────────────────────────────────────────────────────────────────────┐
+│                Action Client System                                 │
+│         src/lib/action-client/unified-action-client.ts             │
+│    • Branch-aware operations                                       │
+│    • IndexedDB-first reads (<50ms)                                 │
+│    • Optimistic updates with background sync                       │
+│    • Tenant isolation                                              │
+└──────────────────────┬──────────────────────────────────────────────┘
+                       │
+┌─────────────────────────────────────────────────────────────────────┐
+│            Auto-Generated Components                                │
+│         src/components/auto-generated/*                            │
+│    • AutoForm - Schema-driven forms                                │
+│    • AutoTable - Data tables with CRUD                             │
+│    • AutoModal - Create/edit dialogs                               │
+│    • AutoTree - Hierarchical navigation                            │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-### **Debug Tools**
+### **System Integration Points**
+
+1. **ResourceSchema** → Defines structure, validation, UI config
+2. **Resource Registry** → Auto-discovers and maps all resources
+3. **Background Bootstrap** → Non-blocking initialization of IndexedDB
+4. **Action Client** → Branch-aware CRUD with caching
+5. **Auto-Components** → Schema-driven UI components
+6. **Junction System** → Auto-discovered from relationship definitions
+
+---
+
+## 🚀 Quick Start Examples
+
+### **Minimal Working Schema**
+
+```typescript
+// src/features/products/products.schema.ts
+import type { ResourceSchema } from '@/lib/resource-system/schemas';
+
+export const PRODUCT_SCHEMA: ResourceSchema = {
+  // ✅ REQUIRED: Identity (BULLETPROOF 3-FIELD DESIGN)
+  databaseKey: 'products',
+  modelName: 'Product',
+  actionPrefix: 'products',
+
+  // ✅ REQUIRED: IndexedDB key function
+  indexedDBKey: (record: any) => record.id,
+
+  // ✅ UI Configuration
+  display: {
+    title: 'Products',
+    description: 'Manage product catalog',
+    icon: 'package'
+  },
+
+  // ✅ Fields (see field-configuration.md for all options)
+  fields: [
+    {
+      key: 'id',
+      label: 'ID',
+      type: 'text',
+      autoValue: { source: 'auto.uuid', required: true },
+      form: { showInForm: false } // Hidden in forms
+    },
+    {
+      key: 'name',
+      label: 'Product Name',
+      type: 'text',
+      required: true,
+      form: { row: 1, width: 'full', order: 1, showInForm: true },
+      mobile: { priority: 'high', showInTable: true },
+      desktop: { showInTable: true, tableWidth: 'lg' },
+      validation: [
+        { type: 'required', message: 'Product name is required' },
+        { type: 'minLength', value: 3, message: 'Name too short' }
+      ]
+    },
+    // Standard system fields
+    {
+      key: 'tenantId',
+      autoValue: { source: 'session.user.tenantId', required: true },
+      form: { showInForm: false }
+    },
+    {
+      key: 'branchId',
+      autoValue: { source: 'session.user.branchContext.currentBranchId', required: true },
+      form: { showInForm: false }
+    }
+  ],
+
+  // ✅ Search Configuration
+  search: {
+    enabled: true,
+    fields: ['name', 'description'],
+    placeholder: 'Search products...'
+  },
+
+  // ✅ Actions
+  actions: {
+    create: true,
+    update: true,
+    delete: true,
+    list: true,
+    read: true
+  }
+};
+```
+
+### **Register the Schema**
+
+```typescript
+// src/lib/resource-system/resource-registry.ts
+
+// ✅ ADD IMPORT
+import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
+
+// ✅ ADD TO SCHEMA_RESOURCES ARRAY
+const SCHEMA_RESOURCES: ResourceSchema[] = [
+  // ... existing schemas
+  PRODUCT_SCHEMA, // Add your schema here
+];
+```
+
+### **Use Auto-Generated Components**
 
 ```tsx
-// Enable debug mode
-<AutoForm
-  schema={YOUR_SCHEMA}
-  enableDebug={process.env.NODE_ENV === 'development'}
-  // ... other props
-/>
+// src/app/products/page.tsx
+import { AutoTable } from '@/components/auto-generated/table/auto-table';
 
-// Check registration
-import { getIndexedDBStoreConfigs } from '@/lib/resource-system/resource-registry';
-console.log('Available stores:', getIndexedDBStoreConfigs().map(s => s.name));
+export default function ProductsPage() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Products</h1>
+      {/* ✅ INSTANT CRUD INTERFACE */}
+      <AutoTable resourceKey="products" />
+    </div>
+  );
+}
+```
+
+**Result**: Complete CRUD interface with create/edit forms, data table, search, mobile responsiveness, offline support, and branch awareness!
+
+---
+
+## 📋 Development Workflow
+
+### **Step 1: Plan Your Resource**
+- [ ] Define data structure and relationships
+- [ ] Identify required vs optional fields
+- [ ] Plan UI layout (form rows, table columns)
+- [ ] Consider mobile vs desktop display priorities
+
+### **Step 2: Create Schema**
+- [ ] Create feature directory: `src/features/yourFeature/`
+- [ ] Create schema file: `yourFeature.schema.ts`
+- [ ] Implement ResourceSchema interface
+- [ ] Define all fields with proper configuration
+- [ ] Add validation rules and auto-values
+- [ ] Configure search and actions
+
+### **Step 3: Register Schema**
+- [ ] Import schema in `resource-registry.ts`
+- [ ] Add to `SCHEMA_RESOURCES` array
+- [ ] Verify no TypeScript errors
+
+### **Step 4: Add Prisma Model** (for server persistence)
+- [ ] Add model to `prisma/schema.prisma`
+- [ ] Include standard fields: `id`, `tenantId`, `branchId`, `createdAt`, `updatedAt`
+- [ ] Run `npx prisma generate`
+
+### **Step 5: Test & Validate**
+- [ ] Create test page with AutoTable
+- [ ] Test create/edit with AutoForm
+- [ ] Test mobile responsiveness
+- [ ] Verify IndexedDB caching works
+- [ ] Test offline functionality
+- [ ] Test branch switching
+
+### **Step 6: Add Advanced Features** (optional)
+- [ ] Junction relationships
+- [ ] Custom actions
+- [ ] Complex validation
+- [ ] Custom UI components
+
+---
+
+## 🔍 Key System Files
+
+### **Core System**
+- `src/lib/resource-system/resource-registry.ts` - Central registration
+- `src/lib/resource-system/schemas.ts` - ResourceSchema interface
+- `src/components/providers/background-bootstrap.tsx` - Resource loading
+- `src/lib/action-client/unified-action-client.ts` - CRUD operations
+
+### **Auto-Generated Components**
+- `src/components/auto-generated/form/auto-form.tsx` - Schema-driven forms
+- `src/components/auto-generated/table/auto-table.tsx` - Data tables
+- `src/components/auto-generated/modal/auto-modal.tsx` - Create/edit modals
+- `src/components/auto-generated/tree/auto-tree.tsx` - Hierarchical navigation
+
+### **Server Integration**
+- `src/app/api/workspaces/current/actions/route.ts` - Unified API endpoint
+- `src/lib/server/action-system/core/action-router-core.ts` - Server routing
+
+---
+
+## 🚨 Critical Success Factors
+
+### **1. Follow the BULLETPROOF 3-FIELD DESIGN**
+```typescript
+{
+  databaseKey: 'products',     // IndexedDB store + API routing
+  modelName: 'Product',        // Prisma model name
+  actionPrefix: 'products',    // Action naming (products.create, etc.)
+}
+```
+
+### **2. Include Standard System Fields**
+```typescript
+fields: [
+  { key: 'id', autoValue: { source: 'auto.uuid', required: true } },
+  { key: 'tenantId', autoValue: { source: 'session.user.tenantId', required: true } },
+  { key: 'branchId', autoValue: { source: 'session.user.branchContext.currentBranchId', required: true } },
+  // ... your custom fields
+]
+```
+
+### **3. Configure Display Options for ALL Fields**
+```typescript
+{
+  key: 'name',
+  form: { row: 1, width: 'full', order: 1, showInForm: true },
+  mobile: { priority: 'high', showInTable: true },
+  desktop: { showInTable: true, tableWidth: 'lg' }
+}
+```
+
+### **4. Implement Required indexedDBKey Function**
+```typescript
+// Simple key for most entities
+indexedDBKey: (record: any) => record.id,
+
+// Compound key for junction tables
+indexedDBKey: (record: any) => `${record.parentId}:${record.childId}`,
 ```
 
 ---
 
-## 📋 Checklists
+## 🔧 Troubleshooting Guide
 
-### **New Schema Checklist**
+### **Common Issues & Solutions**
 
-- [ ] Schema file created with BULLETPROOF 3-FIELD DESIGN
-- [ ] All required fields have form/table configuration
-- [ ] `indexedDBKey` function implemented
-- [ ] Schema registered in resource-registry.ts
-- [ ] TypeScript types exported
-- [ ] Validation rules defined
-- [ ] Tested with AutoForm and AutoTable
+| Issue | Solution | Reference |
+|-------|----------|-----------|
+| "Store not found" error | Verify schema is registered in `resource-registry.ts` | [Registration Guide](./02-registration-integration.md#troubleshooting) |
+| Form fields not showing | Add `form: { showInForm: true }` configuration | [Field Guide](./01-field-configuration.md#form-configuration) |
+| Table columns missing | Add `mobile` and `desktop` display configuration | [Field Guide](./01-field-configuration.md#table-configuration) |
+| IndexedDB not loading | Check Background Bootstrap logs in console | [System Overview](./00-system-overview.md#background-bootstrap) |
+| Actions not working | Verify `actions` configuration in schema | [Registration Guide](./02-registration-integration.md#action-system-integration) |
 
-### **Production Readiness Checklist**
+### **Debug Tools**
 
-- [ ] All CRUD operations working
-- [ ] Mobile responsive design tested
-- [ ] Offline functionality verified
-- [ ] Performance optimized (memoization, lazy loading)
-- [ ] Error handling implemented
-- [ ] Junction relationships working (if applicable)
-- [ ] Branch operations tested (if applicable)
+```typescript
+// Check registered schemas
+import { RESOURCE_REGISTRY } from '@/lib/resource-system/resource-registry';
+console.log('Available resources:', RESOURCE_REGISTRY.map(s => s.actionPrefix));
+
+// Check IndexedDB stores
+import { getIndexedDBStoreConfigs } from '@/lib/resource-system/resource-registry';
+console.log('IndexedDB stores:', getIndexedDBStoreConfigs().map(s => s.name));
+
+// Enable bootstrap debug logging
+// Check browser console for "🔍 [BackgroundBootstrap]" logs
+```
 
 ---
 
-## 🎯 Best Practices
+## 🎯 Performance Best Practices
 
 ### **Schema Design**
+- Use appropriate field priorities (high/medium/low) for mobile
+- Implement proper validation to prevent invalid data
+- Use computed fields for server-side calculations
+- Add search configuration for large datasets
 
-1. **Follow Naming Conventions**
-   ```typescript
-   databaseKey: 'products',    // Plural, lowercase
-   modelName: 'Product',       // Singular, PascalCase
-   actionPrefix: 'products',   // Same as databaseKey
-   ```
+### **IndexedDB Optimization**
+- Background Bootstrap loads critical resources automatically
+- <50ms read performance with IndexedDB-first strategy
+- Automatic caching and cache invalidation
+- Offline-first with background sync
 
-2. **Use Standard System Fields**
-   ```typescript
-   fields: [
-     { key: 'id', autoValue: { source: 'auto.uuid', required: true } },
-     { key: 'tenantId', autoValue: { source: 'session.user.tenantId', required: true } },
-     { key: 'branchId', autoValue: { source: 'session.user.branchContext.currentBranchId', required: true } },
-     // ... your custom fields
-   ]
-   ```
-
-3. **Configure Display Options**
-   ```typescript
-   {
-     key: 'name',
-     form: { row: 1, width: 'full', order: 1, showInForm: true },
-     mobile: { priority: 'high', showInTable: true },
-     desktop: { showInTable: true, tableWidth: 'lg' }
-   }
-   ```
-
-### **Performance**
-
-1. **Use Memoization**
-   ```tsx
-   const MemoizedAutoTable = memo(AutoTable);
-   ```
-
-2. **Add Filters**
-   ```tsx
-   <AutoTable 
-     resourceKey="products"
-     filters={{ isActive: true }}  // Reduce data load
-   />
-   ```
-
-3. **Lazy Load Components**
-   ```tsx
-   const AutoTable = lazy(() => import('@/components/auto-generated/table/auto-table'));
-   ```
-
-### **Error Handling**
-
-1. **Add Error Boundaries**
-   ```tsx
-   <ErrorBoundary>
-     <AutoForm schema={YOUR_SCHEMA} />
-   </ErrorBoundary>
-   ```
-
-2. **Handle Loading States**
-   ```tsx
-   <Suspense fallback={<Skeleton />}>
-     <AutoTable resourceKey="products" />
-   </Suspense>
-   ```
+### **UI Performance**
+- AutoTable supports virtual scrolling for large datasets
+- AutoForm uses progressive enhancement
+- Components are memoized by default
+- Lazy loading for heavy operations
 
 ---
 
-## 🔗 Related Systems
+## 📚 Next Steps
 
-### **Action System**
-- **Purpose**: Backend API integration and data synchronization
-- **Guide**: [Action System Documentation](../action-system/)
-- **Key Features**: Optimistic updates, offline support, branch awareness
-
-### **Resource System**
-- **Purpose**: Schema management and auto-discovery
-- **Files**: `src/lib/resource-system/`
-- **Key Features**: Type safety, validation, relationship management
-
-### **Auto-Generated Components**
-- **Purpose**: UI components generated from schemas
-- **Files**: `src/components/auto-generated/`
-- **Key Features**: Mobile-first, responsive, accessible
-
-### **IndexedDB Integration**
-- **Purpose**: Local data storage and caching
-- **Performance**: <50ms reads, offline support
-- **Features**: Branch awareness, compound keys, automatic indexes
+1. **Start Here**: [System Overview](./00-system-overview.md) - Understand the architecture
+2. **Define Fields**: [Field Configuration](./01-field-configuration.md) - Learn all field options
+3. **Register Schema**: [Registration Guide](./02-registration-integration.md) - Complete registration process
+4. **Build UI**: [Component Integration](./03-auto-generated-integration.md) - Use auto-generated components
+5. **Advanced Patterns**: [Examples & Recipes](./04-examples-recipes.md) - Real-world examples
 
 ---
 
-## 🆕 What's New
+## 💡 Pro Tips
 
-### **Recent Updates**
+- **Always test mobile-first** - Use responsive design tools
+- **Use debug mode** - Enable console logging during development
+- **Follow naming conventions** - Consistent naming prevents errors
+- **Start simple** - Add complexity gradually
+- **Reference existing schemas** - Learn from `src/features/*/**.schema.ts` files
+- **Test offline** - Disable network to verify caching
+- **Monitor Background Bootstrap** - Watch console for loading progress
 
-- ✅ **Junction Auto-Discovery**: Automatic junction table registration
-- ✅ **Context-Aware Auto-Population**: Smart field pre-filling
-- ✅ **Mobile-First Design**: Optimized for touch interfaces
-- ✅ **Branch-Aware Operations**: Complete workspace isolation
-- ✅ **Performance Optimizations**: <50ms IndexedDB reads
-
-### **Coming Soon**
-
-- 🔄 **Real-time Collaboration**: Multi-user editing support
-- 🔄 **Advanced Validation**: Server-side validation rules
-- 🔄 **Bulk Operations**: Enhanced bulk editing capabilities
-- 🔄 **Export/Import**: Data export and import functionality
-
----
-
-## 💡 Tips & Tricks
-
-### **Development**
-
-- Use the debug component to verify schema registration
-- Enable development mode for additional debugging features
-- Test with different screen sizes for responsive design
-- Use browser dev tools to inspect IndexedDB stores
-
-### **Debugging**
-
-- Check browser console for action system logs
-- Verify schema registration with debug tools
-- Test offline functionality by disabling network
-- Use React DevTools to inspect component state
-
-### **Performance**
-
-- Use filters to reduce data load
-- Implement lazy loading for heavy components
-- Memoize components that don't change frequently
-- Monitor IndexedDB performance in dev tools
-
----
-
-## 🤝 Contributing
-
-### **Adding New Features**
-
-1. Follow the patterns in existing schemas
-2. Add comprehensive documentation
-3. Include examples and recipes
-4. Test with auto-generated components
-5. Update this documentation
-
-### **Improving Documentation**
-
-1. Keep examples practical and complete
-2. Include troubleshooting steps
-3. Add cross-references between guides
-4. Test all code examples
-
----
-
-## 📞 Support
-
-### **Getting Help**
-
-1. **Check Documentation**: Start with the relevant guide above
-2. **Search Examples**: Look for similar patterns in [Examples & Recipes](./04-examples-recipes.md)
-3. **Debug Tools**: Use the debug components and console logs
-4. **Code Review**: Compare with working examples in the codebase
-
-### **Common Questions**
-
-**Q: How do I add a new field type?**
-A: See [Field Configuration Guide](./01-field-configuration.md#field-types-overview)
-
-**Q: Why aren't my fields showing in forms?**
-A: Check the form configuration in [Field Configuration](./01-field-configuration.md#form-configuration)
-
-**Q: How do I create junction tables?**
-A: Follow [Junction Table Recipes](./04-examples-recipes.md#junction-table-recipes)
-
-**Q: How do I optimize performance?**
-A: See [Performance Patterns](./04-examples-recipes.md#performance-patterns)
-
----
-
-**Start your schema-driven development journey**: Begin with [System Overview](./00-system-overview.md) 🚀
+**Ready to build? Start with [System Overview](./00-system-overview.md)** 🚀

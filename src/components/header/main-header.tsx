@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Zap, Users, FileText, Settings, Code2, Table, ShoppingCart, ChevronDown, Shield, Cog } from 'lucide-react'
+import { Zap, Users, FileText, Settings, Code2, Table, ShoppingCart, Rows3 } from 'lucide-react'
 import { HeaderBreadcrumb } from './header-breadcrumb'
 import { SearchTrigger } from '@/components/search/universal-search-provider'
 import { HeaderTenantSwitcher } from './header-tenant-switcher'
 // import { HeaderBranchSwitcher } from './header-branch-switcher'
 import dynamic from 'next/dynamic'
 import { TabBar } from '@/components/ui/tab-bar'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/drop-down-menu'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import type { BranchInfo } from '@/lib/utils/branch-utils'
@@ -79,8 +78,9 @@ export function MainHeader({
     { key: 'rules', label: 'Rules', icon: Code2 },
     { key: 'offices', label: 'Offices', icon: Users },
     { key: 'tables', label: 'Tables', icon: Table },
-    { key: 'queues', label: 'Queues', icon: ShoppingCart },
-    { key: 'marketplace', label: 'Marketplace', icon: ShoppingCart }
+    { key: 'queues', label: 'Queues', icon: Rows3 },
+    { key: 'marketplace', label: 'Marketplace', icon: ShoppingCart },
+    { key: 'settings', label: 'Settings', icon: Settings }
   ]
 
   // Convert topLevelTabOptions to the format expected by TabBar
@@ -92,8 +92,9 @@ export function MainHeader({
               option.value === 'rules' ? Code2 :
               option.value === 'offices' ? Users :
               option.value === 'tables' ? Table :
-              option.value === 'queues' ? ShoppingCart :
+              option.value === 'queues' ? Rows3 :
               option.value === 'marketplace' ? ShoppingCart :
+              option.value === 'settings' ? Settings :
               FileText // Default icon
       }))
     : defaultTopLevelTabs
@@ -144,49 +145,6 @@ export function MainHeader({
             animate={true}
             className="flex-1"
           />
-          
-          {/* Settings Dropdown */}
-          <div className="flex-shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button 
-                  className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 rounded transition-colors"
-                >
-                  <Settings size={16} />
-                </button>
-              </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem 
-                onClick={() => router.push('/workflows')}
-                className="flex items-center gap-2"
-              >
-                <FileText size={16} />
-                Workflows
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => router.push('/preferences')}
-                className="flex items-center gap-2"
-              >
-                <Users size={16} />
-                User Preferences
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => router.push('/security')}
-                className="flex items-center gap-2"
-              >
-                <Shield size={16} />
-                Security
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => router.push('/system-settings')}
-                className="flex items-center gap-2"
-              >
-                <Cog size={16} />
-                System Settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
       )}
       

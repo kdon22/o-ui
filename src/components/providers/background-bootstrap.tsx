@@ -70,26 +70,35 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
         isReady: true as const
       }
 
+      console.log('📋 [Bootstrap] TWO-PHASE STRATEGY:')
+      console.log('   Phase 1: Core resources (instant UI) - branches, node, process, rule')  
+      console.log('   Phase 2: Secondary resources (background) - user, credential, settings, etc.')
+
       // Get action client
       const actionClient = getActionClient(tenantId, branchContext)
       
-      // Critical resources only (for instant navigation)
-      const criticalResources = [
-        { type: 'branches', limit: 10 },
-        { type: 'nodes', limit: 50 }, // Root + immediate children only
+      // ============================================================================
+      // PHASE 1: CORE RESOURCES (Immediate Population for Instant UI)
+      // ============================================================================
+      // Only populate essential resources for instant tree navigation and basic CRUD
+      const coreResources = [
+        { type: 'branches', limit: 10 }, // Essential for branch switching
+        { type: 'node', limit: 50 }, // Root + immediate children only  
+        { type: 'process', limit: 25 }, // Essential processes for tree navigation
+        { type: 'rule', limit: 25 }, // Core rules for basic functionality
       ]
 
       setBootstrapProgress(10)
 
-      // Load critical resources with timeout protection
-      for (let i = 0; i < criticalResources.length; i++) {
-        const resource = criticalResources[i]
+      // PHASE 1: Load core resources with timeout protection (instant UI)
+      for (let i = 0; i < coreResources.length; i++) {
+        const resource = coreResources[i]
         
         try {
           // 3 second timeout per resource
           await Promise.race([
             actionClient.executeAction({
-              action: `${resource.type === 'branches' ? 'branches' : resource.type.slice(0, -1)}.list`,
+              action: `${resource.type}.list`, // branches → branches.list, node → node.list, process → process.list, rule → rule.list
               data: { limit: resource.limit },
               branchContext
             }),
@@ -98,7 +107,7 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
             )
           ])
 
-          const progress = 10 + ((i + 1) / criticalResources.length) * 40
+          const progress = 10 + ((i + 1) / coreResources.length) * 40
           setBootstrapProgress(progress)
           
         } catch (error) {
@@ -107,13 +116,19 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
         }
       }
 
+      console.log('✅ [Bootstrap] Phase 1 COMPLETE: Core resources loaded - UI ready for navigation!')
+      setBootstrapProgress(50) // Core resources complete
+
+      // ============================================================================
+      // PHASE 2: SECONDARY RESOURCES (Background Population - Non-Blocking)  
+      // ============================================================================
+      // Start background population immediately (don't wait)
+      setTimeout(() => {
+        loadSecondaryResources(actionClient, branchContext)
+      }, 100) // Start almost immediately but don't block core completion
+
       setBootstrapProgress(100)
       setLastBootstrap(Date.now())
-      
-      // Start lazy loading non-critical resources in background
-      setTimeout(() => {
-        loadNonCriticalResources(actionClient, branchContext)
-      }, 1000)
 
     } catch (error) {
       console.error('❌ [Bootstrap] Critical failure:', error)
@@ -123,11 +138,11 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
     }
   }, [isBootstrapping, status, session])
 
-  // Load non-critical resources in background (no UI blocking)
-  const loadNonCriticalResources = async (actionClient: any, branchContext: any) => {
+  // PHASE 2: Load secondary resources in background (no UI blocking)
+  const loadSecondaryResources = async (actionClient: any, branchContext: any) => {
     // ✅ CRITICAL: Only load if authenticated and not on auth page
     if (status !== 'authenticated' || !session?.user?.tenantId || isAuthPage) {
-      console.log('🚫 [Bootstrap] Skipping non-critical resource loading:', {
+      console.log('🚫 [Bootstrap] Skipping secondary resource loading:', {
         status,
         hasSession: !!session,
         hasTenantId: !!session?.user?.tenantId,
@@ -137,25 +152,70 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
       return
     }
 
-    const nonCriticalResources = ['rules', 'processes', 'workflows', 'offices']
+    console.log('🔄 [Bootstrap] Starting Phase 2: Background secondary resource population...')
+
+    // Secondary resources (populate after core UI is ready)
+    const secondaryResources = [
+      // User & configuration (commonly accessed from settings)
+      { type: 'user', limit: 100 },
+      { type: 'credential', limit: 50 },
+      { type: 'office', limit: 100 },
+      { type: 'workflow', limit: 100 },
+      
+      // Settings System (server-only but accessible via actions)
+      { type: 'endTransactSettings', limit: 10 },
+      { type: 'hitSettings', limit: 10 },
+      { type: 'runtimeNotifications', limit: 10 },
+      
+      // Pull Request & Settings (accessed from settings pages)
+      { type: 'pullRequests', limit: 10 },
+      { type: 'pullRequestReviews', limit: 10 },
+      { type: 'pullRequestComments', limit: 10 },
+      { type: 'prSettings', limit: 10 },
+      
+      // Data management & marketplace
+      { type: 'dataTables', limit: 50 },
+      { type: 'tableCategories', limit: 20 },
+      { type: 'tableData', limit: 50 },
+      { type: 'session', limit: 20 },
+      
+      // Tag system
+      { type: 'tagGroups', limit: 20 },
+      { type: 'tags', limit: 100 },
+      { type: 'classes', limit: 50 },
+      
+      // Queue system (server-only)
+      { type: 'queueConfigs', limit: 10 },
+      { type: 'queueMessages', limit: 50 },
+      { type: 'queueWorkers', limit: 10 },
+      
+      // Marketplace
+      { type: 'marketplacePackages', limit: 50 },
+      { type: 'packageInstallations', limit: 20 }
+    ]
     
-    for (const resourceType of nonCriticalResources) {
+    let completedCount = 0
+    for (const resource of secondaryResources) {
       try {
         await Promise.race([
           actionClient.executeAction({
-            action: `${resourceType}.list`,
-            data: { limit: 200 },
+            action: `${resource.type}.list`,
+            data: { limit: resource.limit },
             branchContext
           }),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error(`${resourceType} timeout`)), 5000)
+            setTimeout(() => reject(new Error(`${resource.type} timeout`)), 5000)
           )
         ])
+        completedCount++
+        console.log(`✅ [Bootstrap] Secondary resource loaded: ${resource.type} (${completedCount}/${secondaryResources.length})`)
       } catch (error) {
-        console.warn(`⚠️ [Bootstrap] ${resourceType} background load failed:`, error)
+        console.warn(`⚠️ [Bootstrap] ${resource.type} background load failed:`, error)
         // Silent failure - don't affect UI
       }
     }
+
+    console.log(`🎉 [Bootstrap] Phase 2 complete: ${completedCount}/${secondaryResources.length} secondary resources loaded`)
   }
 
   // Retry function - MUST BE DEFINED BEFORE EARLY RETURN
@@ -164,7 +224,7 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
     performBootstrap()
   }, [performBootstrap])
 
-  // Start bootstrap after first paint - but NEVER on auth pages
+  // Start bootstrap after first paint - but NEVER on auth pages  
   useEffect(() => {
     console.log('🔍 [BackgroundBootstrap] Bootstrap check:', {
       status,
@@ -176,7 +236,7 @@ export function BackgroundBootstrap({ children }: BackgroundBootstrapProps) {
     })
     
     if (status === 'authenticated' && session?.user?.tenantId && !isAuthPage) {
-      console.log('✅ [BackgroundBootstrap] Starting bootstrap in background')
+      console.log('🚀 [BackgroundBootstrap] Starting TWO-PHASE bootstrap: Core → Secondary')
       // Use setTimeout with a small delay to ensure session is fully synchronized
       setTimeout(performBootstrap, 1000) // 1 second delay to allow session sync
     } else if (isAuthPage) {

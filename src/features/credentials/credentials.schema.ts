@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ResourceSchema } from '@/lib/resource-system/schemas';
 
 // Core Credential schema with all branching fields
 export const CredentialSchema = z.object({
@@ -571,4 +572,217 @@ export type Credential = z.infer<typeof CredentialSchema>;
 export type CreateCredential = z.infer<typeof CreateCredentialSchema>;
 export type UpdateCredential = z.infer<typeof UpdateCredentialSchema>;
 export type CredentialFilter = z.infer<typeof CredentialFilterSchema>;
-export type CredentialQueryOptions = z.infer<typeof CredentialQueryOptionsSchema>; 
+export type CredentialQueryOptions = z.infer<typeof CredentialQueryOptionsSchema>;
+
+// ============================================================================
+// RESOURCE SCHEMA - ACTION SYSTEM INTEGRATION
+// ============================================================================
+
+export const CREDENTIAL_SCHEMA: ResourceSchema = {
+  // ============================================================================
+  // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
+  // ============================================================================
+  databaseKey: 'credential',       // IndexedDB store + API endpoints
+  modelName: 'Credential',         // Prisma model access
+  actionPrefix: 'credential',      // Action naming (SINGULAR)
+
+  // ============================================================================
+  // DISPLAY CONFIGURATION
+  // ============================================================================
+  display: {
+    title: 'Credential',
+    description: 'API credentials and security configurations',
+    icon: 'Shield'
+  },
+
+  // ============================================================================
+  // FIELD DEFINITIONS
+  // ============================================================================
+  fields: [
+    {
+      key: 'id',
+      label: 'ID',
+      type: 'text',
+      required: true,
+      form: {
+        row: 1,
+        width: 'full',
+        showInForm: false
+      },
+      table: {
+        width: 'sm',
+        showInTable: false
+      }
+    },
+    {
+      key: 'name',
+      label: 'Name',
+      type: 'text',
+      required: true,
+      form: {
+        row: 1,
+        width: 'half'
+      },
+      table: {
+        width: 'lg',
+        showInTable: true
+      }
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'API_KEY', label: 'API Key' },
+        { value: 'TOKEN', label: 'Token' },
+        { value: 'CERTIFICATE', label: 'Certificate' },
+        { value: 'USERNAME_PASSWORD', label: 'Username/Password' },
+        { value: 'OAUTH2', label: 'OAuth2' },
+        { value: 'SAML', label: 'SAML' },
+        { value: 'CUSTOM', label: 'Custom' }
+      ],
+      form: {
+        row: 1,
+        width: 'half'
+      },
+      table: {
+        width: 'md',
+        showInTable: true
+      }
+    },
+    {
+      key: 'provider',
+      label: 'Provider',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'SABRE', label: 'Sabre' },
+        { value: 'AMADEUS', label: 'Amadeus' },
+        { value: 'TRAVELPORT', label: 'Travelport' },
+        { value: 'INTERNAL', label: 'Internal' },
+        { value: 'EXTERNAL', label: 'External' },
+        { value: 'CUSTOM', label: 'Custom' }
+      ],
+      form: {
+        row: 2,
+        width: 'half'
+      },
+      table: {
+        width: 'md',
+        showInTable: true
+      }
+    },
+    {
+      key: 'environment',
+      label: 'Environment',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'PRODUCTION', label: 'Production' },
+        { value: 'STAGING', label: 'Staging' },
+        { value: 'DEVELOPMENT', label: 'Development' },
+        { value: 'SANDBOX', label: 'Sandbox' }
+      ],
+      form: {
+        row: 2,
+        width: 'half'
+      },
+      table: {
+        width: 'md',
+        showInTable: true
+      }
+    },
+    {
+      key: 'isActive',
+      label: 'Active',
+      type: 'checkbox',
+      required: false,
+      defaultValue: true,
+      form: {
+        row: 3,
+        width: 'quarter'
+      },
+      table: {
+        width: 'sm',
+        showInTable: true
+      }
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      type: 'textarea',
+      required: false,
+      form: {
+        row: 4,
+        width: 'full'
+      },
+      table: {
+        width: 'xl',
+        showInTable: false
+      }
+    }
+  ],
+
+  // ============================================================================
+  // SEARCH CONFIGURATION
+  // ============================================================================
+  search: {
+    fields: ['name', 'description', 'type', 'provider'],
+    placeholder: 'Search credentials...'
+  },
+
+  // ============================================================================
+  // ACTION CONFIGURATION
+  // ============================================================================
+  actions: {
+    create: true,
+    read: true,
+    update: true,
+    delete: true,
+    optimistic: true, // Enable optimistic updates for instant UI
+    custom: [
+      {
+        id: 'test',
+        description: 'Test credential connectivity',
+        method: 'POST',
+        endpoint: '/api/credentials/{id}/test',
+        optimistic: false,
+        cached: false
+      },
+      {
+        id: 'rotate',
+        description: 'Rotate credential data',
+        method: 'POST',
+        endpoint: '/api/credentials/{id}/rotate',
+        optimistic: false,
+        cached: false
+      }
+    ]
+  },
+
+  // ============================================================================
+  // MOBILE/RESPONSIVE CONFIGURATION
+  // ============================================================================
+  mobile: {
+    cardFormat: 'compact',
+    primaryField: 'name',
+    secondaryFields: ['type', 'provider'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right'
+  },
+
+  // ============================================================================
+  // DESKTOP CONFIGURATION
+  // ============================================================================
+  desktop: {
+    sortField: 'name',
+    sortOrder: 'asc'
+  },
+
+  // ============================================================================
+  // INDEXEDDB CONFIGURATION
+  // ============================================================================
+  indexedDBKey: (record: any) => record.id
+}; 

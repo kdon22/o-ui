@@ -1,437 +1,216 @@
-# Feature Schema System - Complete Developer Guide
+# System Overview - Current Architecture & Data Flow
 
-**Schema-driven development with auto-generated components, forms, tables, and complete CRUD operations**
+**Complete guide to the actual system architecture, data flow, and key components**
 
 ## Table of Contents
 
-1. [System Overview](#system-overview)
-2. [Core Architecture](#core-architecture) 
-3. [Schema Lifecycle](#schema-lifecycle)
-4. [File Structure](#file-structure)
-5. [Quick Start](#quick-start)
-6. [Related Documentation](#related-documentation)
+1. [Architecture Overview](#architecture-overview)
+2. [Core System Components](#core-system-components)
+3. [Data Flow](#data-flow)
+4. [Background Bootstrap](#background-bootstrap)
+5. [Action System](#action-system)
+6. [IndexedDB Integration](#indexeddb-integration)
+7. [Branch-Aware Operations](#branch-aware-operations)
+8. [Junction System](#junction-system)
+9. [Performance Characteristics](#performance-characteristics)
+10. [Development Workflow](#development-workflow)
 
 ---
 
-## System Overview
+## Architecture Overview
 
-The Feature Schema System is the **Single Source of Truth (SSOT)** for all data structures, UI components, and business logic in the application. All behavior flows from the schema definitions under `src/features/**/**/*.schema.ts` and the central registry in `src/lib/resource-system/resource-registry.ts`.
+The system is built on a **schema-first, action-driven architecture** with these core principles:
 
-### **🎯 Core Benefits**
+### **🎯 Single Source of Truth (SSOT)**
+- **One ResourceSchema** → Everything else is auto-generated
+- **93 registered schemas** across 12+ feature directories
+- **400+ action mappings** auto-generated from schemas
+- **Zero configuration** for standard CRUD operations
 
-- **Zero-Code Development**: Define a schema → Get complete CRUD system
-- **Type Safety**: Full TypeScript support with auto-generated types
-- **Mobile-First**: Responsive forms, tables, and modals out of the box
-- **Offline-First**: IndexedDB caching with <50ms read performance
-- **Branch-Aware**: Complete workspace branching with Copy-on-Write
-- **Action System**: Optimistic updates with background sync
-- **DRY Principle**: One schema generates forms, tables, modals, and APIs
+### **⚡ Performance-First Design**
+- **<50ms IndexedDB reads** with offline-first strategy
+- **Background Bootstrap** loads critical resources without blocking UI
+- **Optimistic updates** with automatic rollback on failure
+- **Progressive enhancement** from mobile to desktop
 
-### **🔧 What Gets Auto-Generated**
-
-From a single `ResourceSchema`, the system automatically creates:
-
-```typescript
-// Single schema definition
-export const RULE_SCHEMA: ResourceSchema = {
-  databaseKey: 'rule',
-  modelName: 'Rule', 
-  actionPrefix: 'rule',
-  // ... field definitions
-};
-```
-
-**Auto-generates:**
-- ✅ **IndexedDB Store**: Optimized with compound keys and indexes
-- ✅ **API Endpoints**: RESTful endpoints with validation
-- ✅ **React Components**: AutoForm, AutoTable, AutoModal
-- ✅ **TypeScript Types**: Complete type definitions
-- ✅ **Action System**: CRUD operations with optimistic updates
-- ✅ **Validation**: Zod schemas with custom rules
-- ✅ **Navigation**: Tree structures and breadcrumbs
-- ✅ **Search**: Full-text search with filtering
-
-Notes:
-- Set `serverOnly` or `actions.serverOnly` in the schema to bypass local IndexedDB and force server paths for large resources.
-- Control optimistic updates with `actions.optimistic` (default enabled for CUD in generated mappings).
+### **🌿 Branch-Aware by Design**
+- **Complete workspace isolation** with Copy-on-Write semantics
+- **Tenant separation** built into every operation
+- **Automatic fallback** from current branch to default branch
+- **Junction table branching** with automatic relationship copying
 
 ---
 
-## Core Architecture
+## Core System Components
 
-### **1. Schema-First Development**
+### **1. Resource Registry** `src/lib/resource-system/resource-registry.ts`
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Schema File   │───▶│  Resource        │───▶│  Auto-Generated │
-│  rules.schema   │    │  Registry        │    │  Components     │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  TypeScript     │    │  Action System   │    │  UI Components  │
-│  Types          │    │  Integration     │    │  (Forms/Tables) │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-### **2. BULLETPROOF 3-FIELD DESIGN**
-
-Every schema follows this pattern:
+**The Central Hub** - Auto-discovers and registers all resource schemas:
 
 ```typescript
-export const YOUR_SCHEMA: ResourceSchema = {
-  // ============================================================================
-  // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
-  // ============================================================================
-  databaseKey: 'yourEntity',     // IndexedDB store + API endpoints
-  modelName: 'YourEntity',       // Prisma model access
-  actionPrefix: 'yourEntity',    // Action naming (yourEntity.create, etc.)
-  
-  // ... rest of configuration
-};
-
-Branching/tenant fields and audit fields should exist in models and be represented as fields where relevant:
-- `tenantId`, `branchId`, and optional `original<Entity>Id` for CoW lineage.
-- `createdAt`, `updatedAt`, `createdById`, `updatedById`, and `version` where applicable.
-```
-
-### **3. Auto-Discovery System**
-
-The system uses **auto-discovery** to find and register schemas:
-
-```typescript
-// src/lib/resource-system/resource-registry.ts
+// Auto-discovery process
 const SCHEMA_RESOURCES: ResourceSchema[] = [
-  BRANCH_SCHEMA,     // Auto-discovered from @/features/branches/branches.schema
-  NODE_SCHEMA,       // Auto-discovered from @/features/nodes/nodes.schema  
-  RULE_SCHEMA,       // Auto-discovered from @/features/rules/rules.schema
-  // ... all other schemas
+  BRANCH_SCHEMA,     // Core system schemas
+  NODE_SCHEMA,       // Business entities
+  PROCESS_SCHEMA,    // Workflow components
+  RULE_SCHEMA,       // Business logic
+  // ... 89 more schemas
 ];
 
-Junction auto-discovery:
-- Any `relationships` entry of type `'many-to-many'` with `junction.tableName` becomes a discovered junction.
-- Standalone junctions (e.g., `PROCESS_RULE_SCHEMA`) are imported and added explicitly for full schema metadata.
-```
-
----
-
-## Schema Lifecycle
-
-### **Phase 1: Schema Definition**
-```typescript
-// src/features/yourFeature/yourFeature.schema.ts
-export const YOUR_SCHEMA: ResourceSchema = {
-  databaseKey: 'yourEntity',
-  // ... complete configuration
+// Generates 400+ action mappings
+const actionMappings = {
+  'nodes.create': { store: 'nodes', method: 'POST', optimistic: true },
+  'nodes.list': { store: 'nodes', method: 'GET', cached: true },
+  'rules.create': { store: 'rules', method: 'POST', optimistic: true },
+  // ... auto-generated for all schemas
 };
-```
 
-### **Phase 2: Registration**
-```typescript
-// src/lib/resource-system/resource-registry.ts
-import { YOUR_SCHEMA } from '@/features/yourFeature/yourFeature.schema';
-
-const SCHEMA_RESOURCES: ResourceSchema[] = [
-  // ... existing schemas
-  YOUR_SCHEMA,  // Add your schema here
+// Creates IndexedDB store configurations
+const storeConfigs = [
+  { name: 'nodes', keyPath: 'id', indexes: [...] },
+  { name: 'rules', keyPath: 'id', indexes: [...] },
+  // ... auto-generated for all schemas
 ];
 ```
 
-### **Phase 3: Auto-Generation**
-- **IndexedDB Store**: Created automatically during app initialization
-- **API Routes**: Generated server-side action handlers
-- **React Components**: Available via `useResourceCreate`, `useResourceList`, etc.
-- **Types**: Auto-generated TypeScript interfaces
+**Key Features:**
+- Auto-discovery from imports
+- Action mapping generation
+- IndexedDB store configuration
+- Junction table discovery from relationships
+- Type-safe resource access
 
-Additionally:
-- **Action Mappings**: Generated for `create`, `update`, `delete`, `list`, `read` (+ custom actions), using the unified endpoint `/api/workspaces/current/actions`.
-- **Cache Strategy**: `cacheStrategy` and `serverOnly` influence client‑side storage and queries.
+### **2. Background Bootstrap** `src/components/providers/background-bootstrap.tsx`
 
-### **Phase 4: Usage**
-```tsx
-// Instant CRUD operations
-const { data: rules } = useResourceList('rule');
-const createRule = useResourceCreate('rule');
-const updateRule = useResourceUpdate('rule');
-
-// Auto-generated components
-<AutoForm schema={RULE_SCHEMA} mode="create" />
-<AutoTable schema={RULE_SCHEMA} />
-<AutoModal schema={RULE_SCHEMA} />
-```
-
-Branching best practices:
-- Updates to inherited items cause a CoW fork at the repository/service layer; ensure models have `original<Entity>Id` and queries include branch context.
-- Lists and reads use branch‑aware logic in the Action/Repository pipeline; UI simply passes `branchId` via context (TanStack Query + action hooks).
-
----
-
-## File Structure
-
-### **Required Files**
-
-```
-src/features/yourFeature/
-├── yourFeature.schema.ts     # ✅ REQUIRED - Main schema definition
-├── types.ts                  # ✅ REQUIRED - TypeScript type exports
-└── index.ts                  # ✅ REQUIRED - Public exports
-```
-
-### **Optional Files**
-
-```
-src/features/yourFeature/
-├── components/               # Custom components
-│   ├── your-modal.tsx       
-│   └── your-display.tsx     
-├── hooks/                   # Custom hooks
-│   └── use-your-actions.ts  
-├── services/                # Business logic
-│   └── your-service.ts      
-└── constants.ts             # Feature constants
-```
-
-### **Schema File Template**
+**Non-Blocking Initialization** - Loads resources without blocking UI rendering:
 
 ```typescript
-/**
- * YourFeature Schema - [Brief Description]
- * 
- * Single Source of Truth for:
- * - [List key responsibilities]
- * - [Auto-generated components]
- * - [Business logic]
- */
+// Critical resources loaded first (3s timeout each)
+const criticalResources = [
+  { type: 'branches', limit: 10 },
+  { type: 'nodes', limit: 50 }
+];
 
-import type { ResourceSchema } from '@/lib/resource-system/schemas';
-
-export const YOUR_SCHEMA: ResourceSchema = {
-  // ============================================================================
-  // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
-  // ============================================================================
-  databaseKey: 'yourEntity',       // IndexedDB store + API endpoints
-  modelName: 'YourEntity',         // Prisma model access  
-  actionPrefix: 'yourEntity',      // Action naming
-
-  // ============================================================================
-  // UI DISPLAY CONFIGURATION
-  // ============================================================================
-  display: {
-    title: 'Your Features',
-    description: 'Manage your features and configurations',
-    icon: 'settings',              // Lucide icon name
-    color: 'blue'                  // UI color theme
-  },
-
-  // ============================================================================
-  // FORM CONFIGURATION
-  // ============================================================================
-  form: {
-    width: 'md',                   // sm, md, lg, xl
-    layout: 'compact',             // compact, spacious
-    showDescriptions: true
-  },
-
-  // ============================================================================
-  // FIELD DEFINITIONS
-  // ============================================================================
-  fields: [
-    // See field-configuration.md for complete field options
-  ],
-
-  // ============================================================================
-  // ADDITIONAL CONFIGURATION
-  // ============================================================================
-  search: { /* search config */ },
-  actions: { /* actions config */ },
-  mobile: { /* mobile config */ },
-  desktop: { /* desktop config */ },
-  
-  // ✅ REQUIRED: IndexedDB key function
-  indexedDBKey: (record: any) => record.id
-};
-
-// ============================================================================
-// TYPE EXPORTS
-// ============================================================================
-export type YourEntity = {
-  id: string;
-  // ... other fields
-};
-
-export type CreateYourEntity = Omit<YourEntity, 'id' | 'createdAt' | 'updatedAt'>;
-export type UpdateYourEntity = Partial<Omit<YourEntity, 'id' | 'createdAt'>>;
-```
-
----
-
-## Quick Start
-
-### **Step 1: Create Schema File**
-
-```bash
-# Create feature directory
-mkdir src/features/products
-cd src/features/products
-```
-
-```typescript
-// src/features/products/products.schema.ts
-import type { ResourceSchema } from '@/lib/resource-system/schemas';
-
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  databaseKey: 'products',
-  modelName: 'Product', 
-  actionPrefix: 'products',
-  
-  display: {
-    title: 'Products',
-    description: 'Manage product catalog',
-    icon: 'package',
-    color: 'green'
-  },
-  
-  form: {
-    width: 'lg',
-    layout: 'compact',
-    showDescriptions: true
-  },
-  
-  fields: [
-    {
-      key: 'id',
-      label: 'ID',
-      type: 'text',
-      required: true,
-      autoValue: { source: 'auto.uuid', required: true }
-    },
-    {
-      key: 'name',
-      label: 'Product Name',
-      type: 'text',
-      required: true,
-      placeholder: 'Enter product name...',
-      form: { row: 1, width: 'full', order: 1, showInForm: true },
-      validation: [
-        { type: 'required', message: 'Product name is required' },
-        { type: 'maxLength', value: 100, message: 'Name too long' }
-      ]
-    },
-    // ... more fields
-  ],
-  
-  search: {
-    enabled: true,
-    fields: ['name', 'description'],
-    placeholder: 'Search products...'
-  },
-  
-  actions: {
-    create: true,
-    update: true,
-    delete: true,
-    list: true,
-    read: true
-  },
-  
-  mobile: { showInList: true, priority: 'high' },
-  desktop: { showInTable: true },
-  
-  indexedDBKey: (record: any) => record.id
-};
-
-export type Product = {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
-```
-
-### **Step 2: Register Schema**
-
-```typescript
-// src/lib/resource-system/resource-registry.ts
-import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
-
-const SCHEMA_RESOURCES: ResourceSchema[] = [
-  // ... existing schemas
-  PRODUCT_SCHEMA,  // Add your schema
+// Non-critical resources loaded in background
+const nonCriticalResources = [
+  'rules', 'processes', 'workflows', 'offices', 
+  'user', 'credential', 'communication'
 ];
 ```
 
-### **Step 3: Use Auto-Generated Components**
+**Architecture Benefits:**
+- **Never blocks UI** - UI renders immediately
+- **Fail-open strategy** - Shows offline indicator on failure
+- **Progressive loading** - Critical first, then background
+- **Timeout protection** - 3-5 second limits per resource
+- **Authentication-aware** - Skips bootstrap on auth pages
 
-```tsx
-// src/app/products/page.tsx
-import { AutoTable } from '@/components/auto-generated/table/auto-table';
-import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
+### **3. Action Client System** `src/lib/action-client/unified-action-client.ts`
 
-export default function ProductsPage() {
-  return (
-    <div className="p-6">
-      <h1>Products</h1>
-      <AutoTable schema={PRODUCT_SCHEMA} />
-    </div>
-  );
-}
+**The Data Layer** - Handles all CRUD operations with caching and branching:
+
+```typescript
+// Unified API for all resources
+await actionClient.executeAction({
+  action: 'rules.create',
+  data: { name: 'Validate Customer', type: 'BUSINESS' },
+  branchContext: { currentBranchId, tenantId, userId }
+});
+
+// Branch-aware reads with automatic fallback
+await actionClient.executeAction({
+  action: 'nodes.list',
+  data: { parentId: 'root' },
+  branchContext // Searches current branch + default branch
+});
 ```
 
-**Result**: Complete CRUD interface with:
-- ✅ Product listing table
-- ✅ Create product form
-- ✅ Edit product inline
-- ✅ Delete with confirmation
-- ✅ Search and filtering
-- ✅ Mobile-responsive design
-- ✅ Optimistic updates
-- ✅ Offline support
+**Key Capabilities:**
+- **IndexedDB-first reads** (<50ms performance)
+- **Optimistic updates** with rollback
+- **Branch-aware operations** with automatic fallback
+- **Tenant isolation** built-in
+- **Offline support** with sync queue
+- **Auto-value processing** (UUIDs, timestamps, user context)
+
+### **4. Auto-Generated Components** `src/components/auto-generated/`
+
+**Schema-Driven UI** - Components automatically generated from schemas:
+
+```typescript
+// AutoTable - Complete CRUD interface
+<AutoTable resourceKey="rules" />
+
+// AutoForm - Schema-driven forms with validation  
+<AutoForm schema={RULE_SCHEMA} mode="create" onSubmit={handleSubmit} />
+
+// AutoModal - Create/edit dialogs
+<AutoModal schema={RULE_SCHEMA} config={{ resource: 'rules', action: 'create' }} />
+
+// AutoTree - Hierarchical navigation
+<AutoTree resourceKey="nodes" onNodeSelect={handleSelect} />
+```
+
+**Generated Features:**
+- Mobile-first responsive design
+- Inline editing and bulk operations
+- Context menus and keyboard shortcuts
+- Search and filtering
+- Pagination and virtual scrolling
+- Form validation and error handling
 
 ---
 
-## Related Documentation
+## Data Flow
 
-### **Core Guides**
-- [Field Configuration Guide](./01-field-configuration.md) - Complete field options and validation
-- [Registration & Integration](./02-registration-integration.md) - How to register and integrate schemas
-- [Auto-Generated Components](./03-auto-generated-integration.md) - Using AutoForm, AutoTable, AutoModal
-- [Advanced Patterns](./04-advanced-patterns.md) - Relationships, junctions, and complex scenarios
-- [Examples & Recipes](./05-examples-recipes.md) - Real-world examples and code patterns
+### **Complete Request Lifecycle**
 
-### **Component Documentation**
-- [AutoForm Documentation](../auto-generated/auto-form.md) - Complete form system
-- [AutoTable Documentation](../auto-generated/auto-table.md) - Complete table system  
-- [Action System Guide](../action-system/) - Backend integration and API
+```
+1. User Interaction
+   │
+   ├── AutoForm.submit() / AutoTable.edit()
+   │
+2. Action Client
+   │
+   ├── executeAction('rules.create', data)
+   │   ├── Apply auto-values (UUID, tenantId, branchId)
+   │   ├── Optimistic IndexedDB update
+   │   └── Queue API call
+   │
+3. Server Action Router
+   │
+   ├── Parse action: 'rules.create' → { resource: 'rules', operation: 'create' }
+   │   ├── Get RULE_SCHEMA from registry
+   │   ├── Route to CreateHandler
+   │   └── Execute with Prisma
+   │
+4. Response & Sync
+   │
+   ├── Update IndexedDB with server response
+   │   ├── Auto-create junctions (if configured)
+   │   ├── Invalidate TanStack Query cache
+   │   └── Update UI optimistically
+```
 
-### **Architecture Guides**
-- [Resource System Architecture](../architecture/) - System design and patterns
-- [Data Flow Guide](../action-system/04-data-flow.md) - How data flows through the system
+### **Branch-Aware Read Flow**
 
----
+```
+1. Request: actionClient.executeAction('nodes.list', { parentId: 'root' })
+   │
+2. IndexedDB Query
+   │
+   ├── Search current branch: branchId = 'development'
+   │   └── Results: [node1, node2] (2 items found)
+   │
+   ├── Search default branch: branchId = 'main'  
+   │   └── Results: [node1, node3, node4] (3 items found)
+   │
+3. Merge Results (current takes precedence)
+   │
+   ├── Final results: [node1(dev), node2(dev), node3(main), node4(main)]
+   │   └── De-duplicate by originalNodeId || id
+   │
+4. Return to UI: 4 total nodes with proper branch context
+```
 
-## Key Principles
-
-### **1. Schema-First Development**
-Always start with the schema. Everything else is auto-generated from it.
-
-### **2. DRY (Don't Repeat Yourself)**
-One schema definition creates forms, tables, APIs, and types.
-
-### **3. Mobile-First Design**
-All auto-generated components are responsive and touch-optimized.
-
-### **4. Offline-First Performance**
-IndexedDB provides <50ms reads with background sync.
-
-### **5. Branch-Aware Operations**
-Complete workspace isolation with Copy-on-Write support.
-
-### **6. Type Safety**
-Full TypeScript support with generated types and validation.
-
----
-
-**Next**: Read [Field Configuration Guide](./01-field-configuration.md) to learn about all available field types and options.
+**Next**: Learn about [Field Configuration](./01-field-configuration.md) to design your schema fields and validation rules.

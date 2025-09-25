@@ -1,28 +1,65 @@
-# Schema Registration & Integration Guide
+# Registration & Integration Guide - Current Implementation
 
-**Complete guide for registering schemas and integrating with the action system, IndexedDB, and auto-generated components**
+**Complete guide for registering schemas and integrating with the action system, IndexedDB, and auto-generated components based on the actual current system**
 
 ## Table of Contents
 
-1. [Registration Process](#registration-process)
-2. [Auto-Discovery System](#auto-discovery-system)
-3. [Action System Integration](#action-system-integration)
-4. [IndexedDB Integration](#indexeddb-integration)
-5. [Server-Side Integration](#server-side-integration)
-6. [Junction Table Registration](#junction-table-registration)
-7. [Cache Invalidation Strategy](#cache-invalidation-strategy)
-8. [Troubleshooting](#troubleshooting)
-9. [Best Practices](#best-practices)
+1. [Registration Overview](#registration-overview)
+2. [Step-by-Step Registration Process](#step-by-step-registration-process)
+3. [Resource Registry Integration](#resource-registry-integration)
+4. [Action System Integration](#action-system-integration)
+5. [Background Bootstrap Integration](#background-bootstrap-integration)
+6. [IndexedDB Integration](#indexeddb-integration)
+7. [Junction Table Registration](#junction-table-registration)
+8. [Cache Invalidation Strategy](#cache-invalidation-strategy)
+9. [Server Integration](#server-integration)
+10. [Testing & Validation](#testing--validation)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Registration Process
+## Registration Overview
 
-### **Step-by-Step Registration**
+### **Current Architecture (Actual Implementation)**
 
-#### **Step 1: Create Schema File**
+The system uses a **centralized auto-discovery approach** where schemas are:
 
-Create your schema file in the appropriate feature directory:
+1. **Imported** in `src/lib/resource-system/resource-registry.ts`
+2. **Added** to the `SCHEMA_RESOURCES` array
+3. **Auto-processed** to generate action mappings, IndexedDB stores, and API routes
+4. **Loaded** by Background Bootstrap for offline-first performance
+
+### **93 Schemas Currently Registered**
+
+The system currently supports:
+- **Core entities**: nodes, processes, rules, offices, workflows
+- **System entities**: branches, sessions, users, credentials
+- **Tag system**: tag groups, tags, classes
+- **Table management**: data tables, table categories, table data
+- **Pull request system**: PRs, reviews, comments, settings
+- **Marketplace system**: packages, installations, subscriptions
+- **Queue system**: configs, messages, workers
+
+---
+
+## Step-by-Step Registration Process
+
+### **Step 1: Create Feature Directory Structure**
+
+```bash
+# Create feature directory
+mkdir src/features/products
+cd src/features/products
+
+# Create required files
+touch products.schema.ts    # Main schema definition
+touch types.ts             # TypeScript type exports
+touch index.ts             # Public exports
+```
+
+### **Step 2: Implement ResourceSchema**
+
+Create your schema file with the BULLETPROOF 3-FIELD DESIGN:
 
 ```typescript
 // src/features/products/products.schema.ts
@@ -30,35 +67,232 @@ import type { ResourceSchema } from '@/lib/resource-system/schemas';
 
 export const PRODUCT_SCHEMA: ResourceSchema = {
   // ✅ REQUIRED: BULLETPROOF 3-FIELD DESIGN
-  databaseKey: 'products',     // IndexedDB store + API endpoints
-  modelName: 'Product',        // Prisma model access
-  actionPrefix: 'products',    // Action naming (products.create, etc.)
-  
-  // ... rest of schema configuration
-  
-  // ✅ REQUIRED: IndexedDB key function
+  databaseKey: 'products',      // IndexedDB store + API endpoints
+  modelName: 'Product',         // Prisma model access
+  actionPrefix: 'products',     // Action naming (products.create, etc.)
+
+  // ✅ REQUIRED: Context configuration
+  // Leave defaults for standard entities with tenant/branch/audit
+  notHasTenantContext: false,   // Enable tenant filtering
+  notHasBranchContext: false,   // Enable branch filtering
+  notHasAuditFields: false,     // Enable audit fields
+
+  // ✅ Performance configuration (optional)
+  serverOnly: false,            // Use IndexedDB caching
+  cacheStrategy: 'indexeddb',   // Cache strategy
+
+  // ✅ UI Display Configuration
+  display: {
+    title: 'Products',
+    description: 'Manage product catalog',
+    icon: 'package',
+    color: 'blue'
+  },
+
+  // ✅ REQUIRED: Field Definitions
+  fields: [
+    // System fields (required for all schemas)
+    {
+      key: 'id',
+      label: 'ID',
+      type: 'text',
+      autoValue: { source: 'auto.uuid', required: true },
+      stripOn: { create: true, update: false },
+      form: { showInForm: false },
+      computed: true
+    },
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text',
+      autoValue: { source: 'session.user.tenantId', required: true },
+      form: { showInForm: false },
+      computed: true
+    },
+    {
+      key: 'branchId',
+      label: 'Branch ID',
+      type: 'text',
+      autoValue: { 
+        source: 'session.user.branchContext.currentBranchId',
+        fallback: 'main',
+        required: true 
+      },
+      form: { showInForm: false },
+      computed: true
+    },
+
+    // Custom business fields
+    {
+      key: 'name',
+      label: 'Product Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter product name...',
+      form: {
+        row: 1,
+        width: 'full',
+        order: 1,
+        showInForm: true
+      },
+      mobile: {
+        priority: 'high',
+        showInTable: true
+      },
+      desktop: {
+        showInTable: true,
+        tableWidth: 'lg'
+      },
+      validation: [
+        { type: 'required', message: 'Product name is required' },
+        { type: 'minLength', value: 3, message: 'Name must be at least 3 characters' }
+      ]
+    },
+
+    {
+      key: 'price',
+      label: 'Price',
+      type: 'currency',
+      required: true,
+      form: {
+        row: 2,
+        width: 'half',
+        order: 1,
+        showInForm: true
+      },
+      validation: [
+        { type: 'required', message: 'Price is required' },
+        { type: 'min', value: 0, message: 'Price must be positive' }
+      ]
+    },
+
+    {
+      key: 'categoryId',
+      label: 'Category',
+      type: 'select',
+      options: {
+        dynamic: {
+          resource: 'categories',
+          valueField: 'id',
+          labelField: 'name'
+        }
+      },
+      form: {
+        row: 2,
+        width: 'half',
+        order: 2,
+        showInForm: true
+      }
+    },
+
+    // Standard audit fields
+    {
+      key: 'createdAt',
+      label: 'Created At',
+      type: 'datetime',
+      computed: true,
+      form: { showInForm: false },
+      mobile: { showInTable: false },
+      desktop: { showInTable: true, tableWidth: 'sm' }
+    },
+
+    {
+      key: 'updatedAt',
+      label: 'Updated At',
+      type: 'datetime',
+      computed: true,
+      form: { showInForm: false },
+      mobile: { showInTable: false },
+      desktop: { showInTable: true, tableWidth: 'sm' }
+    }
+  ],
+
+  // ✅ Search Configuration
+  search: {
+    enabled: true,
+    fields: ['name', 'description'],
+    placeholder: 'Search products...'
+  },
+
+  // ✅ Actions Configuration
+  actions: {
+    create: true,
+    update: true,
+    delete: true,
+    list: true,
+    read: true,
+    optimistic: true  // Enable optimistic updates
+  },
+
+  // ✅ Mobile Configuration
+  mobile: {
+    cardFormat: 'compact',
+    primaryField: 'name',
+    secondaryFields: ['price', 'category'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right'
+  },
+
+  // ✅ Desktop Configuration
+  desktop: {
+    sortField: 'name',
+    sortOrder: 'asc',
+    editableField: 'name',
+    rowActions: true,
+    bulkActions: true,
+    density: 'compact'
+  },
+
+  // ✅ REQUIRED: IndexedDB Key Configuration
   indexedDBKey: (record: any) => record.id
 };
-
-// ✅ REQUIRED: Export TypeScript types
-export type Product = {
-  id: string;
-  name: string;
-  // ... other fields
-};
-
-export type CreateProduct = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
-export type UpdateProduct = Partial<Omit<Product, 'id' | 'createdAt'>>;
 ```
 
-#### **Step 2: Register in Resource Registry**
+### **Step 3: Export TypeScript Types**
 
-Add your schema to the central resource registry:
+```typescript
+// src/features/products/types.ts
+export interface Product {
+  id: string;
+  tenantId: string;
+  branchId: string;
+  name: string;
+  description?: string;
+  price: number;
+  categoryId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  createdById: string;
+  updatedById: string;
+}
+
+export type CreateProduct = Omit<Product, 'id' | 'tenantId' | 'branchId' | 'createdAt' | 'updatedAt' | 'createdById' | 'updatedById'>;
+
+export type UpdateProduct = Partial<Omit<Product, 'id' | 'tenantId' | 'branchId' | 'createdAt' | 'createdById'>>;
+```
+
+### **Step 4: Create Index File**
+
+```typescript
+// src/features/products/index.ts
+export { PRODUCT_SCHEMA } from './products.schema';
+export type { Product, CreateProduct, UpdateProduct } from './types';
+```
+
+---
+
+## Resource Registry Integration
+
+### **Step 5: Register in Resource Registry**
+
+Add your schema to the central registry:
 
 ```typescript
 // src/lib/resource-system/resource-registry.ts
 
-// ✅ ADD IMPORT
+// ✅ ADD IMPORT (alphabetical order)
 import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
 
 // ✅ ADD TO SCHEMA_RESOURCES ARRAY
@@ -67,96 +301,24 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   BRANCH_SCHEMA,
   SESSION_SCHEMA,
   NODE_SCHEMA,
-  PROCESS_SCHEMA,
-  RULE_SCHEMA,
   OFFICE_SCHEMA,
-  WORKFLOW_SCHEMA,
-  PROMPT_SCHEMA,
-  USER_SCHEMA,
+  PROCESS_SCHEMA,
   
-  // Tag System Entities
-  TAG_GROUP_SCHEMA,
-  TAG_SCHEMA,
-  CLASS_SCHEMA,
-  
-  // ✅ ADD YOUR SCHEMA HERE
+  // ✅ ADD YOUR SCHEMA HERE (alphabetical order)
   PRODUCT_SCHEMA,
+  
+  RULE_SCHEMA,
+  WORKFLOW_SCHEMA,
+  
+  // ... other schemas
 ];
 ```
 
-#### **Step 3: Create Index File**
+### **What Happens After Registration**
 
-Create an index file for clean exports:
+Once registered, the system automatically generates:
 
-```typescript
-// src/features/products/index.ts
-export { PRODUCT_SCHEMA } from './products.schema';
-export type { Product, CreateProduct, UpdateProduct } from './products.schema';
-```
-
-#### **Step 4: Add to Cache Invalidation Families**
-
-Add your resource to the appropriate cache invalidation family:
-
-```typescript
-// src/hooks/query/cache-invalidation.ts
-
-const RESOURCE_FAMILIES: Record<string, string[]> = {
-  // ... existing families
-  
-  // ✅ ADD YOUR RESOURCE TO APPROPRIATE FAMILY
-  // For simple, self-contained resources:
-  product: ['product'],
-  
-  // For resources with complex relationships:
-  product: ['product', 'category', 'productCategories', 'inventory'],
-  
-  // Or add to existing family if closely related:
-  rule: ['rule', 'process', 'processRules', 'ruleIgnores', 'node', 'product'], // If products relate to rules
-};
-```
-
-**Cache Invalidation Family Guidelines:**
-
-- **Simple entities** (office, user): `[resourceName]` only
-- **Complex entities** (rule, process, node): Include all related resources and junctions
-- **Junction tables**: Include all parent resources they connect
-
-#### **Step 5: Verify Registration**
-
-The system will automatically generate:
-
-- ✅ **IndexedDB Store**: `products` store with indexes
-- ✅ **Action Mappings**: `products.create`, `products.update`, `products.delete`, `products.list`, `products.read`
-- ✅ **API Endpoints**: `/api/workspaces/current/actions` handles all operations
-- ✅ **React Hooks**: `useResourceCreate('products')`, `useResourceList('products')`, etc.
-
----
-
-## Auto-Discovery System
-
-The system uses **auto-discovery** to find and register all schemas automatically.
-
-### **How Auto-Discovery Works**
-
-```typescript
-// 1. Import all schemas in resource-registry.ts
-import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
-
-// 2. Add to SCHEMA_RESOURCES array
-const SCHEMA_RESOURCES: ResourceSchema[] = [
-  PRODUCT_SCHEMA,  // Auto-discovered by system
-];
-
-// 3. System automatically generates everything else
-export const RESOURCE_REGISTRY = SCHEMA_RESOURCES;
-```
-
-### **What Gets Auto-Generated**
-
-From your schema registration, the system creates:
-
-#### **Action Mappings**
+#### **1. Action Mappings**
 ```typescript
 // Auto-generated action mappings
 const actionMappings = {
@@ -164,46 +326,34 @@ const actionMappings = {
     store: 'products',
     method: 'POST',
     endpoint: '/api/workspaces/current/actions',
+    requiresAuth: true,
+    cached: false,
     optimistic: true,
-    schema: PRODUCT_SCHEMA
-  },
-  'products.update': {
-    store: 'products', 
-    method: 'PUT',
-    endpoint: '/api/workspaces/current/actions',
-    optimistic: true,
-    schema: PRODUCT_SCHEMA
-  },
-  'products.delete': {
-    store: 'products',
-    method: 'DELETE', 
-    endpoint: '/api/workspaces/current/actions',
-    optimistic: true,
-    schema: PRODUCT_SCHEMA
+    schema: PRODUCT_SCHEMA,
+    resource: 'products'
   },
   'products.list': {
     store: 'products',
     method: 'GET',
     endpoint: '/api/workspaces/current/actions',
+    requiresAuth: true,
     cached: true,
-    schema: PRODUCT_SCHEMA
+    optimistic: false,
+    schema: PRODUCT_SCHEMA,
+    resource: 'products'
   },
-  'products.read': {
-    store: 'products',
-    method: 'GET',
-    endpoint: '/api/workspaces/current/actions', 
-    cached: true,
-    schema: PRODUCT_SCHEMA
-  }
+  'products.read': { /* ... */ },
+  'products.update': { /* ... */ },
+  'products.delete': { /* ... */ }
 };
 ```
 
-#### **IndexedDB Store Configuration**
+#### **2. IndexedDB Store Configuration**
 ```typescript
 // Auto-generated IndexedDB store
 const storeConfig = {
-  name: 'products',           // From databaseKey
-  keyPath: 'id',              // Uses 'id' as the primary key
+  name: 'products',
+  keyPath: undefined,  // Uses compound keys
   autoIncrement: false,
   indexes: [
     { name: 'idx_tenantId', keyPath: 'tenantId', unique: false },
@@ -214,89 +364,89 @@ const storeConfig = {
 };
 ```
 
+#### **3. React Hooks**
+```typescript
+// Automatically available hooks
+const { data: products } = useResourceList('products');
+const { data: product } = useResourceItem('products', 'product-123');
+const createProduct = useResourceCreate('products');
+const updateProduct = useResourceUpdate('products');
+const deleteProduct = useResourceDelete('products');
+```
+
 ---
 
 ## Action System Integration
 
-### **How Actions Are Generated**
+### **How Actions Work (Current Implementation)**
 
-The system automatically creates standard CRUD actions for every registered schema:
-
+#### **1. Action Naming Convention**
 ```typescript
-// Auto-generated actions for PRODUCT_SCHEMA
-const actions = ['create', 'update', 'delete', 'list', 'read'];
+// Format: {actionPrefix}.{operation}
+'products.create'   // Create product
+'products.read'     // Read single product  
+'products.update'   // Update product
+'products.delete'   // Delete product
+'products.list'     // List products
+```
 
-// Plus custom actions if defined in schema
-if (schema.actions?.custom) {
-  actions.push(...schema.actions.custom.map(action => action.id));
+#### **2. Unified API Endpoint**
+All actions go through a single endpoint:
+```typescript
+POST /api/workspaces/current/actions
+
+// Request format
+{
+  action: 'products.create',
+  data: { name: 'New Product', price: 99.99 },
+  options: { branchId: 'development', tenantId: 'tenant-123' }
 }
 ```
 
-### **Action Configuration Options**
-
-Control action behavior in your schema:
-
+#### **3. Action Client Integration**
 ```typescript
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  // ... other config
-  
-  actions: {
-    create: true,
-    update: true,
-    delete: true,
-    list: true,
-    read: true,
-    
-    // ✅ Control optimistic updates
-    optimistic: true,  // Enable optimistic updates for CUD operations
-    
-    // ✅ Add custom actions
-    custom: [
-      {
-        id: 'duplicate',
-        label: 'Duplicate Product',
-        handler: 'duplicateProduct',
-        icon: 'copy'
-      },
-      {
-        id: 'archive',
-        label: 'Archive Product', 
-        handler: 'archiveProduct',
-        icon: 'archive'
-      }
-    ]
+// Using the action client directly
+import { getActionClient } from '@/lib/action-client';
+
+const actionClient = getActionClient(tenantId, branchContext);
+
+const result = await actionClient.executeAction({
+  action: 'products.create',
+  data: { name: 'New Product', price: 99.99 },
+  branchContext: {
+    currentBranchId: 'development',
+    defaultBranchId: 'main',
+    tenantId: 'tenant-123',
+    userId: 'user-456'
   }
-};
+});
 ```
 
-### **Using Generated Actions**
-
-Once registered, use the actions via hooks:
-
+#### **4. React Hooks Integration**
 ```typescript
-// Auto-generated React hooks
-import { useResourceCreate, useResourceList, useResourceUpdate } from '@/hooks/use-action-api';
+// Using React hooks (recommended)
+import { useResourceCreate, useResourceList } from '@/hooks/query/resource-hooks';
 
 function ProductManager() {
-  // ✅ List products
-  const { data: products, isLoading } = useResourceList('products');
-  
-  // ✅ Create product
+  const { data: products } = useResourceList('products');
   const createProduct = useResourceCreate('products');
   
-  // ✅ Update product
-  const updateProduct = useResourceUpdate('products');
-  
-  // ✅ Delete product
-  const deleteProduct = useResourceDelete('products');
-  
-  const handleCreate = async (productData) => {
-    await createProduct.mutateAsync(productData);
+  const handleCreate = async () => {
+    await createProduct.mutateAsync({
+      name: 'New Product',
+      price: 99.99,
+      categoryId: 'category-123'
+    });
   };
   
   return (
     <div>
-      {/* Your UI here */}
+      {/* Products automatically loaded with caching */}
+      {products?.map(product => (
+        <div key={product.id}>{product.name}</div>
+      ))}
+      
+      <button onClick={handleCreate}>Create Product</button>
     </div>
   );
 }
@@ -304,172 +454,130 @@ function ProductManager() {
 
 ---
 
-## IndexedDB Integration
+## Background Bootstrap Integration
 
-### **Store Creation Process**
+### **How Background Bootstrap Works**
 
-When your schema is registered, the IndexedDB manager automatically:
+The Background Bootstrap component automatically loads your registered resources:
 
-1. **Creates Store**: Using `databaseKey` as store name
-2. **Sets Up Indexes**: Standard indexes for tenant, branch, timestamps
-3. **Configures Keys**: Uses compound keys or simple keys based on configuration
-4. **Handles Upgrades**: Manages database version upgrades
-
-### **IndexedDB Key Configuration**
-
-Every schema **must** define an `indexedDBKey` function:
-
+#### **Critical Resources** (Loaded First)
 ```typescript
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  // ... other config
-  
-  // ✅ REQUIRED: IndexedDB key function
-  indexedDBKey: (record: any) => record.id,  // Simple key
-  
-  // OR for compound keys
-  indexedDBKey: (record: any) => `${record.categoryId}:${record.id}`,
-  
-  // OR for junction tables
-  indexedDBKey: (record: any) => `${record.productId}:${record.tagId}`,
-};
+// From src/components/providers/background-bootstrap.tsx
+const criticalResources = [
+  { type: 'branches', limit: 10 },
+  { type: 'nodes', limit: 50 }
+];
 ```
 
-### **Store Configuration Examples**
-
-#### **Entity Store (Simple Key)**
+#### **Non-Critical Resources** (Background Loading)
 ```typescript
-// Products store configuration
+const nonCriticalResources = [
+  'rules', 'processes', 'workflows', 'offices', 
+  'user', 'credential', 'communication',
+  'products'  // Your new resource will be added here automatically
+];
+```
+
+### **Adding to Critical Resources**
+
+If your resource is essential for navigation, add it to critical resources:
+
+```typescript
+// src/components/providers/background-bootstrap.tsx
+
+// Add to critical resources if needed for navigation
+const criticalResources = [
+  { type: 'branches', limit: 10 },
+  { type: 'nodes', limit: 50 },
+  { type: 'products', limit: 100 }  // Add if critical
+];
+```
+
+### **Background Loading Process**
+
+```typescript
+// 1. Critical resources loaded with 3-second timeout each
+// 2. UI renders immediately (never blocked)
+// 3. Non-critical resources loaded in background with 5-second timeout each
+// 4. Resources cached in IndexedDB for offline access
+// 5. Progressive enhancement as resources become available
+```
+
+---
+
+## IndexedDB Integration
+
+### **Automatic Store Creation**
+
+Your registered schema automatically gets an IndexedDB store:
+
+#### **Store Configuration**
+```typescript
+// Auto-generated for PRODUCT_SCHEMA
 {
-  name: 'products',
-  keyPath: undefined,  // Uses compound keys
+  name: 'products',              // From databaseKey
+  keyPath: undefined,            // Uses compound keys via indexedDBKey
   autoIncrement: false,
   indexes: [
     { name: 'idx_tenantId', keyPath: 'tenantId', unique: false },
     { name: 'idx_branchId', keyPath: 'branchId', unique: false },
     { name: 'idx_createdAt', keyPath: 'createdAt', unique: false },
     { name: 'idx_updatedAt', keyPath: 'updatedAt', unique: false },
-    { name: 'idx_name', keyPath: 'name', unique: false }  // Custom index
+    // Additional indexes based on field configuration
+    { name: 'idx_name', keyPath: 'name', unique: false },
+    { name: 'idx_categoryId', keyPath: 'categoryId', unique: false }
   ]
 }
 ```
 
-#### **Junction Store (Compound Key)**
+#### **Key Generation**
 ```typescript
-// ProductTags junction store configuration  
-{
-  name: 'productTags',
-  keyPath: undefined,  // Uses compound keys
-  autoIncrement: false,
-  indexes: [
-    { name: 'idx_productId', keyPath: 'productId', unique: false },
-    { name: 'idx_tagId', keyPath: 'tagId', unique: false },
-    { name: 'idx_tenantId', keyPath: 'tenantId', unique: false },
-    { name: 'idx_branchId', keyPath: 'branchId', unique: false }
-  ]
-}
+// Simple entity key (most common)
+indexedDBKey: (record: any) => record.id
+
+// Compound key for junctions
+indexedDBKey: (record: any) => `${record.productId}:${record.categoryId}`
+
+// Branch-aware key (if needed)
+indexedDBKey: (record: any) => `${record.id}:${record.branchId}`
 ```
 
-### **Performance Optimization**
+### **Performance Characteristics**
 
-The IndexedDB integration provides:
+- **<50ms reads** from IndexedDB cache
+- **Automatic indexing** on tenant, branch, timestamps
+- **Batch operations** for large datasets
+- **Branch-aware queries** with automatic fallback
 
-- ✅ **<50ms Reads**: Optimized compound keys and indexes
-- ✅ **Batch Operations**: Efficient bulk inserts and updates
-- ✅ **Branch Awareness**: Automatic branch context handling
-- ✅ **Tenant Isolation**: Complete tenant data separation
-
----
-
-## Server-Side Integration
-
-### **API Endpoint Generation**
-
-All registered schemas automatically work with the unified API endpoint:
+### **Cache-First Strategy**
 
 ```typescript
-// Single endpoint handles all operations
-POST /api/workspaces/current/actions
+// Read hierarchy (fastest to slowest)
+1. IndexedDB (local cache)     // <50ms
+2. Server API (if cache miss)  // 100-500ms
+3. Offline fallback           // Show cached + offline indicator
+
+// Write strategy
+1. Optimistic IndexedDB update  // Instant UI feedback
+2. Queue server operation      // Background sync
+3. Update with server response // Reconcile differences
+4. Rollback on error          // Automatic error recovery
 ```
-
-### **Action Router Integration**
-
-The server-side action router automatically handles your schema:
-
-```typescript
-// src/lib/server/action-system/action-router.ts
-
-// Auto-discovers your schema from resource registry
-const schema = getResourceSchema(resourceType);  // Finds PRODUCT_SCHEMA
-
-// Handles all CRUD operations
-switch (operation) {
-  case 'create':
-    return await this.prismaService.create(resourceType, data, options);
-  case 'update':
-    return await this.prismaService.update(resourceType, data, options);
-  case 'delete':
-    return await this.prismaService.delete(resourceType, data.id, options);
-  case 'list':
-    return await this.prismaService.list(resourceType, options);
-  case 'read':
-    return await this.prismaService.read(resourceType, data.id, options);
-}
-```
-
-### **Prisma Integration (Models + Branching Fields)**
-
-Your schema integrates with Prisma models:
-
-```typescript
-// Prisma schema (schema.prisma)
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Float
-  categoryId  String?
-  tenantId    String
-  branchId    String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdById String?
-  updatedById String?
-  originalProductId String?  // Link to original if branched
-  
-  // Relationships
-  category    Category? @relation(fields: [categoryId], references: [id])
-  tags        ProductTag[]
-  
-  @@map("products")  // Table name matches databaseKey
-  @@index([tenantId])
-  @@index([branchId])
-  @@index([originalProductId])
-}
-```
-
-Run prisma generate after updating schema:
-
-```bash
-npx prisma generate
-```
-
-If adding a new model/table, create a migration and apply it as appropriate.
 
 ---
 
 ## Junction Table Registration
 
-### **Two Registration Methods**
+### **Two Approaches for Junction Tables**
 
-#### **Method 1: Embedded in Entity Schema (Recommended)**
+#### **Method 1: Embedded Relationships (Recommended)**
 
-Define junction relationships within your main entity schema:
+Define relationships in your main entity schema:
 
 ```typescript
 export const PRODUCT_SCHEMA: ResourceSchema = {
-  // ... main config
-  
+  // ... main configuration
+
   relationships: {
     tags: {
       type: 'many-to-many',
@@ -480,6 +588,12 @@ export const PRODUCT_SCHEMA: ResourceSchema = {
         field: 'productId',
         relatedField: 'tagId'
       }
+    },
+    category: {
+      type: 'many-to-one',
+      relatedEntity: 'categories',
+      foreignKey: 'categoryId',
+      description: 'Product category'
     }
   }
 };
@@ -487,46 +601,66 @@ export const PRODUCT_SCHEMA: ResourceSchema = {
 
 #### **Method 2: Standalone Junction Schema**
 
-Create a separate junction schema:
+For complex junctions with additional fields:
 
 ```typescript
 // src/features/products/products.schema.ts
 
-// Junction schema for ProductTag relationship
 export const PRODUCT_TAG_SCHEMA = {
   databaseKey: 'productTags',
   modelName: 'ProductTag',
   actionPrefix: 'productTags',
-  schema: ProductTagZodSchema,
-  relations: ['product', 'tag', 'branch'],
-  primaryKey: ['id'],
   
-  // ✅ Junction-specific configuration
-  indexedDBKey: (record: ProductTag) => `${record.productId}:${record.tagId}`,
+  fields: [
+    { key: 'id', autoValue: { source: 'auto.uuid', required: true } },
+    { key: 'productId', required: true },
+    { key: 'tagId', required: true },
+    { key: 'order', type: 'number', defaultValue: 0 },
+    { key: 'isActive', type: 'switch', defaultValue: true }
+  ],
+  
+  indexedDBKey: (record) => `${record.productId}:${record.tagId}`,
   
   junctionConfig: {
     autoCreateOnParentCreate: true,
     navigationContext: {
-      productId: 'string',  // If productId provided, create ProductTag
-      tagId: 'string'       // If tagId provided, create ProductTag
+      productId: 'string',
+      tagId: 'string'
     },
     defaults: {
+      order: 0,
       isActive: true
     }
   }
 };
 
-// Register in resource-registry.ts by importing and
-// including in the explicit junction schemas array.
+// Register separately in resource-registry.ts
+const STANDALONE_JUNCTION_SCHEMAS = [
+  PROCESS_RULE_SCHEMA,
+  RULE_IGNORE_SCHEMA,
+  NODE_PROCESS_SCHEMA,
+  PRODUCT_TAG_SCHEMA  // Add your junction schema
+];
 ```
 
-### **Junction Auto-Discovery**
+### **Junction Auto-Creation**
 
-The system automatically discovers junction tables from:
+Junctions are automatically created when entities are created with navigation context:
 
-1. **Relationship definitions** in entity schemas
-2. **Standalone junction schemas** in the registry
-3. **Pattern matching** on table names (e.g., `productTags`, `userRoles`)
+```typescript
+// User creates product from category page
+<AutoForm 
+  schema={PRODUCT_SCHEMA}
+  mode="create"
+  navigationContext={{ categoryId: 'category-123' }}  // Context from page
+/>
+
+// System automatically:
+// 1. Creates product
+// 2. Detects categoryId in navigation context
+// 3. Creates productCategories junction (if configured)
+// 4. Links product to category
+```
 
 ---
 
@@ -534,83 +668,218 @@ The system automatically discovers junction tables from:
 
 ### **Resource Family Approach**
 
-The system uses a **Resource Family** cache invalidation strategy - the same approach used by companies like Stripe, Shopify, and Linear for 100% reliability.
+The system uses the industry-standard **Resource Family** cache invalidation strategy:
 
-#### **How It Works**
-
-When any resource changes, the system invalidates all related resources in the same "family":
-
-```typescript
-// Example: When a rule is created/updated/deleted
-// The entire rule family gets invalidated:
-rule: ['rule', 'process', 'processRules', 'ruleIgnores', 'node']
-```
-
-#### **Family Categories**
-
-**🔥 Complex Business Entities** (with junctions and relationships):
-```typescript
-rule: ['rule', 'process', 'processRules', 'ruleIgnores', 'node'],
-process: ['process', 'rule', 'processRules', 'nodeProcesses', 'node'],
-node: ['node', 'process', 'nodeProcesses', 'rule'],
-```
-
-**✅ Simple Self-Contained Entities**:
-```typescript
-office: ['office'],
-user: ['user', 'userGroups', 'userTenants'],
-```
-
-**🔗 Junction Tables** (always invalidate parents):
-```typescript
-processRules: ['rule', 'process', 'processRules', 'node'],
-nodeProcesses: ['node', 'process', 'nodeProcesses', 'rule'],
-```
-
-#### **Smart Invalidation Logic**
-
-The system automatically chooses the right strategy:
-
-```typescript
-// Complex operations (junction auto-creation, navigation context)
-→ Nuclear invalidation (invalidate everything)
-
-// Simple operations (basic CRUD)  
-→ Family invalidation (invalidate resource family)
-```
-
-#### **Adding New Resources**
-
-When adding a new resource, **always** add it to `RESOURCE_FAMILIES`:
+#### **Add Your Resource to Cache Families**
 
 ```typescript
 // src/hooks/query/cache-invalidation.ts
+
 const RESOURCE_FAMILIES: Record<string, string[]> = {
-  // ✅ ADD YOUR NEW RESOURCE
-  yourNewResource: ['yourNewResource'], // Simple entity
+  // Existing families
+  rule: ['rule', 'process', 'processRules', 'ruleIgnores', 'node'],
+  process: ['process', 'rule', 'processRules', 'nodeProcesses', 'node'],
   
-  // OR include related resources for complex entities
-  yourComplexResource: ['yourComplexResource', 'relatedResource', 'junctionTable'],
+  // ✅ ADD YOUR RESOURCE FAMILY
+  // Simple entity (no complex relationships)
+  product: ['product'],
+  
+  // Complex entity (with relationships)
+  product: ['product', 'category', 'productTags', 'productCategories', 'tag'],
+  
+  // Junction table (always invalidate parents)
+  productTags: ['product', 'tag', 'productTags'],
+  productCategories: ['product', 'category', 'productCategories']
 };
 ```
 
-#### **Benefits of This Approach**
+#### **How Cache Invalidation Works**
 
-- ✅ **100% Reliable**: Never misses cache invalidations
-- ✅ **Simple**: Easy to understand and debug  
-- ✅ **Maintainable**: Just add resources to families
-- ✅ **Battle-Tested**: Used by major companies
-- ✅ **Performance**: TanStack Query handles debouncing efficiently
+```typescript
+// When any product changes, entire product family gets invalidated
+// This ensures 100% reliability - no missed cache updates
 
-#### **When to Use Nuclear Invalidation**
+// Example: Product updated
+await updateProduct.mutateAsync({ id: 'prod-123', name: 'New Name' });
 
-The system automatically uses nuclear invalidation (invalidate everything) for:
+// System automatically invalidates:
+// - All product queries
+// - All category queries (if in family)
+// - All junction table queries (if in family)
+// - Related tag queries (if in family)
+```
 
-- Junction auto-creation operations
-- Operations with navigation context
-- Custom complex operations
+#### **Why This Approach**
 
-This ensures 100% reliability for complex scenarios while maintaining performance for simple operations.
+- ✅ **100% Reliable** - Never misses cache invalidations
+- ✅ **Battle-tested** - Used by Stripe, Shopify, Linear
+- ✅ **Simple** - Easy to understand and maintain
+- ✅ **Fast** - TanStack Query handles debouncing efficiently
+
+---
+
+## Server Integration
+
+### **Prisma Model Integration**
+
+Add your Prisma model to support server-side persistence:
+
+```typescript
+// prisma/schema.prisma
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  categoryId  String?
+  
+  // Standard branching fields
+  tenantId    String
+  branchId    String
+  originalProductId String?  // Link to original if branched
+  
+  // Standard audit fields
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  updatedBy   String
+  version     Int      @default(1)
+  
+  // Relationships
+  category    Category? @relation(fields: [categoryId], references: [id])
+  tags        ProductTag[]
+  
+  @@map("products")  // Table name matches databaseKey
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([originalProductId])
+  @@index([name])
+}
+```
+
+### **Run Database Migration**
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Create migration (if adding new model)
+npx prisma migrate dev --name add-products
+
+# Apply migration to production
+npx prisma migrate deploy
+```
+
+### **Server Action Router Integration**
+
+The server automatically handles your schema through the unified action router:
+
+```typescript
+// src/lib/server/action-system/core/action-router-core.ts
+
+// 1. Parse action: 'products.create' → { resourceType: 'products', operation: 'create' }
+const parsedAction = parseAction('products.create');
+
+// 2. Get schema from registry
+const schema = getResourceSchema('products');  // Returns PRODUCT_SCHEMA
+
+// 3. Route to handler
+const handler = handlerFactory.getHandler('create', 'products');
+
+// 4. Execute with Prisma
+const result = await handler.execute(data, context);
+```
+
+---
+
+## Testing & Validation
+
+### **Step 6: Create Test Page**
+
+Create a test page to validate your schema registration:
+
+```typescript
+// src/app/products/test/page.tsx
+import { AutoTable } from '@/components/auto-generated/table/auto-table';
+import { AutoForm } from '@/components/auto-generated/form/auto-form';
+import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
+
+export default function ProductsTestPage() {
+  const handleSubmit = async (data: any) => {
+    console.log('Product created:', data);
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">Products Test</h1>
+      
+      {/* Test AutoTable */}
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Products Table</h2>
+        <AutoTable resourceKey="products" />
+      </section>
+      
+      {/* Test AutoForm */}
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Create Product Form</h2>
+        <AutoForm
+          schema={PRODUCT_SCHEMA}
+          mode="create"
+          onSubmit={handleSubmit}
+          onCancel={() => console.log('Cancelled')}
+        />
+      </section>
+    </div>
+  );
+}
+```
+
+### **Validation Checklist**
+
+- [ ] **Schema Registration**: Product shows up in resource registry
+- [ ] **IndexedDB Store**: Product store created in browser dev tools
+- [ ] **Background Bootstrap**: Products loaded on app initialization
+- [ ] **AutoTable**: Shows products in table with proper columns
+- [ ] **AutoForm**: Creates products with validation
+- [ ] **Action Hooks**: `useResourceList('products')` works
+- [ ] **Cache Invalidation**: Updates refresh table automatically
+- [ ] **Mobile Responsive**: Works on mobile devices
+- [ ] **Offline Support**: Works without network connection
+- [ ] **Branch Awareness**: Works when switching branches
+
+### **Debug Tools**
+
+#### **Check Schema Registration**
+```typescript
+// Browser console
+import { RESOURCE_REGISTRY } from '@/lib/resource-system/resource-registry';
+console.log('Available resources:', RESOURCE_REGISTRY.map(s => s.actionPrefix));
+console.log('Product schema:', RESOURCE_REGISTRY.find(s => s.actionPrefix === 'products'));
+```
+
+#### **Check Action Mappings**
+```typescript
+// Browser console  
+import { getActionMappings } from '@/lib/resource-system/resource-registry';
+const actions = getActionMappings();
+console.log('Product actions:', Object.keys(actions).filter(key => key.startsWith('products.')));
+```
+
+#### **Check IndexedDB**
+```typescript
+// Browser dev tools → Application → IndexedDB
+// Look for 'ActionClientDB' database
+// Should contain 'products' store
+```
+
+#### **Check Background Bootstrap**
+```typescript
+// Browser console - look for bootstrap logs
+// "✅ [BackgroundBootstrap] Starting bootstrap"
+// "✅ [Bootstrap] products loaded"
+```
 
 ---
 
@@ -624,264 +893,186 @@ This ensures 100% reliability for complex scenarios while maintaining performanc
 // ❌ Problem: Schema not registered
 Error: Store products not found
 
-// ✅ Solution: Check registration
-// 1. Verify import in resource-registry.ts
+// ✅ Solution: Check registration steps
+// 1. Schema imported in resource-registry.ts?
 import { PRODUCT_SCHEMA } from '@/features/products/products.schema';
 
-// 2. Verify schema in SCHEMA_RESOURCES array
+// 2. Schema added to SCHEMA_RESOURCES array?
 const SCHEMA_RESOURCES: ResourceSchema[] = [
   PRODUCT_SCHEMA,  // ✅ Must be here
 ];
 
-// 3. Verify indexedDBKey function exists
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  // ...
-  indexedDBKey: (record: any) => record.id  // ✅ Required
-};
+// 3. indexedDBKey function defined?
+indexedDBKey: (record: any) => record.id  // ✅ Required
 ```
 
 #### **Issue: Actions Not Working**
 
 ```typescript
-// ❌ Problem: Action mapping not found
+// ❌ Problem: Actions not enabled
 Error: Action products.create not found
 
-// ✅ Solution: Check action configuration
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  // ...
-  actions: {
-    create: true,  // ✅ Must be enabled
-    update: true,
-    delete: true,
-    list: true,
-    read: true
-  }
-};
+// ✅ Solution: Check actions configuration
+actions: {
+  create: true,  // ✅ Must be enabled
+  update: true,
+  delete: true,
+  list: true,
+  read: true
+}
 ```
 
-#### **Issue: TypeScript Errors**
+#### **Issue: Form Fields Not Showing**
 
 ```typescript
-// ❌ Problem: Missing required properties
-Property 'databaseKey' is missing in type
+// ❌ Problem: Form configuration missing
+// Field shows in schema but not in AutoForm
 
-// ✅ Solution: Follow BULLETPROOF 3-FIELD DESIGN
-export const PRODUCT_SCHEMA: ResourceSchema = {
-  databaseKey: 'products',     // ✅ Required
-  modelName: 'Product',        // ✅ Required  
-  actionPrefix: 'products',    // ✅ Required
-  // ...
-  indexedDBKey: (record: any) => record.id  // ✅ Required
+// ✅ Solution: Add form configuration
+{
+  key: 'name',
+  form: {
+    row: 1,
+    width: 'full',
+    order: 1,
+    showInForm: true  // ✅ Required to show in form
+  }
+}
+```
+
+#### **Issue: Table Columns Missing**
+
+```typescript
+// ❌ Problem: Display configuration missing  
+// Field shows in schema but not in AutoTable
+
+// ✅ Solution: Add mobile/desktop configuration
+{
+  key: 'name',
+  mobile: {
+    priority: 'high',
+    showInTable: true  // ✅ Required for mobile
+  },
+  desktop: {
+    showInTable: true  // ✅ Required for desktop
+  }
+}
+```
+
+#### **Issue: Background Bootstrap Not Loading**
+
+```bash
+# Check browser console for bootstrap logs
+# Should see: "✅ [BackgroundBootstrap] Starting bootstrap"
+
+# If not loading, check:
+# 1. Is user authenticated?
+# 2. Is tenantId available in session?
+# 3. Are you on an auth page (bootstrap skipped)?
+# 4. Check for JavaScript errors blocking bootstrap
+```
+
+#### **Issue: Cache Not Invalidating**
+
+```typescript
+// ❌ Problem: Resource not in cache family
+// Updates don't refresh other queries
+
+// ✅ Solution: Add to cache invalidation families
+// src/hooks/query/cache-invalidation.ts
+const RESOURCE_FAMILIES: Record<string, string[]> = {
+  product: ['product', 'category'],  // ✅ Add your resource
 };
 ```
 
-### **Debugging Registration**
+### **Debug Components**
 
-Use the debug component to verify registration:
+Use these temporary components to debug registration issues:
 
 ```typescript
 // Temporary debug component
-import { getIndexedDBStoreConfigs } from '@/lib/resource-system/resource-registry';
-
-function DebugRegistration() {
+function RegistrationDebug() {
   const stores = getIndexedDBStoreConfigs();
   const productStore = stores.find(s => s.name === 'products');
   
   return (
-    <div>
+    <div className="p-4 bg-gray-100 rounded">
       <h3>Registration Debug</h3>
       <p>Product store found: {productStore ? '✅ Yes' : '❌ No'}</p>
       <p>Total stores: {stores.length}</p>
-      <ul>
-        {stores.map(store => (
-          <li key={store.name}>{store.name}</li>
-        ))}
-      </ul>
+      <details>
+        <summary>All registered stores</summary>
+        <ul className="list-disc ml-4">
+          {stores.map(store => (
+            <li key={store.name}>{store.name}</li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }
 ```
 
----
-
-## Best Practices
-
-### **1. Follow Naming Conventions**
+### **Performance Debugging**
 
 ```typescript
-// ✅ Good: Consistent naming
-databaseKey: 'products',      // Plural, lowercase
-modelName: 'Product',         // Singular, PascalCase
-actionPrefix: 'products',     // Same as databaseKey
+// Check background bootstrap performance
+// Browser dev tools → Network → Disable cache
+// Look for /api/workspaces/current/actions requests
+// Should be <500ms per resource
 
-// ❌ Bad: Inconsistent naming
-databaseKey: 'product',       // Inconsistent
-modelName: 'product',         // Wrong case
-actionPrefix: 'productActions' // Too verbose
-```
-
-### **2. Use Standard Field Patterns**
-
-```typescript
-// ✅ Standard system fields in every schema
-fields: [
-  // Core identity
-  { key: 'id', autoValue: { source: 'auto.uuid', required: true } },
-  
-  // Tenant/branch context
-  { key: 'tenantId', autoValue: { source: 'session.user.tenantId', required: true } },
-  { key: 'branchId', autoValue: { source: 'session.user.branchContext.currentBranchId', required: true } },
-  
-  // Audit fields
-  { key: 'createdAt', type: 'date', computed: true },
-  { key: 'updatedAt', type: 'date', computed: true },
-  { key: 'createdById', autoValue: { source: 'session.user.id' } },
-  { key: 'updatedById', autoValue: { source: 'session.user.id' } },
-  
-  // Your custom fields...
-]
-```
-
-### **3. Define Clear Relationships**
-
-```typescript
-// ✅ Clear relationship definitions
-relationships: {
-  category: {
-    type: 'many-to-one',
-    relatedEntity: 'categories',
-    foreignKey: 'categoryId',
-    displayInForm: true,
-    displayInDetail: true
-  },
-  tags: {
-    type: 'many-to-many',
-    relatedEntity: 'tags',
-    junction: {
-      tableName: 'productTags',
-      field: 'productId',
-      relatedField: 'tagId'
-    },
-    displayInDetail: true
-  }
-}
-```
-
-### **4. Organize Schema Files**
-
-```typescript
-// ✅ Well-organized schema file structure
-src/features/products/
-├── products.schema.ts        # Main schema
-├── types.ts                  # TypeScript types
-├── index.ts                  # Public exports
-├── components/               # Custom components
-│   ├── product-modal.tsx
-│   └── product-display.tsx
-└── hooks/                    # Custom hooks
-    └── use-product-actions.ts
-```
-
-### **5. Test Registration**
-
-Always test your schema registration:
-
-```typescript
-// Test in your component
-function TestProductSchema() {
-  const { data: products } = useResourceList('products');
-  const createProduct = useResourceCreate('products');
-  
-  // If this works, registration is successful
-  const handleCreate = () => {
-    createProduct.mutate({
-      name: 'Test Product',
-      price: 99.99
-    });
-  };
-  
-  return <button onClick={handleCreate}>Test Create</button>;
-}
+// Check IndexedDB performance  
+// Browser dev tools → Console
+// Look for "[ActionClient] IndexedDB read" logs
+// Should be <50ms per query
 ```
 
 ---
 
-## Repository & Dependency Injection (Backend Usage)
-
-When adding new entities that require services (tree, relationships, versioning), ensure the repository factory wires dependencies:
-
-- Update `src/lib/database/repositories/RepositoryFactory.ts` to create your repository with required services (e.g., `VersioningService`, relationship services) and shared Prisma client.
-- Follow the existing patterns for `WorkflowRepository`, `NodeRepository`, etc. as references.
-- Repositories must accept a `BranchContext` and implement fallback + Copy‑on‑Write as per the refactoring rules.
-
-Server routes and actions should resolve repositories through the factory. Keep service instantiation centralized in the factory.
-
----
-
-## Start‑to‑Finish New Schema Checklist
-
-1) Prisma model
-- Add model with `tenantId`, `branchId`, optional `original<Entity>Id`.
-- Add indexes for `tenantId`, `branchId`, `original<Entity>Id`.
-- Run `npx prisma generate`.
-
-2) Schema file
-- Create `<feature>.schema.ts` implementing `ResourceSchema`.
-- Define `fields`, `search`, `actions`, and `indexedDBKey`.
-- Define `relationships` (M2M junctions discovered via `junction.tableName`).
-
-3) Register schema
-- Import in `src/lib/resource-system/resource-registry.ts` and add to `SCHEMA_RESOURCES`.
-
-4) Cache invalidation
-- Add/extend resource family in `src/hooks/query/cache-invalidation.ts` if needed.
-
-5) Repository/DI (if needed)
-- Add repository class or extend existing.
-- Wire dependencies in `RepositoryFactory.ts`.
-
-6) Verify UI
-- Use `useResourceList/read/create/update/delete` hooks.
-- Use `AutoTable`, `AutoForm`, `AutoModal` as needed.
-
-7) Junctions
-- Prefer embedded M2M relationships; add standalone junction schema only when necessary and register explicitly.
-
-8) Performance/Server‑Only
-- For large resources, set `serverOnly` or `actions.serverOnly` in the schema.
-
----
-
-## Registration Checklist
+## Complete Registration Checklist
 
 ### **Pre-Registration**
-- [ ] Schema file created in correct feature directory
+- [ ] Feature directory created (`src/features/yourFeature/`)
+- [ ] Schema file created with ResourceSchema interface
 - [ ] BULLETPROOF 3-FIELD DESIGN implemented
-- [ ] `indexedDBKey` function defined
-- [ ] All required fields have proper configuration
+- [ ] System fields included (id, tenantId, branchId, audit fields)
+- [ ] All business fields have form/table configuration
+- [ ] Validation rules defined where needed
+- [ ] indexedDBKey function implemented
 - [ ] TypeScript types exported
 
 ### **Registration**
 - [ ] Schema imported in `resource-registry.ts`
-- [ ] Schema added to `SCHEMA_RESOURCES` array
-- [ ] Junction schemas registered (if applicable)
+- [ ] Schema added to `SCHEMA_RESOURCES` array  
+- [ ] Junction relationships defined (if applicable)
+- [ ] Cache invalidation family configured
 - [ ] Index file created for clean exports
 
-### **Post-Registration**
-- [ ] No TypeScript compilation errors
-- [ ] IndexedDB store created successfully
-- [ ] Action hooks work correctly
-- [ ] Auto-generated components function
-- [ ] Junction relationships work (if applicable)
+### **Server Integration**
+- [ ] Prisma model created with branching fields
+- [ ] Database migration created and applied
+- [ ] `npx prisma generate` executed
 
 ### **Testing**
-- [ ] Create operation works
-- [ ] Read/List operations work
-- [ ] Update operation works
-- [ ] Delete operation works
-- [ ] Offline functionality works
-- [ ] Branch operations work
+- [ ] Test page created with AutoTable and AutoForm
+- [ ] Schema registration verified (debug tools)
+- [ ] IndexedDB store created successfully
+- [ ] Background Bootstrap loads resource
+- [ ] Action hooks work (`useResourceList`, `useResourceCreate`)
+- [ ] CRUD operations work end-to-end
+- [ ] Mobile responsiveness verified
+- [ ] Offline functionality tested
+- [ ] Branch switching tested (if applicable)
+- [ ] Junction relationships tested (if applicable)
+
+### **Production Readiness**
+- [ ] Error handling implemented
+- [ ] Loading states handled
+- [ ] Form validation working
+- [ ] Performance optimized
+- [ ] Security considerations reviewed
+- [ ] Documentation updated
 
 ---
 
-**Next**: Read [Auto-Generated Components Integration](./03-auto-generated-integration.md) to learn how to use AutoForm, AutoTable, and AutoModal with your registered schemas.
+**Next**: Learn about [Auto-Generated Components](./03-auto-generated-integration.md) to use AutoForm, AutoTable, AutoModal, and AutoTree with your registered schemas.
