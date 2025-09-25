@@ -23,8 +23,7 @@ import {
   buildBranchWhere 
 } from '../core/query-builder';
 
-// Type-only import for now - will be injected
-type PrismaClient = any;
+import type { PrismaClient } from '@prisma/client';
 
 export class QueryOperationsService {
   private prisma: PrismaClient;

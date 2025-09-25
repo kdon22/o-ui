@@ -13,6 +13,11 @@ import type { FieldType, FieldSchema, ValidationRule } from './schemas';
 import { TagFormField } from '@/components/ui/tags/tag-form-field';
 import { Badge } from '@/components/ui/badge';
 import { useActionQuery } from '@/hooks/use-action-api';
+import { 
+  PermissionMatrixInput, 
+  PermissionMatrixDisplay 
+} from '@/components/ui/permission-matrix/permission-matrix-input';
+import { EnhancedJsonInput } from '@/components/ui/json-input/enhanced-json-input';
 
 // ============================================================================
 // FIELD COMPONENT TYPES
@@ -311,6 +316,8 @@ const TagDisplay: React.FC<FieldDisplayProps> = ({ value = [], field }) => {
   );
 };
 
+// Enhanced JSON and permission components now imported at top
+
 // Placeholder components for other field types
 const ColorInput = TextInput;
 const ColorDisplay = TextDisplay;
@@ -323,7 +330,7 @@ const DateInput = TextInput;
 const DateDisplay = TextDisplay;
 const AvatarInput = TextInput;
 const AvatarDisplay = TextDisplay;
-const JsonInput = TextareaInput;
+const JsonInput = EnhancedJsonInput;  // ✅ Use enhanced JSON input
 const JsonDisplay = TextDisplay;
 const RichTextInput = TextareaInput;
 const RichTextDisplay = TextDisplay;
@@ -349,7 +356,8 @@ export const FIELD_COMPONENTS: Record<FieldType, FieldComponent> = {
   date: { Input: DateInput, Display: DateDisplay },
   avatar: { Input: AvatarInput, Display: AvatarDisplay },
   json: { Input: JsonInput, Display: JsonDisplay },
-  richText: { Input: RichTextInput, Display: RichTextDisplay }
+  richText: { Input: RichTextInput, Display: RichTextDisplay },
+  'permission-matrix': { Input: PermissionMatrixInput, Display: PermissionMatrixDisplay }
 };
 
 // ============================================================================

@@ -5,8 +5,11 @@
  * - Component selector for marketplace packages
  * - Currency input with formatting
  * - Enhanced tags field with suggestions
+ * - Matrix field for permission grids and capability matrices
  */
 
 export { ComponentSelector } from './component-selector'
 export { CurrencyField } from './currency-field'
 export { TagsField } from './tags-field'
+export { MatrixField, createPermissionMatrixConfig, getMatrixDefaultValues } from './matrix-field'
+export type { MatrixFieldProps, MatrixFieldConfig, MatrixSection } from './matrix-field'

@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useActionQuery, useActionMutation } from '@/hooks/use-action-api';
+import { useServerOnlyQuery, useServerOnlyMutation } from '@/hooks/use-server-only-action';
 import { 
   Clock, 
   AlertTriangle, 
@@ -98,7 +98,7 @@ export default function QueueManagement() {
   // BULK ACTION MUTATION
   // ============================================================================
   
-  const bulkActionMutation = useActionMutation('queueConfigs.bulkUpdate', {
+  const bulkActionMutation = useServerOnlyMutation('queues.bulkUpdate', {
     onSuccess: () => {
       setIsPerformingBulkAction(false);
       handleRefresh();
@@ -117,8 +117,8 @@ export default function QueueManagement() {
     isLoading: loadingConfigs,
     error: configError,
     refetch: refetchConfigs
-  } = useActionQuery<QueueConfig[]>(
-    'queueConfigs.list',
+  } = useServerOnlyQuery<QueueConfig[]>(
+    'queues.list',
     undefined, // No data/filters needed for list all
     {
       // Server-only via schema, always fresh data
@@ -132,8 +132,8 @@ export default function QueueManagement() {
     isLoading: loadingMessages,
     error: messageError,
     refetch: refetchMessages
-  } = useActionQuery<QueueMessage[]>(
-    'queueMessages.list',
+  } = useServerOnlyQuery<QueueMessage[]>(
+    'queueEvents.list',
     undefined, // No data/filters needed for list all
     {
       // Server-only via schema, always fresh data

@@ -96,15 +96,54 @@ export class StorageHelpers {
    * UNIFIED: Check if we should skip IndexedDB updates for this resource
    */
   private shouldSkipIndexedDBUpdate(storeName: string): boolean {
-    const schema = getResourceSchema(storeName);
+    console.log('🔍 [StorageHelpers] Checking if should skip IndexedDB update:', {
+      storeName,
+      timestamp: new Date().toISOString()
+    });
+    
+    // ✅ FIX: Handle server-only store names (e.g., 'groups-server-only' → 'groups')
+    const actualSchemaKey = storeName.endsWith('-server-only') 
+      ? storeName.replace('-server-only', '') 
+      : storeName;
+      
+    console.log('🔍 [StorageHelpers] Schema lookup:', {
+      originalStoreName: storeName,
+      actualSchemaKey,
+      timestamp: new Date().toISOString()
+    });
+    
+    const schema = getResourceSchema(actualSchemaKey);
+    
+    console.log('🔍 [StorageHelpers] Schema found:', {
+      actualSchemaKey,
+      schemaFound: !!schema,
+      serverOnly: schema?.serverOnly,
+      indexedDBKey: schema?.indexedDBKey,
+      timestamp: new Date().toISOString()
+    });
     
     // Check schema serverOnly property
     if (schema?.serverOnly === true) {
+      console.log('✅ [StorageHelpers] Skipping IndexedDB - serverOnly = true:', {
+        storeName,
+        actualSchemaKey,
+        timestamp: new Date().toISOString()
+      });
       return true;
     }
     
     // Legacy check: if indexedDBKey is explicitly set to null
-    return schema?.indexedDBKey === null;
+    const shouldSkip = schema?.indexedDBKey === null;
+    
+    console.log('🔍 [StorageHelpers] Final skip decision:', {
+      storeName,
+      actualSchemaKey,
+      shouldSkip,
+      reason: shouldSkip ? 'indexedDBKey is null' : 'should proceed with IndexedDB',
+      timestamp: new Date().toISOString()
+    });
+    
+    return shouldSkip;
   }
 
   /**
@@ -235,6 +274,13 @@ export class StorageHelpers {
     storeName: string, 
     branchContext: BranchContext | null
   ): Promise<void> {
+    console.log('🚨 [StorageHelpers] updateIndexedDBWithServerResponse called:', {
+      storeName,
+      dataId: data?.id,
+      hasBranchContext: !!branchContext,
+      timestamp: new Date().toISOString()
+    });
+    
     // ✅ UNIFIED: Check if schema is configured for server-only operations
     if (this.shouldSkipIndexedDBUpdate(storeName)) {
       console.log('⚡ [StorageHelpers] Skipping IndexedDB update for server-only resource:', {

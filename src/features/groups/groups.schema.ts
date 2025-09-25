@@ -1,16 +1,17 @@
 /**
- * Groups Schema - Simple Group Management with JSON Permissions
+ * Groups Schema - Factory-Driven Group Management with Permission Templates
  * 
  * Single Source of Truth for:
- * - Group/role management with three-tab interface
- * - JSON permissions field (no junction tables needed!)
+ * - Group/role management with configurable permission matrices
+ * - JSON permissions field using template system (no junction tables needed!)
  * - Mobile-first responsive design
  * - Inline editing capabilities
  * 
- * This schema uses the existing Group model with added permissions JSON field.
+ * This schema uses the existing Group model with factory-driven permission templates.
  */
 
 import type { ResourceSchema, FieldSchema } from '@/lib/resource-system/schemas';
+import { getPermissionJsonSchema, createDefaultPermissions } from '@/lib/resource-system/permission-templates';
 
 // ============================================================================
 // GROUP SCHEMA - SIMPLIFIED WITH JSON PERMISSIONS
@@ -21,10 +22,6 @@ export const GROUP_SCHEMA: ResourceSchema = {
   // RESOURCE IDENTITY - ACTION SYSTEM CONFIGURATION
   // ============================================================================
   
-  resourceKey: 'group',
-  resourceLabel: 'Group',
-  resourceLabelPlural: 'Groups',
-  
   // ============================================================================
   // ACTION SYSTEM - REQUIRED FOR AUTO-TABLE
   // ============================================================================
@@ -32,118 +29,200 @@ export const GROUP_SCHEMA: ResourceSchema = {
   databaseKey: 'groups',          // IndexedDB store name
   modelName: 'Group',             // Prisma model name
   actionPrefix: 'group',          // Action prefix (group.list, group.create, etc.)
-  primaryKey: 'id',               // Primary key field
   serverOnly: true,               // Groups are server-only (no IndexedDB caching for security)
   
   // ============================================================================
-  // THREE-TAB INTERFACE CONFIGURATION
+  // FIELD DEFINITIONS - ORGANIZED FOR PERMISSION MANAGEMENT
   // ============================================================================
-  
-  tabs: [
-    {
-      id: 'description',
-      label: 'Description',
-      icon: 'FileText',
-      isDefault: true
-    },
-    {
-      id: 'general-rights', 
-      label: 'General Rights',
-      icon: 'Shield'
-    },
-    {
-      id: 'setting-rights',
-      label: 'Setting Rights', 
-      icon: 'Settings'
-    }
-  ],
-  
-  // ============================================================================
-  // FIELD DEFINITIONS FOR ALL TABS
-  // ============================================================================
+  // Note: Tabs will be implemented at the component level until schema supports them
   
   fields: [
-    // TAB 1: DESCRIPTION
+    // ============================================================================
+    // CORE IDENTITY FIELDS - HIDDEN FROM FORMS
+    // ============================================================================
+    {
+      key: 'id',
+      label: 'ID',
+      type: 'text',
+      required: true,
+      autoValue: {
+        source: 'auto.uuid',
+        required: true
+      }
+    },
+    {
+      key: 'originalGroupId',
+      label: 'Original Group ID',
+      type: 'text',
+      description: 'Reference to the original group for branching'
+    },
+
+    // ============================================================================
+    // BRANCHING FIELDS - HIDDEN FROM FORMS
+    // ============================================================================
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text',
+      required: true,
+      autoValue: {
+        source: 'session.user.tenantId',
+        required: true
+      }
+    },
+    {
+      key: 'branchId',
+      label: 'Branch ID',
+      type: 'text',
+      required: true,
+      description: 'Current branch this group belongs to',
+      autoValue: {
+        source: 'session.user.branchContext.currentBranchId',
+        required: true
+      }
+    },
+
+    // ============================================================================
+    // DESCRIPTION TAB FIELDS
+    // ============================================================================
     {
       key: 'name',
       label: 'Group Name',
       type: 'text',
       required: true,
-      placeholder: 'e.g., Administrators, Editors, Viewers',
-      tab: 'description',
-      validation: {
-        minLength: 2,
-        maxLength: 50
+      tab: 'Description',
+      placeholder: '',
+      form: {
+        width: '3quarters',
+        row: 1
       }
     },
     {
       key: 'description',
       label: 'Description',
       type: 'textarea',
-      placeholder: 'Describe what this group can do...',
-      tab: 'description',
-      validation: {
-        maxLength: 500
+      tab: 'Description',
+      placeholder: '',
+      form: {
+        width: 'full',
+        row: 2
       }
     },
+
+    // ============================================================================
+    // PERMISSIONS - SINGLE JSON FIELD WITH MATRIX TEMPLATE
+    // ============================================================================
     {
-      key: 'type',
-      label: 'Group Type',
-      type: 'select',
-      tab: 'description',
-      options: [
-        { value: 'admin', label: 'Administrator', description: 'Full system access' },
-        { value: 'editor', label: 'Editor', description: 'Can create and modify content' },
-        { value: 'viewer', label: 'Viewer', description: 'Read-only access' },
-        { value: 'custom', label: 'Custom', description: 'Custom permission set' }
-      ]
+      key: 'permissions',
+      label: '',
+      type: 'matrix',
+      tab: 'Permissions',
+      template: 'permission-matrix',
+      description: '',
+      config: {
+        sections: [
+          {
+            id: 'general',
+            label: 'General Rights',
+            resources: [
+              { key: 'users', label: 'Users' },
+              { key: 'groups', label: 'Groups' },
+              { key: 'categories', label: 'Categories' },
+              { key: 'businessUnits', label: 'Business Units' },
+              { key: 'customers', label: 'Customers' },
+              { key: 'queueTree', label: 'Queue Tree' },
+              { key: 'defaultNode', label: 'Default Node' },
+              { key: 'processes', label: 'Processes' },
+              { key: 'intersections', label: 'Intersections' }
+            ],
+            actions: [
+              { key: 'view', label: 'View' },
+              { key: 'create', label: 'Create' },
+              { key: 'modify', label: 'Modify' },
+              { key: 'delete', label: 'Delete' }
+            ]
+          },
+          {
+            id: 'settings',
+            label: 'Setting Rights',
+            resources: [
+              { key: 'abacusEndTransactionRule', label: 'Abacus End Transaction Rule' },
+              { key: 'abacusSimultaneousChangesRule', label: 'Abacus Simultaneous Changes Rule' },
+              { key: 'addStartStopRemark', label: 'Add Start/Stop Remark? (Y/N)' },
+              { key: 'administratorEmailAddresses', label: 'Administrator Email Address(es)' },
+              { key: 'afterQueueStopRoutine', label: 'After Queue Stop Routine' },
+              { key: 'agentQueue', label: 'Agent Queue' },
+              { key: 'amadeusEndTransactionRule', label: 'Amadeus End Transaction Rule' },
+              { key: 'amadeusSimultaneousChangesRule', label: 'Amadeus Simultaneous Changes Rule' },
+              { key: 'apolloEndTransactionRule', label: 'Apollo End Transaction Rule' }
+            ],
+            actions: [
+              { key: 'view', label: 'View' },
+              { key: 'create', label: 'Create' },
+              { key: 'modify', label: 'Modify' },
+              { key: 'delete', label: 'Delete' }
+            ]
+          }
+        ]
+      },
+      defaultValue: {},
+      form: {
+        width: 'full',
+        row: 1
+      }
     },
+
+    // ============================================================================
+    // AUDIT FIELDS - HIDDEN FROM FORMS
+    // ============================================================================
     {
       key: 'isActive',
       label: 'Active',
-      type: 'boolean',
-      defaultValue: true,
-      tab: 'description'
+      type: 'switch',
+      description: 'Whether this group is currently active',
+      defaultValue: true
     },
-    
-    // TAB 2: GENERAL RIGHTS - PERMISSION MATRIX
     {
-      key: 'permissions.generalPermissions',
-      label: 'General System Permissions',
-      type: 'permission-matrix',
-      tab: 'general-rights',
-      permissions: [
-        { resource: 'Users', actions: ['View', 'Create', 'Modify', 'Delete'] },
-        { resource: 'Groups', actions: ['View', 'Create', 'Modify', 'Delete'] },
-        { resource: 'Categories', actions: ['View', 'Create', 'Modify', 'Delete'] },
-        { resource: 'Tags', actions: ['View', 'Create', 'Modify', 'Delete'] },
-        { resource: 'Reports', actions: ['View', 'Create', 'Export'] },
-        { resource: 'Analytics', actions: ['View', 'Export'] }
-      ]
+      key: 'version',
+      label: 'Version',
+      type: 'number',
+      description: 'Current version of this group'
     },
-    
-    // TAB 3: SETTING RIGHTS - SYSTEM SETTINGS PERMISSIONS  
     {
-      key: 'permissions.settingPermissions',
-      label: 'System Settings Permissions',
-      type: 'permission-matrix',
-      tab: 'setting-rights', 
-      permissions: [
-        { resource: 'System Configuration', actions: ['View', 'Modify'] },
-        { resource: 'Security Settings', actions: ['View', 'Modify'] },
-        { resource: 'API Access', actions: ['View', 'Create', 'Modify', 'Delete'] },
-        { resource: 'Database Settings', actions: ['View', 'Modify'] },
-        { resource: 'Backup & Restore', actions: ['View', 'Create', 'Restore'] },
-        { resource: 'Audit Logs', actions: ['View', 'Export'] }
-      ]
+      key: 'createdAt',
+      label: 'Created',
+      type: 'date',
+      description: 'When this group was created'
+    },
+    {
+      key: 'updatedAt',
+      label: 'Updated',
+      type: 'date',
+      description: 'When this group was last updated'
+    },
+    {
+      key: 'createdById',
+      label: 'Created By',
+      type: 'text',
+      description: 'User who created this group'
+    },
+    {
+      key: 'updatedById',
+      label: 'Updated By',
+      type: 'text',
+      description: 'User who last updated this group'
     }
   ],
   
   // ============================================================================
-  // AUTO-TABLE CONFIGURATION
+  // REQUIRED DISPLAY CONFIGURATION
   // ============================================================================
   
-  displayField: 'name',
+  display: {
+    title: 'Groups',
+    description: 'Manage user groups and role-based permissions',
+    icon: 'Shield'
+  },
   
   // ============================================================================
   // SEARCH CONFIGURATION - REQUIRED FOR AUTO-TABLE
@@ -154,137 +233,72 @@ export const GROUP_SCHEMA: ResourceSchema = {
     fuzzy: true
   },
   
-  tableConfig: {
-    defaultSort: [{ field: 'name', direction: 'asc' }],
-    rowsPerPage: 10,
-    
-    // Column definitions for table view
-    columns: [
-      {
-        key: 'name',
-        label: 'Group Name',
-        sortable: true,
-        searchable: true,
-        sticky: 'left'
-      },
-      {
-        key: 'type', 
-        label: 'Type',
-        sortable: true,
-        width: 120,
-        render: 'badge'
-      },
-      {
-        key: 'description',
-        label: 'Description', 
-        sortable: false,
-        truncate: 60
-      },
-      {
-        key: 'userCount',
-        label: 'Users',
-        width: 80,
-        computed: true // Will be calculated from UserGroup relationships
-      },
-      {
-        key: 'isActive',
-        label: 'Status',
-        width: 100,
-        render: 'status-badge'
-      },
-      {
-        key: 'updatedAt',
-        label: 'Last Modified',
-        width: 140,
-        render: 'relative-date',
-        sortable: true
-      }
-    ]
+  // ============================================================================
+  // REQUIRED ACTIONS CONFIGURATION
+  // ============================================================================
+  
+  actions: {
+    create: true,
+    update: true,
+    delete: true,
+    duplicate: false,
+    bulk: true,
+    optimistic: false, // Groups use server-only operations for security
+    serverOnly: true
+  },
+  
+  // ============================================================================
+  // REQUIRED MOBILE CONFIGURATION
+  // ============================================================================
+  
+  mobile: {
+    cardFormat: 'detailed',
+    primaryField: 'name',
+    secondaryFields: ['description', 'type'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right'
+  },
+  
+  // ============================================================================
+  // REQUIRED DESKTOP CONFIGURATION  
+  // ============================================================================
+  
+  desktop: {
+    sortField: 'name',
+    sortOrder: 'asc',
+    editableField: 'name',
+    rowActions: true,
+    bulkActions: true,
+    density: 'normal'
   },
   
   // ============================================================================
   // FORM CONFIGURATION 
   // ============================================================================
   
-  formConfig: {
-    layout: 'tabs', // Use tab-based layout
-    submitLabel: 'Save Group',
-    
-    // Validation rules
-    validation: {
-      'name': {
-        required: 'Group name is required',
-        minLength: { value: 2, message: 'Name must be at least 2 characters' }
-      },
-      'type': {
-        required: 'Group type is required'
-      }
-    },
-    
-    // Default values for new groups
-    defaults: {
-      isActive: true,
-      permissions: {
-        generalPermissions: {},
-        settingPermissions: {}
-      }
-    }
-  },
-
-  // ============================================================================
-  // MOBILE-FIRST RESPONSIVE CONFIG
-  // ============================================================================
-
-  mobileConfig: {
-    searchPlaceholder: 'Search groups...',
-    emptyStateMessage: 'No groups found',
-    
-    cardView: {
-      title: 'name',
-      subtitle: 'description',
-      badge: 'type',
-      status: 'isActive'
-    }
-  },
-
-  // ============================================================================
-  // SYSTEM CONFIGURATION
-  // ============================================================================
-  
-  systemFields: ['id', 'tenantId', 'createdAt', 'updatedAt', 'createdById', 'updatedById', 'version'],
-  requiredFields: ['name', 'tenantId'],
-  
-  // Quick filtering options
-  quickFilters: [
-    { key: 'active', label: 'Active Groups', filter: { isActive: true } },
-    { key: 'admin', label: 'Administrators', filter: { type: 'admin' } },
-    { key: 'custom', label: 'Custom Groups', filter: { type: 'custom' } }
-  ],
-  
-  // Auto-generation settings
-  enableAutoId: true,
-  enableAuditFields: true,
-  enableSoftDelete: false, // Using isActive instead
-  
-  // Performance optimizations
-  indexFields: ['name', 'type', 'isActive', 'tenantId'],
-  cacheConfig: {
-    ttl: 300, // 5 minutes
-    tags: ['groups', 'permissions']
+  form: {
+    width: 'lg',
+    layout: 'default',
+    showDescriptions: true,
+    showRequiredIndicators: true,
+    submitButtonText: 'Save Group',
+    cancelButtonText: 'Cancel'
   }
 } as const;
 
-// Export type for TypeScript usage
+// Export type for TypeScript usage - Factory-driven permissions
 export type GroupResource = {
   id: string;
   name: string;
   description?: string;
-  type?: string;
-  permissions?: {
-    generalPermissions?: Record<string, string[]>;
-    settingPermissions?: Record<string, string[]>;
-  };
+  
+  // 🏭 FACTORY: Single JSON permissions field with matrix template
+  permissions?: Record<string, string[]>; // Single field: { "users": ["view", "create"], "groups": ["view"] }
+  
   tenantId: string;
+  branchId: string;
+  originalGroupId?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

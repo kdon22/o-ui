@@ -13,6 +13,7 @@ import { TagField } from '@/components/ui/tags/tag-field';
 import { ComponentSelector } from './fields/component-selector';
 import { CurrencyField } from './fields/currency-field';
 import { TagsField } from './fields/tags-field';
+import { MatrixField, createPermissionMatrixConfig, getMatrixDefaultValues } from './fields/matrix-field';
 // import { cn } from '@/lib/utils/generalUtils'; // No longer needed
 
 // ============================================================================
@@ -238,6 +239,30 @@ export const FormField: React.FC<FormFieldProps> = ({
                 max={field.validation?.find(v => v.type === 'max')?.value}
               />
             )}
+          />
+        );
+
+      case 'matrix':
+        return (
+          <Controller
+            name={field.key}
+            control={control}
+            render={({ field: formField }) => {
+              // Create matrix configuration from field template
+              const matrixConfig = field.template && field.config 
+                ? createPermissionMatrixConfig(field.config.sections || [])
+                : { sections: [], layout: 'tabs' as const, showHeaders: true };
+              
+              return (
+                <MatrixField
+                  value={formField.value || {}}
+                  onChange={formField.onChange}
+                  config={matrixConfig}
+                  placeholder={field.placeholder}
+                  disabled={false}
+                />
+              );
+            }}
           />
         );
 

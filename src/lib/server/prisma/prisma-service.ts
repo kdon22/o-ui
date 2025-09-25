@@ -29,8 +29,7 @@ import { UpdateOperationsService } from './operations/update-operations';
 import { DeleteOperationsService } from './operations/delete-operations';
 import { ChangeTrackingService } from './specialized/change-tracking-service';
 
-// Type-only import for now - will be injected
-type PrismaClient = any;
+import type { PrismaClient } from '@prisma/client';
 
 /**
  * Slim Orchestrator PrismaService

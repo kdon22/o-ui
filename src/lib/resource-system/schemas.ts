@@ -56,7 +56,9 @@ export const FIELD_TYPES = {
   'component-selector': { input: 'ComponentSelectorInput', display: 'ComponentSelectorDisplay' },
   currency: { input: 'CurrencyInput', display: 'CurrencyDisplay' },
   // Permission management field types
-  'permission-matrix': { input: 'PermissionMatrixInput', display: 'PermissionMatrixDisplay' }
+  'permission-matrix': { input: 'PermissionMatrixInput', display: 'PermissionMatrixDisplay' },
+  // Generic matrix field type (replaces permission-matrix for flexibility)
+  matrix: { input: 'MatrixInput', display: 'MatrixDisplay' }
 } as const;
 
 export type FieldType = keyof typeof FIELD_TYPES;
@@ -67,12 +69,12 @@ export type FieldType = keyof typeof FIELD_TYPES;
 
 export interface FieldFormConfig {
   row: number;
-  width: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'half' | 'third' | 'quarter';
+  width: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'half' | 'third' | 'quarter' | '3quarters';
   order?: number;
   showInForm?: boolean;
   mobile?: {
     row?: number;
-    width?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'half' | 'third' | 'quarter' | 'hidden';
+    width?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'half' | 'third' | 'quarter' | '3quarters' | 'hidden';
   };
 }
 
@@ -167,6 +169,10 @@ export interface FieldSchema {
   table?: FieldTableConfig;
   validation?: ValidationRule[];
   options?: FieldOptions;
+  
+  // Template-based field configuration (for matrix, complex components)
+  template?: string; // Template identifier (e.g., 'permission-matrix', 'feature-grid')
+  config?: Record<string, any>; // Template-specific configuration object
   
   // Mobile and Desktop specific configurations
   mobile?: {

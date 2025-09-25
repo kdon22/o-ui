@@ -13,8 +13,7 @@ import type { PrismaServiceContext } from '../core/types';
 import { resolveBranchContext } from '../core/branch-resolver';
 import { getModelName } from '../core/model-utils';
 
-// Type-only import for now - will be injected
-type PrismaClient = any;
+import type { PrismaClient } from '@prisma/client';
 
 export class DeleteOperationsService {
   private prisma: PrismaClient;

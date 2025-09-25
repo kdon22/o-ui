@@ -178,6 +178,12 @@ export const getFormValidationSchema = (schema: ResourceSchema, isCreate: boolea
       case 'json':
         fieldSchema = z.any();
         break;
+      case 'matrix':
+        fieldSchema = z.record(z.array(z.string())); // Matrix data: { resource: ["action1", "action2"] }
+        break;
+      case 'permission-matrix':
+        fieldSchema = z.record(z.array(z.string())); // Permission matrix data
+        break;
       default:
         fieldSchema = z.string();
     }
@@ -281,6 +287,7 @@ export const getFieldWidthClass = (field: FieldSchema, fieldsInRow: number): str
   if (field.form?.width === 'half') return 'col-span-12 md:col-span-6';
   if (field.form?.width === 'third') return 'col-span-12 md:col-span-4';
   if (field.form?.width === 'quarter') return 'col-span-12 md:col-span-3';
+  if (field.form?.width === '3quarters') return 'col-span-12 md:col-span-9';
   
   // Auto-calculate based on number of fields in row
   if (fieldsInRow === 1) return 'col-span-12';

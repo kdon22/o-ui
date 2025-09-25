@@ -16,8 +16,7 @@ import { getModelName } from '../core/model-utils';
 import { buildBranchWhere, buildInclude } from '../core/query-builder';
 import { processRelationships } from '../relationship-processor';
 
-// Type-only import for now - will be injected
-type PrismaClient = any;
+import type { PrismaClient } from '@prisma/client';
 
 export class UpdateOperationsService {
   private prisma: PrismaClient;

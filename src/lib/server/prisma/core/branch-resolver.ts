@@ -4,8 +4,7 @@
 
 import type { PrismaServiceContext } from './types';
 
-// Type-only import for now - will be injected
-type PrismaClient = any;
+import type { PrismaClient } from '@prisma/client';
 
 /**
  * Resolve branch ID if needed

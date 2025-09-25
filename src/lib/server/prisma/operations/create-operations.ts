@@ -18,8 +18,7 @@ import { getModelName } from '../core/model-utils';
 import { PrismaDataFactory } from '../prisma-data-factory';
 import { NodeHierarchyService } from '../specialized/node-hierarchy-service';
 
-// Type-only import for now - will be injected
-type PrismaClient = any;
+import type { PrismaClient } from '@prisma/client';
 
 export class CreateOperationsService {
   private prisma: PrismaClient;

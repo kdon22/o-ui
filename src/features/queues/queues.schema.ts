@@ -1,761 +1,525 @@
+import { z } from 'zod'
+import type { ResourceSchema } from '@/lib/resource-system/schemas'
+
+// ============================================================================
+// QUEUE ENTITY SCHEMAS
+// ============================================================================
+
 /**
- * Travel Queue Management Schemas - Action System Integration
- * 
- * Frequency-based queue configurations for travel operations:
- * - Critical: 0-15 minutes (ticketing, payments, urgent)
- * - Standard: 16-60 minutes (seating, upgrades, waitlist) 
- * - Routine: 61+ minutes (reporting, cleanup, maintenance)
+ * Queue Entity Schema
+ * Represents a processing queue with real-time status
  */
-
-import { z } from 'zod';
-import type { ResourceSchema } from '@/lib/resource-system/schemas';
-
-// ============================================================================
-// ZOD SCHEMAS
-// ============================================================================
-
-export const QueueConfigSchema = z.object({
+export const QueueSchema = z.object({
   id: z.string(),
-  tenantId: z.string(), 
-  
-  // Queue Identity
   name: z.string(),
   displayName: z.string(),
-  description: z.string().nullable(),
+  queueType: z.enum(['VENDOR', 'INTERNAL', 'CRITICAL', 'STANDARD', 'ROUTINE']),
+  office: z.string().nullable(),
+  queueNumber: z.number(),
+  category: z.string().nullable(),
+  maxAge: z.number().default(0),
+  isActive: z.boolean().default(true),
   
-  // Queue Type & Configuration
-  type: z.enum(['GDS', 'Virtual']),
-  priority: z.enum(['critical', 'standard', 'routine']),
+  // Real-time metrics
+  monitoring: z.number().default(0),
+  failed: z.number().default(0),
+  sleeping: z.number().default(0),
+  pnrsOnQueue: z.number().default(0),
   
-  // Scheduling Configuration
-  frequencyMinutes: z.number(),
-  scheduleExpression: z.string(), // "*/5 * * * *" for every 5 minutes
+  // Health indicators
+  healthStatus: z.enum(['HEALTHY', 'WARNING', 'CRITICAL', 'OFFLINE']).default('HEALTHY'),
+  lastProcessedAt: z.string().nullable(),
+  processingRate: z.number().default(0), // items per minute
+  averageWaitTime: z.number().default(0), // milliseconds
   
-  // GDS Configuration (for GDS type)
-  gdsSystem: z.enum(['amadeus', 'sabre']).nullable(),
-  gdsQueue: z.string().nullable(), // "Q/9", "Q/URGENT", etc.
-  gdsOffice: z.string().nullable(), // "13Q1", "1SUB", etc.
-  
-  // Processing Configuration
-  processId: z.string().nullable(),
-  workflowId: z.string().nullable(),
-  officeId: z.string().nullable(),
-  
-  // Operational Settings
-  maxRetries: z.number(),
-  timeoutMinutes: z.number(),
-  concurrentLimit: z.number(),
-  
-  // Status & Control
-  status: z.enum(['active', 'paused', 'sleeping', 'failed']),
-  sleepUntil: z.string().nullable(),
-  pauseReason: z.string().nullable(),
-  
-  // Performance Tracking
-  lastRun: z.string().nullable(),
-  nextRun: z.string().nullable(),
-  averageRunTime: z.number().nullable(),
-  successRate: z.number().nullable(),
-  
-  // System Fields
-  isDeleted: z.boolean(),
+  // System fields
+  tenantId: z.string(),
+  branchId: z.string(),
+  isDeleted: z.boolean().default(false),
   createdAt: z.string(),
   updatedAt: z.string(),
   createdById: z.string().nullable(),
   updatedById: z.string().nullable(),
-});
+  originalQueueId: z.string().nullable(),
+})
 
-export const QueueMessageSchema = z.object({
+export type Queue = z.infer<typeof QueueSchema>
+
+/**
+ * Queue Event Schema
+ * Represents real-time queue events for activity stream
+ */
+export const QueueEventSchema = z.object({
   id: z.string(),
+  queueId: z.string(),
+  eventType: z.enum([
+    'ITEM_ADDED',
+    'ITEM_PROCESSED', 
+    'ITEM_FAILED',
+    'QUEUE_PAUSED',
+    'QUEUE_RESUMED',
+    'QUEUE_CLEARED',
+    'STATUS_CHANGED'
+  ]),
+  eventData: z.record(z.any()),
+  message: z.string(),
+  severity: z.enum(['INFO', 'WARNING', 'ERROR', 'CRITICAL']).default('INFO'),
+  timestamp: z.string(),
+  
+  // System fields
   tenantId: z.string(),
-  queueConfigId: z.string(),
-  
-  // Job Identity
-  jobType: z.enum(['gds_queue_check', 'virtual_scheduled', 'utr_processing', 'follow_up']),
-  pnr: z.string().nullable(),
-  gdsLocator: z.string().nullable(),
-  
-  // Processing Status
-  status: z.enum(['queued', 'processing', 'completed', 'failed', 'cancelled', 'retrying']),
-  priority: z.number(),
-  
-  // Worker Assignment
-  workerId: z.string().nullable(),
-  workerHost: z.string().nullable(),
-  
-  // Timing
-  scheduledFor: z.string(),
-  startedAt: z.string().nullable(),
-  completedAt: z.string().nullable(),
-  processingTimeMs: z.number().nullable(),
-  
-  // Retry Handling
-  attemptCount: z.number(),
-  maxAttempts: z.number(),
-  lastError: z.string().nullable(),
-  
-  // Job Data
-  jobData: z.record(z.any()),
-  result: z.record(z.any()).nullable(),
-  
-  // UTR Processing Specific
-  utrCount: z.number().nullable(),
-  utrsProcessed: z.number().nullable(),
-  followUpJobsCreated: z.number().nullable(),
-  
-  // System Fields
-  createdAt: z.string(),
-  updatedAt: z.string().nullable(),
-});
+  branchId: z.string(),
+})
 
-export const QueueWorkerSchema = z.object({
-  id: z.string(),
-  tenantId: z.string(),
-  
-  // Worker Identity
-  name: z.string(),
-  host: z.string(),
-  pid: z.number().nullable(),
-  version: z.string().nullable(),
-  
-  // Status & Health
-  status: z.enum(['idle', 'busy', 'offline', 'error']),
-  lastHeartbeat: z.string().nullable(),
-  startedAt: z.string(),
-  
-  // Current Assignment
-  currentJobId: z.string().nullable(),
-  currentJobType: z.string().nullable(),
-  currentJobStarted: z.string().nullable(),
-  
-  // Performance
-  jobsCompleted: z.number(),
-  jobsFailed: z.number(),
-  averageJobTime: z.number().nullable(),
-  
-  // Capabilities
-  capabilities: z.array(z.string()),
-  maxConcurrentJobs: z.number(),
-  
-  // System Fields
-  createdAt: z.string(),
-  updatedAt: z.string().nullable(),
-});
+export type QueueEvent = z.infer<typeof QueueEventSchema>
 
 // ============================================================================
-// TYPESCRIPT TYPES
+// RESOURCE SCHEMA DEFINITIONS
 // ============================================================================
 
-export type QueueConfig = z.infer<typeof QueueConfigSchema>;
-export type QueueMessage = z.infer<typeof QueueMessageSchema>;
-export type QueueWorker = z.infer<typeof QueueWorkerSchema>;
-
-// ============================================================================
-// RESOURCE SCHEMAS - ACTION SYSTEM INTEGRATION
-// ============================================================================
-
-export const QUEUE_CONFIG_SCHEMA: ResourceSchema = {
-  databaseKey: 'queueConfigs',
-  modelName: 'QueueConfig', 
-  actionPrefix: 'queueConfigs',
+export const QUEUE_SCHEMA: ResourceSchema = {
+  // ============================================================================
+  // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
+  // ============================================================================
+  databaseKey: 'queues',
+  modelName: 'Queue', 
+  actionPrefix: 'queues',
   
-  // Server-only configuration
-  serverOnly: true,
-  cacheStrategy: 'server-only',
-  notHasBranchContext: true,
+  // ============================================================================
+  // SERVER-ONLY CONFIGURATION
+  // ============================================================================
+  serverOnly: true, // Large dataset - server-side rendering only
+  cacheStrategy: 'server-only' as const,
   
+  // ============================================================================
+  // UI DISPLAY
+  // ============================================================================
   display: {
-    title: 'Travel Queue Configurations',
-    description: 'GDS queue cleaning and scheduled job management',
-    icon: 'clock',
-    color: 'blue'
+    title: 'Queues',
+    description: 'Real-time queue monitoring and management',
+    icon: 'Queue'
   },
   
+  // ============================================================================
+  // FIELD DEFINITIONS
+  // ============================================================================
   fields: [
-    // Identity
-    { 
-      key: 'id', 
-      label: 'ID', 
-      type: 'text', 
-      required: true,
-      autoValue: { source: 'auto.uuid', required: true },
-      form: { row: 1, width: 'full', showInForm: false }, 
-      table: { width: 'sm', showInTable: false }
+    {
+      key: 'id',
+      label: 'ID',
+      type: 'text' as const,
+      autoValue: { source: 'auto.uuid' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
     },
-    { 
-      key: 'tenantId', 
-      label: 'Tenant ID', 
-      type: 'text', 
+    {
+      key: 'name',
+      label: 'Queue Name',
+      type: 'text' as const,
       required: true,
-      autoValue: { source: 'session.user.tenantId', required: true },
-      form: { row: 1, width: 'full', showInForm: false }, 
-      table: { width: 'sm', showInTable: false }
+      validation: [
+        { type: 'required' as const, message: 'Queue name is required' },
+        { type: 'minLength' as const, value: 3, message: 'Name too short' },
+        { type: 'maxLength' as const, value: 100, message: 'Name too long' }
+      ],
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const, sortable: true }
     },
-    
-    // Queue Configuration
-    { 
-      key: 'name', 
-      label: 'Queue Name', 
-      type: 'text', 
-      required: true,
-      placeholder: 'e.g., ticketing-urgent',
-      form: { row: 1, width: 'half' }, 
-      table: { width: 'lg', sortable: true }
-    },
-    { 
-      key: 'displayName', 
+    {
+      key: 'displayName',
       label: 'Display Name', 
-      type: 'text', 
+      type: 'text' as const,
       required: true,
-      placeholder: 'e.g., Ticketing - Urgent Processing',
-      form: { row: 1, width: 'half' }, 
-      table: { width: 'xl', sortable: true }
+      validation: [
+        { type: 'required' as const, message: 'Display name is required' },
+        { type: 'minLength' as const, value: 3, message: 'Display name too short' },
+        { type: 'maxLength' as const, value: 150, message: 'Display name too long' }
+      ],
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const, sortable: true }
     },
-    { 
-      key: 'description', 
-      label: 'Description', 
-      type: 'textarea', 
-      form: { row: 2, width: 'full' }, 
-      table: { width: 'xl', showInTable: false }
-    },
-    
-    // Type & Priority
-    { 
-      key: 'type', 
-      label: 'Queue Type', 
-      type: 'select', 
-      required: true,
-      options: { 
-        static: [
-          { value: 'GDS', label: 'GDS Queue Cleaning' },
-          { value: 'Virtual', label: 'Scheduled Jobs' }
-        ]
-      },
-      form: { row: 3, width: 'third' }, 
-      table: { width: 'sm', sortable: true }
-    },
-    { 
-      key: 'priority', 
-      label: 'Priority Level', 
-      type: 'select', 
+    {
+      key: 'queueType',
+      label: 'Queue Type',
+      type: 'select' as const,
       required: true,
       options: {
         static: [
-          { value: 'critical', label: 'Critical (0-15 min)' },
-          { value: 'standard', label: 'Standard (16-60 min)' },
-          { value: 'routine', label: 'Routine (61+ min)' }
+          { value: 'VENDOR', label: 'Vendor Queue' },
+          { value: 'INTERNAL', label: 'Internal Queue' },
+          { value: 'CRITICAL', label: 'Critical Operations' },
+          { value: 'STANDARD', label: 'Standard Operations' },
+          { value: 'ROUTINE', label: 'Routine Operations' }
         ]
       },
-      form: { row: 3, width: 'third' }, 
-      table: { width: 'sm', sortable: true }
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
     },
-    { 
-      key: 'frequencyMinutes', 
-      label: 'Frequency (minutes)', 
-      type: 'number', 
+    {
+      key: 'queueNumber',
+      label: 'Queue #',
+      type: 'number' as const,
       required: true,
-      form: { row: 3, width: 'third' }, 
-      table: { width: 'sm', sortable: true }
+      validation: [
+        { type: 'required' as const, message: 'Queue number is required' },
+        { type: 'min' as const, value: 1, message: 'Queue number must be positive' },
+        { type: 'max' as const, value: 999, message: 'Queue number too large' }
+      ],
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const, sortable: true }
     },
-    
-    // GDS Configuration
-    { 
-      key: 'gdsSystem', 
-      label: 'GDS System', 
-      type: 'select',
+    {
+      key: 'office',
+      label: 'Office',
+      type: 'text' as const,
+      required: false,
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      type: 'text' as const,
+      required: false,
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'md' as const }
+    },
+    {
+      key: 'maxAge',
+      label: 'Max Age (min)',
+      type: 'number' as const,
+      required: true,
+      defaultValue: 0,
+      validation: [
+        { type: 'min' as const, value: 0, message: 'Max age must be non-negative' }
+      ],
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'sm' as const }
+    },
+    {
+      key: 'pnrsOnQueue',
+      label: 'Items in Queue',
+      type: 'number' as const,
+      required: false,
+      defaultValue: 0,
+      mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const, sortable: true }
+    },
+    {
+      key: 'healthStatus',
+      label: 'Health',
+      type: 'select' as const,
+      required: true,
+      defaultValue: 'HEALTHY',
       options: {
         static: [
-          { value: 'amadeus', label: 'Amadeus' },
-          { value: 'sabre', label: 'Sabre' }
+          { value: 'HEALTHY', label: 'Healthy' },
+          { value: 'WARNING', label: 'Warning' },
+          { value: 'CRITICAL', label: 'Critical' },
+          { value: 'OFFLINE', label: 'Offline' }
         ]
       },
-      form: { row: 4, width: 'third' }, 
-      table: { width: 'sm' }
+      mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
     },
-    { 
-      key: 'gdsQueue', 
-      label: 'GDS Queue', 
-      type: 'text',
-      placeholder: 'Q/9, Q/URGENT, etc.',
-      form: { row: 4, width: 'third' }, 
-      table: { width: 'sm' }
-    },
-    { 
-      key: 'gdsOffice', 
-      label: 'GDS Office', 
-      type: 'text',
-      placeholder: '13Q1, 1SUB, etc.',
-      form: { row: 4, width: 'third' }, 
-      table: { width: 'sm' }
-    },
-    
-    // Processing Assignment
-    { 
-      key: 'processId', 
-      label: 'Process ID', 
-      type: 'text',
-      form: { row: 5, width: 'third' }, 
-      table: { width: 'sm', showInTable: false }
-    },
-    { 
-      key: 'workflowId', 
-      label: 'Workflow ID', 
-      type: 'text',
-      form: { row: 5, width: 'third' }, 
-      table: { width: 'sm', showInTable: false }
-    },
-    { 
-      key: 'officeId', 
-      label: 'Office ID', 
-      type: 'text',
-      form: { row: 5, width: 'third' }, 
-      table: { width: 'sm', showInTable: false }
-    },
-    
-    // Operational Settings
-    { 
-      key: 'maxRetries', 
-      label: 'Max Retries', 
-      type: 'number', 
-      defaultValue: 3,
-      form: { row: 6, width: 'third' }, 
-      table: { width: 'xs', showInTable: false }
-    },
-    { 
-      key: 'timeoutMinutes', 
-      label: 'Timeout (min)', 
-      type: 'number', 
-      defaultValue: 10,
-      form: { row: 6, width: 'third' }, 
-      table: { width: 'xs', showInTable: false }
-    },
-    { 
-      key: 'concurrentLimit', 
-      label: 'Concurrent Limit', 
-      type: 'number', 
-      defaultValue: 1,
-      form: { row: 6, width: 'third' }, 
-      table: { width: 'xs', showInTable: false }
-    },
-    
-    // Status & Control
-    { 
-      key: 'status', 
-      label: 'Status', 
-      type: 'select', 
+    {
+      key: 'isActive',
+      label: 'Active',
+      type: 'boolean' as const,
       required: true,
-      defaultValue: 'active',
-      options: {
-        static: [
-          { value: 'active', label: 'Active' },
-          { value: 'paused', label: 'Paused' },
-          { value: 'sleeping', label: 'Sleeping' },
-          { value: 'failed', label: 'Failed' }
-        ]
-      },
-      form: { row: 7, width: 'third' }, 
-      table: { width: 'sm', sortable: true }
+      defaultValue: true,
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const, filterable: true }
     },
-    { 
-      key: 'sleepUntil', 
-      label: 'Sleep Until', 
-      type: 'datetime',
-      form: { row: 7, width: 'third' }, 
-      table: { width: 'md' }
+    // System fields
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text' as const,
+      autoValue: { source: 'context.tenantId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
     },
-    { 
-      key: 'pauseReason', 
-      label: 'Pause Reason', 
-      type: 'text',
-      form: { row: 7, width: 'third' }, 
-      table: { width: 'lg', showInTable: false }
-    },
-    
-    // Performance Fields (read-only, computed)
-    { 
-      key: 'lastRun', 
-      label: 'Last Run', 
-      type: 'datetime',
-      form: { row: 8, width: 'half', showInForm: false }, 
-      table: { width: 'md' }
-    },
-    { 
-      key: 'nextRun', 
-      label: 'Next Run', 
-      type: 'datetime',
-      form: { row: 8, width: 'half', showInForm: false }, 
-      table: { width: 'md' }
-    },
-    
-    // System Fields
-    { 
-      key: 'createdAt', 
-      label: 'Created', 
-      type: 'datetime',
-      autoValue: { source: 'auto.timestamp', required: true },
-      form: { row: 9, width: 'half', showInForm: false }, 
-      table: { width: 'sm', showInTable: false }
-    },
-    { 
-      key: 'updatedAt', 
-      label: 'Updated', 
-      type: 'datetime',
-      autoValue: { source: 'auto.timestamp', required: true },
-      form: { row: 9, width: 'half', showInForm: false }, 
-      table: { width: 'sm', showInTable: false }
+    {
+      key: 'branchId', 
+      label: 'Branch ID',
+      type: 'text' as const,
+      autoValue: { source: 'context.branchId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
     }
   ],
   
-  search: { 
-    fields: ['name', 'displayName', 'type', 'gdsQueue', 'gdsOffice'], 
-    placeholder: 'Search queues...', 
-    mobileFilters: true, 
-    fuzzy: true 
+  // ============================================================================
+  // SEARCH CONFIGURATION
+  // ============================================================================
+  search: {
+    fields: ['name', 'displayName', 'office', 'category'],
+    placeholder: 'Search queues...',
+    fuzzy: true
   },
   
-  actions: { 
-    create: true, 
-    update: true, 
+  // ============================================================================
+  // ACTIONS CONFIGURATION
+  // ============================================================================
+  actions: {
+    create: true,
+    update: true,
     delete: true,
-    custom: [
-      { id: 'pause', label: 'Pause Queue', icon: 'pause' },
-      { id: 'resume', label: 'Resume Queue', icon: 'play' },
-      { id: 'sleep', label: 'Sleep Queue', icon: 'moon' },
-      { id: 'wake', label: 'Wake Queue', icon: 'sun' },
-      { id: 'testConnection', label: 'Test Connection', icon: 'link' },
-      { id: 'bulkUpdate', label: 'Bulk Update Queues', icon: 'layers' }
-    ],
-    serverOnly: true 
+    duplicate: false,
+    bulk: true,
+    optimistic: false, // Real-time data - server-only operations
+    serverOnly: true
   },
   
-  mobile: { 
-    cardFormat: 'compact', 
-    primaryField: 'displayName', 
-    secondaryFields: ['type', 'priority', 'status'],
-    showSearch: true, 
-    showFilters: true, 
-    fabPosition: 'bottom-right' 
+  // ============================================================================
+  // MOBILE CONFIGURATION
+  // ============================================================================
+  mobile: {
+    cardFormat: 'detailed' as const,
+    primaryField: 'displayName',
+    secondaryFields: ['queueType', 'pnrsOnQueue', 'healthStatus'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right' as const
   },
   
-  desktop: { 
-    sortField: 'displayName', 
-    sortOrder: 'asc', 
-    density: 'normal', 
-    rowActions: true, 
-    bulkActions: true 
+  // ============================================================================
+  // DESKTOP CONFIGURATION  
+  // ============================================================================
+  desktop: {
+    sortField: 'queueNumber',
+    sortOrder: 'asc' as const,
+    editableField: 'displayName',
+    rowActions: true,
+    bulkActions: false, // Critical infrastructure - no bulk operations
+    density: 'normal' as const
   },
   
-  table: { 
-    width: 'full', 
-    bulkSelect: true, 
-    columnFilter: true, 
-    sortableColumns: true 
-  }
-};
+  // ============================================================================
+  // INDEXEDDB CONFIGURATION
+  // ============================================================================
+  indexedDBKey: (record: any) => record.id,
+  
+  // ============================================================================
+  // REAL-TIME CAPABILITIES
+  // ============================================================================
+  enableRealTimeUpdates: true,
+  updateInterval: 5000 // 5 seconds
+}
 
-export const QUEUE_MESSAGE_SCHEMA: ResourceSchema = {
-  databaseKey: 'queueMessages',
-  modelName: 'QueueMessage',
-  actionPrefix: 'queueMessages',
+export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
+  // ============================================================================
+  // RESOURCE IDENTITY - BULLETPROOF 3-FIELD DESIGN
+  // ============================================================================
+  databaseKey: 'queueEvents',
+  modelName: 'QueueEvent',
+  actionPrefix: 'queueEvents',
   
-  serverOnly: true,
-  cacheStrategy: 'server-only',
-  notHasBranchContext: true,
+  // ============================================================================
+  // SERVER-ONLY CONFIGURATION
+  // ============================================================================
+  serverOnly: true, // High-volume event stream - server-side only
+  cacheStrategy: 'server-only' as const,
   
+  // ============================================================================
+  // UI DISPLAY
+  // ============================================================================
   display: {
-    title: 'Travel Processing Jobs',
-    description: 'UTR processing and scheduled travel tasks',
-    icon: 'activity',
-    color: 'green'
+    title: 'Queue Events',
+    description: 'Real-time queue activity event stream',
+    icon: 'Activity'
   },
   
+  // ============================================================================
+  // FIELD DEFINITIONS
+  // ============================================================================
   fields: [
-    // Identity
-    { 
-      key: 'id', 
-      label: 'Job ID', 
-      type: 'text', 
-      required: true,
-      form: { row: 1, width: 'full', showInForm: false }, 
-      table: { width: 'md', sortable: true }
+    {
+      key: 'id',
+      label: 'Event ID',
+      type: 'text' as const,
+      autoValue: { source: 'auto.uuid' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
     },
-    { 
-      key: 'queueConfigId', 
-      label: 'Queue', 
-      type: 'text', 
+    {
+      key: 'queueId',
+      label: 'Queue',
+      type: 'text' as const,
       required: true,
-      form: { row: 1, width: 'half' }, 
-      table: { width: 'lg' }
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
     },
-    { 
-      key: 'jobType', 
-      label: 'Job Type', 
-      type: 'select',
+    {
+      key: 'eventType',
+      label: 'Event Type',
+      type: 'select' as const,
+      required: true,
       options: {
         static: [
-          { value: 'gds_queue_check', label: 'GDS Queue Check' },
-          { value: 'virtual_scheduled', label: 'Virtual Scheduled' },
-          { value: 'utr_processing', label: 'UTR Processing' },
-          { value: 'follow_up', label: 'Follow-up Task' }
+          { value: 'ITEM_ADDED', label: 'Item Added' },
+          { value: 'ITEM_PROCESSED', label: 'Item Processed' },
+          { value: 'ITEM_FAILED', label: 'Item Failed' },
+          { value: 'QUEUE_PAUSED', label: 'Queue Paused' },
+          { value: 'QUEUE_RESUMED', label: 'Queue Resumed' },
+          { value: 'QUEUE_CLEARED', label: 'Queue Cleared' },
+          { value: 'STATUS_CHANGED', label: 'Status Changed' }
         ]
       },
-      form: { row: 1, width: 'half' }, 
-      table: { width: 'sm', sortable: true }
+      mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const, filterable: true }
     },
-    
-    // Travel Context
-    { 
-      key: 'pnr', 
-      label: 'PNR', 
-      type: 'text',
-      form: { row: 2, width: 'half' }, 
-      table: { width: 'sm' }
+    {
+      key: 'message',
+      label: 'Message',
+      type: 'text' as const,
+      required: true,
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'xl' as const }
     },
-    { 
-      key: 'gdsLocator', 
-      label: 'GDS Locator', 
-      type: 'text',
-      form: { row: 2, width: 'half' }, 
-      table: { width: 'sm' }
-    },
-    
-    // Status & Processing
-    { 
-      key: 'status', 
-      label: 'Status', 
-      type: 'select',
+    {
+      key: 'severity',
+      label: 'Severity',
+      type: 'select' as const,
+      required: true,
+      defaultValue: 'INFO',
       options: {
         static: [
-          { value: 'queued', label: 'Queued' },
-          { value: 'processing', label: 'Processing' },
-          { value: 'completed', label: 'Completed' },
-          { value: 'failed', label: 'Failed' },
-          { value: 'cancelled', label: 'Cancelled' },
-          { value: 'retrying', label: 'Retrying' }
+          { value: 'INFO', label: 'Info' },
+          { value: 'WARNING', label: 'Warning' },
+          { value: 'ERROR', label: 'Error' },
+          { value: 'CRITICAL', label: 'Critical' }
         ]
       },
-      form: { row: 3, width: 'third' }, 
-      table: { width: 'sm', sortable: true }
+      mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const, filterable: true }
     },
-    { 
-      key: 'priority', 
-      label: 'Priority', 
-      type: 'number',
-      form: { row: 3, width: 'third' }, 
-      table: { width: 'xs' }
+    {
+      key: 'timestamp',
+      label: 'Timestamp',
+      type: 'datetime' as const,
+      required: true,
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const, sortable: true }
     },
-    { 
-      key: 'workerId', 
-      label: 'Worker', 
-      type: 'text',
-      form: { row: 3, width: 'third' }, 
-      table: { width: 'sm' }
+    // System fields
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text' as const,
+      autoValue: { source: 'context.tenantId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
     },
-    
-    // Timing
-    { 
-      key: 'scheduledFor', 
-      label: 'Scheduled For', 
-      type: 'datetime',
-      form: { row: 4, width: 'third' }, 
-      table: { width: 'md', sortable: true }
-    },
-    { 
-      key: 'startedAt', 
-      label: 'Started At', 
-      type: 'datetime',
-      form: { row: 4, width: 'third' }, 
-      table: { width: 'md' }
-    },
-    { 
-      key: 'completedAt', 
-      label: 'Completed At', 
-      type: 'datetime',
-      form: { row: 4, width: 'third' }, 
-      table: { width: 'md' }
-    },
-    
-    // UTR Processing Results
-    { 
-      key: 'utrCount', 
-      label: 'UTRs Found', 
-      type: 'number',
-      form: { row: 5, width: 'third' }, 
-      table: { width: 'xs' }
-    },
-    { 
-      key: 'utrsProcessed', 
-      label: 'UTRs Processed', 
-      type: 'number',
-      form: { row: 5, width: 'third' }, 
-      table: { width: 'xs' }
-    },
-    { 
-      key: 'followUpJobsCreated', 
-      label: 'Follow-up Jobs', 
-      type: 'number',
-      form: { row: 5, width: 'third' }, 
-      table: { width: 'xs' }
-    },
-    
-    // Error Handling
-    { 
-      key: 'attemptCount', 
-      label: 'Attempts', 
-      type: 'number',
-      form: { row: 6, width: 'half' }, 
-      table: { width: 'xs' }
-    },
-    { 
-      key: 'lastError', 
-      label: 'Last Error', 
-      type: 'textarea',
-      form: { row: 6, width: 'half' }, 
-      table: { width: 'xl', showInTable: false }
-    },
-    
-    { 
-      key: 'createdAt', 
-      label: 'Created', 
-      type: 'datetime',
-      form: { row: 7, width: 'full', showInForm: false }, 
-      table: { width: 'md', sortable: true }
+    {
+      key: 'branchId',
+      label: 'Branch ID',
+      type: 'text' as const,
+      autoValue: { source: 'context.branchId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
     }
   ],
   
-  search: { 
-    fields: ['pnr', 'gdsLocator', 'status', 'jobType'], 
-    placeholder: 'Search jobs...', 
-    mobileFilters: true 
+  // ============================================================================
+  // SEARCH CONFIGURATION
+  // ============================================================================
+  search: {
+    fields: ['message', 'eventType', 'severity'],
+    placeholder: 'Search events...',
+    fuzzy: true
   },
   
-  actions: { 
-    create: false,
-    update: false, 
-    delete: false,
-    list: true,
-    custom: [
-      { id: 'requeue', label: 'Requeue Job', icon: 'refresh' },
-      { id: 'cancel', label: 'Cancel Job', icon: 'x' },
-      { id: 'retry', label: 'Retry Now', icon: 'repeat' },
-      { id: 'viewPayload', label: 'View Payload', icon: 'eye' }
-    ],
-    serverOnly: true 
+  // ============================================================================
+  // ACTIONS CONFIGURATION
+  // ============================================================================
+  actions: {
+    create: true,  // Events can be logged
+    update: false, // Events are immutable once created
+    delete: false, // Auto-cleanup handles deletion
+    duplicate: false,
+    bulk: false,
+    optimistic: false,
+    serverOnly: true
   },
   
-  mobile: { 
-    cardFormat: 'expanded', 
-    primaryField: 'pnr', 
-    secondaryFields: ['jobType', 'status', 'scheduledFor'] 
+  // ============================================================================
+  // MOBILE CONFIGURATION
+  // ============================================================================
+  mobile: {
+    cardFormat: 'detailed' as const,
+    primaryField: 'message',
+    secondaryFields: ['eventType', 'severity', 'timestamp'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right' as const
   },
   
-  desktop: { 
-    sortField: 'createdAt', 
-    sortOrder: 'desc' 
+  // ============================================================================
+  // DESKTOP CONFIGURATION
+  // ============================================================================
+  desktop: {
+    sortField: 'timestamp',
+    sortOrder: 'desc' as const, // Latest events first
+    editableField: null, // Events are read-only
+    rowActions: false, // No row actions for events
+    bulkActions: false,
+    density: 'compact' as const // More events visible
+  },
+  
+  // ============================================================================
+  // INDEXEDDB CONFIGURATION
+  // ============================================================================
+  indexedDBKey: (record: any) => record.id,
+  
+  // ============================================================================
+  // REAL-TIME CAPABILITIES
+  // ============================================================================
+  enableRealTimeStream: true,
+  streamChannel: 'queue-events',
+  
+  // ============================================================================
+  // AUTO-CLEANUP CONFIGURATION
+  // ============================================================================
+  autoCleanup: {
+    enabled: true,
+    retentionDays: 7 // Keep events for 7 days
   }
-};
+}
 
-export const QUEUE_WORKER_SCHEMA: ResourceSchema = {
-  databaseKey: 'queueWorkers',
-  modelName: 'QueueWorker',
-  actionPrefix: 'queueWorkers',
+// ============================================================================
+// ANALYTICS SCHEMAS
+// ============================================================================
+
+/**
+ * Queue Analytics Schema
+ * On-demand analytics data
+ */
+export const QueueAnalyticsSchema = z.object({
+  queueId: z.string(),
+  timeRange: z.enum(['1h', '6h', '24h', '7d', '30d']),
   
-  serverOnly: true,
-  cacheStrategy: 'server-only',
-  notHasBranchContext: true,
+  // Performance metrics
+  totalProcessed: z.number(),
+  totalFailed: z.number(),
+  averageProcessingTime: z.number(),
+  peakProcessingRate: z.number(),
   
-  display: {
-    title: 'Queue Workers',
-    description: 'GDS processing workers and system capacity',
-    icon: 'server',
-    color: 'purple'
-  },
+  // Health metrics  
+  uptime: z.number(), // percentage
+  errorRate: z.number(), // percentage
   
-  fields: [
-    { 
-      key: 'id', 
-      label: 'Worker ID', 
-      type: 'text',
-      form: { row: 1, width: 'full', showInForm: false }, 
-      table: { width: 'md' }
-    },
-    { 
-      key: 'name', 
-      label: 'Worker Name', 
-      type: 'text', 
-      required: true,
-      form: { row: 1, width: 'half' }, 
-      table: { width: 'lg', sortable: true }
-    },
-    { 
-      key: 'host', 
-      label: 'Host', 
-      type: 'text', 
-      required: true,
-      form: { row: 1, width: 'half' }, 
-      table: { width: 'md' }
-    },
-    { 
-      key: 'status', 
-      label: 'Status', 
-      type: 'select',
-      options: {
-        static: [
-          { value: 'idle', label: 'Idle' },
-          { value: 'busy', label: 'Busy' },
-          { value: 'offline', label: 'Offline' },
-          { value: 'error', label: 'Error' }
-        ]
-      },
-      form: { row: 2, width: 'third' }, 
-      table: { width: 'sm', sortable: true }
-    },
-    { 
-      key: 'currentJobId', 
-      label: 'Current Job', 
-      type: 'text',
-      form: { row: 2, width: 'third' }, 
-      table: { width: 'md' }
-    },
-    { 
-      key: 'lastHeartbeat', 
-      label: 'Last Heartbeat', 
-      type: 'datetime',
-      form: { row: 2, width: 'third' }, 
-      table: { width: 'md', sortable: true }
-    },
-    { 
-      key: 'jobsCompleted', 
-      label: 'Jobs Completed', 
-      type: 'number',
-      form: { row: 3, width: 'half' }, 
-      table: { width: 'sm' }
-    },
-    { 
-      key: 'jobsFailed', 
-      label: 'Jobs Failed', 
-      type: 'number',
-      form: { row: 3, width: 'half' }, 
-      table: { width: 'sm' }
-    }
-  ],
+  // Time series data
+  processingRateHistory: z.array(z.object({
+    timestamp: z.string(),
+    rate: z.number()
+  })),
   
-  actions: { 
-    create: false,
-    update: false,
-    delete: false,
-    list: true,
-    custom: [
-      { id: 'terminate', label: 'Terminate Worker', icon: 'x-circle' },
-      { id: 'restart', label: 'Restart Worker', icon: 'refresh' },
-      { id: 'viewLogs', label: 'View Logs', icon: 'file-text' }
-    ],
-    serverOnly: true 
-  },
-  
-  mobile: { 
-    cardFormat: 'compact', 
-    primaryField: 'name', 
-    secondaryFields: ['status', 'host'] 
-  }
-};
+  queueSizeHistory: z.array(z.object({
+    timestamp: z.string(), 
+    size: z.number()
+  }))
+})
+
+export type QueueAnalytics = z.infer<typeof QueueAnalyticsSchema>

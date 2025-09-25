@@ -50,7 +50,7 @@ import { CLASS_SCHEMA } from '@/features/classes/classes.schema';
 import { TABLE_CATEGORY_SCHEMA } from '@/features/table-categories/table-categories.schema';
 import { DATA_TABLE_SCHEMA } from '@/features/data-tables/data-tables.schema';
 import { TABLE_DATA_SCHEMA } from '@/features/table-data/table-data.schema';
-import { QUEUE_CONFIG_SCHEMA, QUEUE_MESSAGE_SCHEMA, QUEUE_WORKER_SCHEMA } from '@/features/queues/queues.schema';
+import { QUEUE_SCHEMA, QUEUE_EVENT_SCHEMA } from '@/features/queues/queues.schema';
 
 // Junction Schema Imports - Standalone Junction Tables
 import { PROCESS_RULE_SCHEMA, RULE_IGNORE_SCHEMA } from '@/features/rules/rules.schema';
@@ -92,10 +92,9 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   DATA_TABLE_SCHEMA,
   TABLE_DATA_SCHEMA,
   
-  // Travel Queue Management System (server-only)
-  QUEUE_CONFIG_SCHEMA,
-  QUEUE_MESSAGE_SCHEMA,
-  QUEUE_WORKER_SCHEMA,
+  // Real-Time Queue Management System (server-only)
+  QUEUE_SCHEMA,
+  QUEUE_EVENT_SCHEMA,
 
   // Settings System (server-only configurations) - Cast to ResourceSchema for action generation
   END_TRANSACT_SETTINGS_SCHEMA as unknown as ResourceSchema,
@@ -151,18 +150,33 @@ function initializeActionMappings(): Record<string, ActionMapping> {
         const key = `${schema.actionPrefix}.${action}`;
         const isCUDAction = action === 'create' || action === 'update' || action === 'delete';
         
-        actionMappings[key] = {
-          store: schema.databaseKey,
-          method: getMethodForAction(action),
-          endpoint: `/api/workspaces/current/actions`,
-          requiresAuth: true,
-          cached: action === 'read' || action === 'list',
-          // Use schema optimistic setting if specified, otherwise default CUD behavior
-          optimistic: schema.actions?.optimistic !== undefined ? schema.actions.optimistic && isCUDAction : isCUDAction,
-          // ✅ ADD SCHEMA: Required for auto-value processing in ActionClientCore
-          schema: schema,
-          resource: schema.actionPrefix
-        };
+        // ✅ SERVER-ONLY SCHEMAS: Generate actions but disable caching and optimistic updates
+        if (schema.serverOnly === true) {
+          actionMappings[key] = {
+            store: `${schema.databaseKey}-server-only`, // Different store identifier for server-only
+            method: getMethodForAction(action),
+            endpoint: `/api/workspaces/current/actions`,
+            requiresAuth: true,
+            cached: false, // ✅ NO CACHING for server-only schemas (security)
+            optimistic: false, // ✅ NO OPTIMISTIC UPDATES without local cache
+            schema: schema,
+            resource: schema.actionPrefix
+          };
+        } else {
+          // ✅ STANDARD SCHEMAS: Normal caching and optimistic behavior
+          actionMappings[key] = {
+            store: schema.databaseKey,
+            method: getMethodForAction(action),
+            endpoint: `/api/workspaces/current/actions`,
+            requiresAuth: true,
+            cached: action === 'read' || action === 'list',
+            // Use schema optimistic setting if specified, otherwise default CUD behavior
+            optimistic: schema.actions?.optimistic !== undefined ? schema.actions.optimistic && isCUDAction : isCUDAction,
+            // ✅ ADD SCHEMA: Required for auto-value processing in ActionClientCore
+            schema: schema,
+            resource: schema.actionPrefix
+          };
+        }
       });
     });
 
