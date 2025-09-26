@@ -14,14 +14,16 @@ import { useRouter } from 'next/navigation';
 
 export function SettingsWorkflows() {
   const router = useRouter();
+  const logPrefix = '[SettingsWorkflows]';
 
   const handleOpenBuilder = () => {
-    // Navigate to workflow builder in full page
+    console.log(logPrefix, 'Create Workflow button clicked → navigating to /workflows/builder');
     router.push('/workflows/builder');
   };
 
   // Handle row clicks to navigate to workflow builder for editing
   const handleRowClick = (workflow: any) => {
+    console.log(logPrefix, 'Row clicked → navigating to builder with id', { id: workflow?.id, workflow });
     router.push(`/workflows/builder?id=${workflow.id}`);
   };
 
@@ -33,7 +35,10 @@ export function SettingsWorkflows() {
           {
             label: 'Create Workflow',
             icon: <Plus className="w-4 h-4" />,
-            onClick: () => router.push('/workflows/builder'),
+            onClick: () => {
+              console.log(logPrefix, 'HeaderActions Create Workflow clicked');
+              router.push('/workflows/builder');
+            },
             variant: 'primary'
           }
         ]}

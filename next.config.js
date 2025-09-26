@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 // Removed MonacoWebpackPlugin; let @monaco-editor/react manage workers
 const path = require('path');
+const isProd = process.env.NODE_ENV === 'production';
 
 const nextConfig = {
   reactStrictMode: false, // 🚫 DISABLED: Prevents duplicate Monaco editor instances
@@ -12,12 +13,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true, // Temporarily ignore ESLint errors during build
   },
-  experimental: {
-    // Enable webpack build worker for better performance (only for webpack builds)
-    webpackBuildWorker: true,
-    // 🚀 **PERFORMANCE**: Enable optimized package imports
-    optimizePackageImports: ['lucide-react'],
-  },
+  // experimental: {
+  //   // Enable webpack build worker for better performance (only for webpack builds)
+  //   webpackBuildWorker: true,
+  //   // 🚀 **PERFORMANCE**: Enable optimized package imports
+  //   optimizePackageImports: ['lucide-react'],
+  // },
   // 🚀 **TURBOPACK**: Modern Turbopack configuration (moved from experimental.turbo)
   turbopack: {
     resolveAlias: {
@@ -124,8 +125,8 @@ const nextConfig = {
       return config;
     },
   }),
-  // Ensure output is configured correctly
-  output: 'standalone',
+  // Ensure output is configured correctly (only in production)
+  output: isProd ? 'standalone' : undefined,
 };
 
 module.exports = nextConfig; 

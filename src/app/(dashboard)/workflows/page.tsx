@@ -18,9 +18,11 @@ import { Plus, Upload } from 'lucide-react';
 
 export default function WorkflowsPage() {
   const router = useRouter();
+  const logPrefix = '[WorkflowsPage]';
 
   // Handle row clicks to navigate to workflow builder
   const handleRowClick = (workflow: any) => {
+    console.log(logPrefix, 'Row clicked → navigating to builder with id', { id: workflow?.id, workflow });
     router.push(`/workflows/builder?id=${workflow.id}`);
   };
 
@@ -32,7 +34,10 @@ export default function WorkflowsPage() {
           {
             label: 'Create Workflow',
             icon: <Plus className="w-4 h-4" />,
-            onClick: () => router.push('/workflows/builder'),
+            onClick: () => {
+              console.log(logPrefix, 'HeaderActions Create Workflow clicked');
+              router.push('/workflows/builder');
+            },
             variant: 'primary'
           },
           {

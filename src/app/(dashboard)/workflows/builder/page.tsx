@@ -7,15 +7,37 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Save, Play, Download, X } from 'lucide-react';
+import { ArrowLeft, Play, Download, X } from 'lucide-react';
 import { useActionQuery } from '@/hooks/use-action-api';
-import { WorkflowBuilder } from '@/features/workflows/components/workflow-builder';
-import { UnsavedChangesModal, useUnsavedChangesModal } from '@/features/workflows/components/workflow-builder/unsaved-changes-modal';
+import { queryKeys } from '@/hooks/use-action-api';
+import { useActionClientContext } from '@/lib/session';
+import dynamic from 'next/dynamic';
+
+// Lazy-load heavy components for better performance
+const WorkflowBuilder = dynamic(
+  () => import('@/features/workflows/components/workflow-builder'),
+  {
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center h-64">Loading workflow builder...</div>,
+  }
+);
+
+const UnsavedChangesModalDynamic = dynamic(
+  () =>
+    import('@/features/workflows/components/workflow-builder/unsaved-changes-modal').then((mod) => ({
+      default: mod.UnsavedChangesModal
+    })),
+  {
+    ssr: false,
+    loading: () => <div />,
+  }
+);
+
+import { useUnsavedChangesModal } from '@/features/workflows/components/workflow-builder/unsaved-changes-modal';
 import type { Workflow } from '@/features/workflows/workflows.schema';
 import type { ValidationError } from '@/features/workflows/utils/workflow-validator';
 
@@ -26,6 +48,11 @@ export default function WorkflowBuilderPage() {
   // Get workflow ID from URL params (for editing existing workflows)
   const workflowId = searchParams.get('id');
   const isEditing = Boolean(workflowId);
+  const { isReady: actionClientReady, tenantId, branchContext } = useActionClientContext();
+  const currentBranchId = branchContext?.currentBranchId;
+  const defaultBranchId = branchContext?.defaultBranchId;
+  const queryEnabled = isEditing && !!workflowId && actionClientReady;
+  const builderQueryKey = queryKeys.actionData('workflow.read', { id: workflowId }, currentBranchId);
   
   // State management
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -49,15 +76,24 @@ export default function WorkflowBuilderPage() {
   const {
     data: existingWorkflow,
     isLoading,
+    isFetching,
     error
   } = useActionQuery(
     'workflow.read',
     { id: workflowId },
     { 
-      enabled: isEditing && !!workflowId,
+      // Gate on branch/session readiness to avoid firing before context exists
+      enabled: queryEnabled,
+      retry: (failureCount, err: any) => {
+        // Avoid retry loops on auth/branch context errors
+        const msg = (err?.message || '').toString();
+        if (msg.includes('Tenant ID not available') || msg.includes('Branch context')) return false;
+        return failureCount < 2;
+      },
       staleTime: 5 * 60 * 1000 // 5 minutes
     }
   );
+
 
   // Set workflow data when loaded
   useEffect(() => {
@@ -66,18 +102,40 @@ export default function WorkflowBuilderPage() {
     }
   }, [existingWorkflow]);
 
+  // Ensure we pass the right workflow state to WorkflowBuilder
+  const workflowForBuilder = React.useMemo(() => {
+    // If we're editing and have fetched data, use it
+    if (isEditing && existingWorkflow?.data) {
+      return existingWorkflow.data as Workflow;
+    }
+    // If we're editing but still loading, use current state
+    if (isEditing && workflow) {
+      return workflow;
+    }
+    // For new workflows, return null
+    return null;
+  }, [isEditing, existingWorkflow?.data, workflow]);
+
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
 
   const handleWorkflowSaved = useCallback((savedWorkflow: Workflow) => {
+    console.log('🐛 [DEBUG] handleWorkflowSaved called:', { 
+      workflowId: savedWorkflow.id, 
+      isEditing, 
+      willNavigate: !isEditing,
+      timestamp: new Date().toISOString() 
+    });
     setWorkflow(savedWorkflow);
     setHasUnsavedChanges(false);
     
     // Update URL to editing mode if this was a new workflow
     if (!isEditing) {
       const newUrl = `/workflows/builder?id=${savedWorkflow.id}`;
-      router.replace(newUrl);
+      console.log('🐛 [DEBUG] Navigating to:', newUrl);
+      // 🛡️ Use router.push instead of router.replace to avoid potential race conditions
+      router.push(newUrl);
     }
   }, [isEditing, router]);
 
@@ -103,7 +161,6 @@ export default function WorkflowBuilderPage() {
     // For now, we can't trigger save from here since WorkflowBuilder handles its own saves
     // This is a limitation that would need to be addressed by exposing a save method
     // from WorkflowBuilder or changing the architecture
-    console.warn('Save from modal not yet implemented - WorkflowBuilder handles its own saving');
     
     // For now, just close the modal and let user manually save
     // In a real implementation, we'd expose a save method from WorkflowBuilder
@@ -113,7 +170,6 @@ export default function WorkflowBuilderPage() {
     if (!workflow) return;
     
     // TODO: Implement workflow testing
-    console.log('Testing workflow:', workflow.id);
     // Could navigate to a test runner page or open a modal
   };
 
@@ -127,6 +183,22 @@ export default function WorkflowBuilderPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading workflow...</p>
+          <div className="mt-6 text-left inline-block bg-gray-50 border border-gray-200 rounded p-4 max-w-xl">
+            <p className="font-semibold mb-2">Debug</p>
+            <pre className="text-xs whitespace-pre-wrap">{JSON.stringify({
+  workflowId,
+  isEditing,
+  actionClientReady,
+  tenantId,
+  currentBranchId,
+  defaultBranchId,
+  queryEnabled,
+  isLoading,
+  isFetching,
+  error: (error as any)?.message,
+  builderQueryKey
+}, null, 2)}</pre>
+          </div>
         </div>
       </div>
     );
@@ -137,7 +209,7 @@ export default function WorkflowBuilderPage() {
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load workflow: {error.message}
+            Failed to load workflow: {(error as any)?.message ?? 'Unknown error'}
           </AlertDescription>
         </Alert>
         <Button 
@@ -237,7 +309,7 @@ export default function WorkflowBuilderPage() {
       {/* Main Workflow Builder */}
       <div className="flex-1 overflow-hidden">
         <WorkflowBuilder
-          workflow={workflow}
+          workflow={workflowForBuilder}
           onSaved={handleWorkflowSaved}
           onChange={handleUnsavedChanges}
           onValidationChange={handleValidationChange}
@@ -246,7 +318,7 @@ export default function WorkflowBuilderPage() {
       </div>
 
       {/* Unsaved Changes Modal */}
-      <UnsavedChangesModal
+      <UnsavedChangesModalDynamic
         open={isUnsavedModalOpen}
         onOpenChange={setIsUnsavedModalOpen}
         canSave={false} // Temporarily disabled - would need WorkflowBuilder save method
@@ -256,7 +328,7 @@ export default function WorkflowBuilderPage() {
         onContinueEditing={handleContinueEditing}
         workflowName={workflow?.name || 'Untitled Workflow'}
       />
-
     </div>
   );
 }
+

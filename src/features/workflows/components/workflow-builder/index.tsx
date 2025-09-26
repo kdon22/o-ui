@@ -107,6 +107,7 @@ export function WorkflowBuilder({
   const [isEditingName, setIsEditingName] = useState<boolean>(!workflow);
   const [workflowName, setWorkflowName] = useState<string>(workflow?.name || 'New Workflow');
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);  // Add saving state protection
   const [validationResult, setValidationResult] = useState<ValidationResult>(() => 
     validateWorkflow(visualWorkflow, 'immediate')
   );
@@ -156,11 +157,28 @@ export function WorkflowBuilder({
   // ============================================================================
 
   const saveWorkflowMutation = useActionMutation('workflow.create', {
+    onMutate: (variables) => {
+      console.log('🐛 [DEBUG] saveWorkflowMutation.onMutate:', { 
+        name: variables.name,
+        id: variables.id,
+        timestamp: new Date().toISOString()
+      });
+    },
     onSuccess: (result) => {
+      console.log('🐛 [DEBUG] saveWorkflowMutation.onSuccess:', { 
+        resultId: result.data?.id,
+        timestamp: new Date().toISOString()
+      });
       setHasChanges(false);
       if (onSaved && result.data) {
         onSaved(result.data as Workflow);
       }
+    },
+    onError: (error) => {
+      console.log('🐛 [DEBUG] saveWorkflowMutation.onError:', { 
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
@@ -179,9 +197,19 @@ export function WorkflowBuilder({
 
   const handleNameSave = useCallback(async (name: string) => {
     if (!name.trim()) return;
+    
+    // 🛡️ PREVENT MULTIPLE SAVES: Check if already saving
+    if (isSaving) {
+      console.warn('🚫 [WorkflowBuilder] Save already in progress, ignoring duplicate call');
+      return;
+    }
 
     try {
+      setIsSaving(true);
+      console.log('🐛 [DEBUG] handleNameSave called:', { name: name.trim(), hasWorkflow: !!workflow, timestamp: new Date().toISOString() });
+      
       if (!workflow) {
+        console.log('🐛 [DEBUG] Creating new workflow via mutation');
         // Create new workflow in database
         const result = await saveWorkflowMutation.mutateAsync({
           name: name.trim(),
@@ -236,9 +264,11 @@ export function WorkflowBuilder({
         setIsEditingName(false);
       }
     } catch (error) {
-      console.error('Failed to save workflow name:', error);
+      console.error('❌ [WorkflowBuilder] Failed to save workflow name:', error);
+    } finally {
+      setIsSaving(false);
     }
-  }, [visualWorkflow, workflow, saveWorkflowMutation, updateWorkflowMutation, onSaved]);
+  }, [visualWorkflow, workflow, saveWorkflowMutation, updateWorkflowMutation, onSaved, isSaving]);
 
   const handleWorkflowChange = useCallback((newVisualWorkflow: VisualWorkflow) => {
     setVisualWorkflow(newVisualWorkflow);
@@ -350,14 +380,19 @@ export function WorkflowBuilder({
   // ============================================================================
 
   // Auto-save when workflow changes (debounced)
+  // 🛡️ ONLY for existing workflows - NEW workflows should be saved explicitly via name editor
   useEffect(() => {
     if (!hasChanges || !visualWorkflow || visualWorkflow.id === 'new' || !workflow) return;
+    
+    // 🚫 DISABLED: Auto-save conflicts with explicit name-based creation for new workflows
+    // For existing workflows, auto-save after changes but NOT during initial creation
+    if (workflow && workflow.id && workflow.id !== 'new') {
+      const autoSaveTimer = setTimeout(() => {
+        handleSave();
+      }, 2000); // Auto-save after 2 seconds of no changes
 
-    const autoSaveTimer = setTimeout(() => {
-      handleSave();
-    }, 2000); // Auto-save after 2 seconds of no changes
-
-    return () => clearTimeout(autoSaveTimer);
+      return () => clearTimeout(autoSaveTimer);
+    }
   }, [hasChanges, visualWorkflow, workflow, handleSave]);
 
   // ============================================================================

@@ -4,16 +4,19 @@ import React from 'react'
 import { MainHeader } from '@/components/header/main-header'
 import { useUnifiedApp } from '@/components/providers/conditional-providers'
 import type { BranchInfo } from '@/lib/utils/branch-utils'
+import { usePathname } from 'next/navigation'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const { 
-    session, 
-    isAuthenticated, 
-    branchContext,
-    isCacheReady
+    auth,
+    branchContext
   } = useUnifiedApp()
   
-  const sessionLoading = !isAuthenticated
+  // Extract auth properties from auth object (like AppLoadingBoundary does)
+  const sessionLoading = !auth.isAuthenticated
+  const isAuthenticated = auth.isAuthenticated
+  const session = { user: { currentTenant: auth.session?.user?.currentTenant } }
   
   // Create BranchInfo object from unified provider data
   const currentBranch: BranchInfo | null = branchContext?.currentBranchId ? {
@@ -43,7 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
   
-  const currentTenant = session?.user?.currentTenant
+  const currentTenant = auth.session?.user?.currentTenant
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

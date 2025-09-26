@@ -30,12 +30,14 @@ export function InlineNameEditor({
   disabled = false
 }: InlineNameEditorProps) {
   const [editValue, setEditValue] = useState(name);
+  const [isSubmitting, setIsSubmitting] = useState(false);  // Prevent double submission
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset edit value when name changes externally (only when not editing)
   useEffect(() => {
     if (!isEditing) {
       setEditValue(name);
+      setIsSubmitting(false);  // Reset submission state when not editing
     }
   }, [name, isEditing]);
 
@@ -48,9 +50,24 @@ export function InlineNameEditor({
   }, [isEditing]);
 
   const handleSave = () => {
+    // 🛡️ PREVENT DOUBLE SUBMISSION: Check if already submitting
+    if (isSubmitting) {
+      console.log('🐛 [DEBUG] InlineNameEditor.handleSave blocked - already submitting');
+      return;
+    }
+
     const trimmedValue = editValue.trim();
+    console.log('🐛 [DEBUG] InlineNameEditor.handleSave called:', { 
+      trimmedValue, 
+      originalName: name, 
+      willSave: trimmedValue && trimmedValue !== name,
+      timestamp: new Date().toISOString()
+    });
+
     if (trimmedValue && trimmedValue !== name) {
+      setIsSubmitting(true);
       onSave(trimmedValue);
+      // Note: isSubmitting will be reset when component unmounts or name changes
     } else {
       onCancel();
     }
@@ -64,14 +81,7 @@ export function InlineNameEditor({
     }
   };
 
-  const handleBlur = () => {
-    // Small delay to allow clicking save button
-    setTimeout(() => {
-      if (document.activeElement?.getAttribute('data-save-button') !== 'true') {
-        handleSave();
-      }
-    }, 100);
-  };
+  // Removed auto-save on blur - users must explicitly click save button
 
   if (isEditing) {
     return (
@@ -81,22 +91,20 @@ export function InlineNameEditor({
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
           placeholder={placeholder}
           className="h-8 text-lg font-semibold bg-white dark:bg-gray-800"
           style={{ minWidth: '200px', maxWidth: '400px' }}
           showSuccessIndicator={false}
         />
         <button
-          data-save-button="true"
           onClick={handleSave}
-          disabled={disabled || !editValue.trim() || editValue === name}
+          disabled={disabled || !editValue.trim() || editValue === name || isSubmitting}
           className={`p-1 rounded transition-colors ${
-            disabled || !editValue.trim() || editValue === name
+            disabled || !editValue.trim() || editValue === name || isSubmitting
               ? 'text-gray-400 cursor-not-allowed' 
               : 'text-green-600 hover:text-green-700 hover:bg-green-50'
           }`}
-          title={disabled ? "Fix validation errors before saving" : "Save name"}
+          title={disabled ? "Fix validation errors before saving" : isSubmitting ? "Saving..." : "Save name"}
         >
           <Check size={16} />
         </button>
