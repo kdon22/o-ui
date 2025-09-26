@@ -6,14 +6,39 @@
 'use client';
 
 import React from 'react';
-import { Workflow, ExternalLink } from 'lucide-react';
+import { Workflow, ExternalLink, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AutoTable } from '@/components/auto-generated/table';
+import { HeaderActions } from '@/components/auto-generated/table/header-actions';
+import { useRouter } from 'next/navigation';
 
 export function SettingsWorkflows() {
+  const router = useRouter();
+
   const handleOpenBuilder = () => {
     // Navigate to workflow builder in full page
-    window.location.href = '/workflows/builder';
+    router.push('/workflows/builder');
+  };
+
+  // Handle row clicks to navigate to workflow builder for editing
+  const handleRowClick = (workflow: any) => {
+    router.push(`/workflows/builder?id=${workflow.id}`);
+  };
+
+  // Header actions function that customizes the Add button to open workflow builder
+  const headerActions = (handleAdd: () => void) => {
+    return (
+      <HeaderActions
+        actions={[
+          {
+            label: 'Create Workflow',
+            icon: <Plus className="w-4 h-4" />,
+            onClick: () => router.push('/workflows/builder'),
+            variant: 'primary'
+          }
+        ]}
+      />
+    );
   };
 
   return (
@@ -40,10 +65,12 @@ export function SettingsWorkflows() {
         </div>
       </div>
       
-      {/* Content - AutoTable handles inline editing */}
+      {/* Content - AutoTable with workflow builder integration */}
       <div className="flex-1 overflow-hidden">
         <AutoTable
           resourceKey="workflow"
+          onRowClick={handleRowClick}
+          headerActions={headerActions}
           customTitle="Workflow Management"
           customSearchPlaceholder="Search workflows..."
           buttonVariant="black"

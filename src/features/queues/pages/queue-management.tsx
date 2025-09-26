@@ -45,6 +45,10 @@ interface QueueManagementProps {
 export default function QueueManagement({ className }: QueueManagementProps) {
   const [activeTab, setActiveTab] = useState('queues');
   const [refreshInterval, setRefreshInterval] = useState(5000); // 5 second polling
+  
+  // Activity Stream filters
+  const [activityTypeFilter, setActivityTypeFilter] = useState('all');
+  const [severityFilter, setSeverityFilter] = useState('all');
 
   const handleRefresh = () => {
     // Trigger refresh on all tabs
@@ -165,10 +169,46 @@ export default function QueueManagement({ className }: QueueManagementProps) {
                   <div className="flex items-center gap-1 ml-4">
                     <span className="text-xs text-gray-500">Type:</span>
                     <div className="flex gap-1">
-                      <button className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md border border-blue-200">All</button>
-                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">Job Lifecycle</button>
-                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">Errors</button>
-                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">Workers</button>
+                      <button 
+                        onClick={() => setActivityTypeFilter('all')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          activityTypeFilter === 'all'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button 
+                        onClick={() => setActivityTypeFilter('job-lifecycle')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          activityTypeFilter === 'job-lifecycle'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        Job Lifecycle
+                      </button>
+                      <button 
+                        onClick={() => setActivityTypeFilter('errors')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          activityTypeFilter === 'errors'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        Errors
+                      </button>
+                      <button 
+                        onClick={() => setActivityTypeFilter('workers')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          activityTypeFilter === 'workers'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        Workers
+                      </button>
                     </div>
                   </div>
 
@@ -176,20 +216,38 @@ export default function QueueManagement({ className }: QueueManagementProps) {
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-gray-500">Severity:</span>
                     <div className="flex gap-1">
-                      <button className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md border border-blue-200">All <span className="ml-1 bg-blue-200 px-1 rounded">4</span></button>
-                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">INFO <span className="ml-1 bg-gray-200 px-1 rounded">3</span></button>
-                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">ERROR <span className="ml-1 bg-gray-200 px-1 rounded">1</span></button>
+                      <button 
+                        onClick={() => setSeverityFilter('all')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          severityFilter === 'all'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        All <span className="ml-1 bg-blue-200 px-1 rounded text-xs">4</span>
+                      </button>
+                      <button 
+                        onClick={() => setSeverityFilter('INFO')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          severityFilter === 'INFO'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        INFO <span className="ml-1 bg-gray-200 px-1 rounded text-xs">3</span>
+                      </button>
+                      <button 
+                        onClick={() => setSeverityFilter('ERROR')}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          severityFilter === 'ERROR'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        ERROR <span className="ml-1 bg-gray-200 px-1 rounded text-xs">1</span>
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                {/* Search */}
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Search activities..." 
-                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-48"
-                  />
                 </div>
               </div>
 
@@ -200,7 +258,11 @@ export default function QueueManagement({ className }: QueueManagementProps) {
                   className="h-full"
                   filteringConfig={{}}
                   customTitle=""
-                  customSearchPlaceholder="Search activities..."
+                  level1Filter={activityTypeFilter}
+                  level2Filter={severityFilter}
+                  onLevel1FilterChange={setActivityTypeFilter}
+                  onLevel2FilterChange={setSeverityFilter}
+                  customSearchPlaceholder=""
                 />
               </div>
             </div>
