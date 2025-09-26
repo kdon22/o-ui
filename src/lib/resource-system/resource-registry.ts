@@ -50,7 +50,7 @@ import { CLASS_SCHEMA } from '@/features/classes/classes.schema';
 import { TABLE_CATEGORY_SCHEMA } from '@/features/table-categories/table-categories.schema';
 import { DATA_TABLE_SCHEMA } from '@/features/data-tables/data-tables.schema';
 import { TABLE_DATA_SCHEMA } from '@/features/table-data/table-data.schema';
-import { QUEUE_SCHEMA, QUEUE_EVENT_SCHEMA } from '@/features/queues/queues.schema';
+import { QUEUE_SCHEMA, QUEUE_EVENT_SCHEMA, JOB_PACKAGE_SCHEMA, JOB_ACTIVITY_SCHEMA } from '@/features/queues/queues.schema';
 
 // Junction Schema Imports - Standalone Junction Tables
 import { PROCESS_RULE_SCHEMA, RULE_IGNORE_SCHEMA } from '@/features/rules/rules.schema';
@@ -95,6 +95,10 @@ const SCHEMA_RESOURCES: ResourceSchema[] = [
   // Real-Time Queue Management System (server-only)
   QUEUE_SCHEMA,
   QUEUE_EVENT_SCHEMA,
+  
+  // Distributed Job Execution System (server-only) 
+  JOB_PACKAGE_SCHEMA,
+  JOB_ACTIVITY_SCHEMA,
 
   // Settings System (server-only configurations) - Cast to ResourceSchema for action generation
   END_TRANSACT_SETTINGS_SCHEMA as unknown as ResourceSchema,

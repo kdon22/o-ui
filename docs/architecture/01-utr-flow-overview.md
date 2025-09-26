@@ -102,6 +102,8 @@ Business Code → Schema Translation → Python → Go Orchestrator → Vendor A
 
 Based on Python rule results, the Go orchestrator handles:
 
+> **Infrastructure Note**: The Go orchestrator and Python rule engine execute as containerized workers in the AWS cloud infrastructure described in [/docs/cloud-architecture/](../../../docs/cloud-architecture/). Jobs are queued, prioritized, and auto-scaled based on workload.
+
 #### **Automated Actions (Go Executes)**
 - **Data Corrections**: Go applies fixes to PNR data via vendor APIs
 - **GDS Write-back**: Go updates records in source systems (Amadeus, Sabre)

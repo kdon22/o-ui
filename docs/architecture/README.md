@@ -136,6 +136,11 @@ GDS Systems → Go Orchestrator → UTR Normalization → Python Rules → Actio
 
 ## 🔗 **Related Resources**
 
+### **Infrastructure Documentation**
+- [AWS Cloud Architecture Overview](../../../docs/cloud-architecture/) - **Infrastructure layer that hosts this system**
+- [Deployment and Operations](../../../docs/cloud-architecture/06-deployment-operations.md) - **How UTR jobs are deployed and executed**
+- [Cost Optimization](../../../docs/cloud-architecture/04-cost-optimization.md) - **Infrastructure cost management for UTR processing**
+
 ### **External Documentation**
 - [GDS API Documentation](../external-apis/)
 - [Python Rule Development Guide](../python-rules/)

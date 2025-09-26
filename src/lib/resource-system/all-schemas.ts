@@ -23,7 +23,7 @@ import { CLASS_SCHEMA } from '@/features/classes/classes.schema';
 import { TABLE_CATEGORY_SCHEMA } from '@/features/table-categories/table-categories.schema';
 import { DATA_TABLE_SCHEMA } from '@/features/data-tables/data-tables.schema';
 import { TABLE_DATA_SCHEMA } from '@/features/table-data/table-data.schema';
-import { QUEUE_SCHEMA, QUEUE_EVENT_SCHEMA } from '@/features/queues/queues.schema';
+import { QUEUE_SCHEMA, QUEUE_EVENT_SCHEMA, JOB_PACKAGE_SCHEMA, JOB_ACTIVITY_SCHEMA } from '@/features/queues/queues.schema';
 
 // Pull Request System Schemas
 import { 
@@ -86,6 +86,10 @@ export const ALL_SCHEMAS = [
   // Real-Time Queue Management System
   QUEUE_SCHEMA,
   QUEUE_EVENT_SCHEMA,
+  
+  // Distributed Job Execution System
+  JOB_PACKAGE_SCHEMA,
+  JOB_ACTIVITY_SCHEMA,
   
   // Junction schemas (auto-discovered)
   PROCESS_RULE_SCHEMA,

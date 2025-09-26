@@ -101,6 +101,33 @@ export const USER_SCHEMA: ResourceSchema = {
         { type: 'email', message: 'Please enter a valid email address' }
       ]
     },
+    {
+      key: 'groupId',
+      label: 'Permission Group',
+      type: 'select',
+      required: false,
+      placeholder: 'Select a group...',
+      description: 'User permission group that determines access rights',
+      tab: 'Profile',
+      form: {
+        row: 2,
+        width: 'full',
+        order: 1
+      },
+      table: {
+        width: 'md',
+        showInTable: true
+      },
+      options: {
+        dynamic: {
+          resource: 'groups',
+          valueField: 'id',
+          labelField: 'name',
+          displayField: 'description',
+          filter: (item: any) => item.isActive === true
+        }
+      }
+    },
 
     // ============================================================================
     // CODE EDITOR PREFERENCES - EDITOR TAB

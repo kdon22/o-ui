@@ -617,6 +617,31 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
     placeholder: 'Search events...',
     fuzzy: true
   },
+
+  // ============================================================================
+  // FILTERING CONFIGURATION - Two-Level System for Activity Stream
+  // ============================================================================
+  filtering: {
+    level1: {
+      title: 'Event Type',
+      filterField: 'eventType',
+      tabs: [
+        { id: 'all', label: 'All Events', value: 'all' },
+        { id: 'processed', label: 'Processed', value: 'ITEM_PROCESSED', icon: 'CheckCircle' },
+        { id: 'failed', label: 'Failed', value: 'ITEM_FAILED', icon: 'XCircle' },
+        { id: 'queue-ops', label: 'Queue Ops', value: 'QUEUE_PAUSED,QUEUE_RESUMED,QUEUE_CLEARED', icon: 'Settings' },
+        { id: 'status', label: 'Status Changes', value: 'STATUS_CHANGED', icon: 'Activity' }
+      ],
+      showAll: true,
+      defaultTab: 'all'
+    },
+    level2: {
+      title: 'Severity',
+      filterField: 'severity',
+      groupBy: 'severity',
+      showAll: true
+    }
+  },
   
   // ============================================================================
   // ACTIONS CONFIGURATION
@@ -672,6 +697,61 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
   //   enabled: true,
   //   retentionDays: 7 // Keep events for 7 days
   // }
+
+  // ============================================================================
+  // ENHANCED ACTIVITY STREAM FILTERS (Future Implementation)
+  // ============================================================================
+  // Advanced filtering capabilities for the activity stream:
+  // 
+  // additionalFilters: [
+  //   {
+  //     key: 'eventType',
+  //     label: 'Event Type',
+  //     type: 'dropdown',
+  //     multiple: true,
+  //     options: [
+  //       { value: 'ITEM_ADDED', label: 'Item Added', icon: 'Plus' },
+  //       { value: 'ITEM_PROCESSED', label: 'Item Processed', icon: 'CheckCircle' },
+  //       { value: 'ITEM_FAILED', label: 'Item Failed', icon: 'XCircle' },
+  //       { value: 'QUEUE_PAUSED', label: 'Queue Paused', icon: 'Pause' },
+  //       { value: 'QUEUE_RESUMED', label: 'Queue Resumed', icon: 'Play' },
+  //       { value: 'QUEUE_CLEARED', label: 'Queue Cleared', icon: 'Trash2' },
+  //       { value: 'STATUS_CHANGED', label: 'Status Changed', icon: 'Activity' }
+  //     ],
+  //     defaultValue: ['ITEM_PROCESSED', 'ITEM_FAILED', 'QUEUE_PAUSED', 'QUEUE_RESUMED']
+  //   },
+  //   {
+  //     key: 'queueId',
+  //     label: 'Queue',
+  //     type: 'dropdown',
+  //     multiple: true,
+  //     dataSource: {
+  //       endpoint: '/api/queues',
+  //       valueField: 'id',
+  //       labelField: 'displayName'
+  //     }
+  //   },
+  //   {
+  //     key: 'dateRange',
+  //     label: 'Time Range',
+  //     type: 'daterange',
+  //     defaultValue: 'last24h',
+  //     presets: [
+  //       { value: 'last1h', label: 'Last Hour' },
+  //       { value: 'last6h', label: 'Last 6 Hours' },
+  //       { value: 'last24h', label: 'Last 24 Hours' },
+  //       { value: 'last7d', label: 'Last 7 Days' },
+  //       { value: 'last30d', label: 'Last 30 Days' },
+  //       { value: 'custom', label: 'Custom Range' }
+  //     ]
+  //   }
+  // ],
+  //
+  // autoRefresh: {
+  //   enabled: true,
+  //   intervals: [5000, 15000, 30000, 60000], // 5s, 15s, 30s, 1min
+  //   defaultInterval: 15000
+  // }
 }
 
 // ============================================================================
@@ -709,3 +789,816 @@ export const QueueAnalyticsSchema = z.object({
 })
 
 export type QueueAnalytics = z.infer<typeof QueueAnalyticsSchema>
+
+// ============================================================================
+// JOB EXECUTION SYSTEM SCHEMAS - DISTRIBUTED JOB PROCESSING
+// ============================================================================
+
+/**
+ * JobPackage Entity Schema
+ * Represents a distributed job with full lifecycle tracking
+ */
+export const JobPackageSchema = z.object({
+  id: z.string(),
+  jobId: z.string(), // Universal job identifier
+  tenantId: z.string(),
+  branchId: z.string().nullable(),
+  
+  // Execution timing and scheduling
+  runTimeUtc: z.string(), // ISO datetime
+  queuedAt: z.string(),
+  scheduleFrequencyMinutes: z.number().nullable(),
+  
+  // Trigger context
+  triggerType: z.enum(['SCHEDULED', 'API_CALL', 'WEBHOOK', 'MANUAL', 'DEPENDENCY', 'QUEUE_EVENT']),
+  triggerSource: z.string().nullable(),
+  triggeredBy: z.string().nullable(),
+  
+  // Job definition
+  jobType: z.string(),
+  workflowId: z.string().nullable(),
+  processId: z.string().nullable(),
+  ruleId: z.string().nullable(),
+  
+  // Processing state
+  status: z.enum(['QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'RETRYING', 'TIMEOUT']),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'URGENT']),
+  priorityScore: z.number().default(0),
+  retryCount: z.number().default(0),
+  maxRetries: z.number().default(3),
+  
+  // Results and timing
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  timeoutAt: z.string().nullable(),
+  duration: z.number().nullable(),
+  error: z.string().nullable(),
+  errorCode: z.string().nullable(),
+  
+  // Resource tracking
+  workerId: z.string().nullable(), // ✅ Key field for sorting!
+  workerInstanceId: z.string().nullable(),
+  containerInstance: z.string().nullable(),
+  
+  // Performance metrics
+  cpuUsage: z.number().nullable(),
+  memoryUsage: z.number().nullable(),
+  networkUsage: z.number().nullable(),
+  
+  // Dependencies and relationships
+  parentJobId: z.string().nullable(),
+  batchId: z.string().nullable(),
+  queueId: z.string().nullable(),
+  
+  // System fields
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdById: z.string().nullable(),
+  isArchived: z.boolean().default(false),
+})
+
+export type JobPackage = z.infer<typeof JobPackageSchema>
+
+/**
+ * JobActivity Entity Schema
+ * Represents activity stream events for jobs
+ */
+export const JobActivitySchema = z.object({
+  id: z.string(),
+  jobId: z.string(), // References JobPackage.jobId
+  tenantId: z.string(),
+  
+  // Activity details
+  activityType: z.enum([
+    'JOB_CREATED', 'JOB_STARTED', 'JOB_COMPLETED', 'JOB_FAILED', 'JOB_CANCELLED',
+    'JOB_RETRIED', 'JOB_TIMEOUT', 'WORKER_ASSIGNED', 'WORKER_RELEASED',
+    'DEPENDENCY_RESOLVED', 'RESOURCE_ALLOCATED', 'RESOURCE_RELEASED',
+    'ERROR_OCCURRED', 'WARNING_ISSUED', 'METRIC_RECORDED', 'USER_ACTION', 'SYSTEM_EVENT'
+  ]),
+  title: z.string(),
+  description: z.string().nullable(),
+  
+  // Context
+  entityType: z.string().nullable(),
+  entityId: z.string().nullable(),
+  userId: z.string().nullable(),
+  systemComponent: z.string().nullable(),
+  
+  // Error details
+  errorCode: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  severity: z.enum(['INFO', 'WARNING', 'ERROR', 'CRITICAL']).nullable(),
+  
+  // Performance
+  duration: z.number().nullable(),
+  
+  // Correlation
+  correlationId: z.string().nullable(),
+  traceId: z.string().nullable(),
+  
+  // Visibility
+  isVisible: z.boolean().default(true),
+  isSystemGenerated: z.boolean().default(false),
+  tags: z.array(z.string()).default([]),
+  
+  // System fields
+  createdAt: z.string(),
+  retentionDays: z.number().default(365),
+  isArchived: z.boolean().default(false),
+})
+
+export type JobActivity = z.infer<typeof JobActivitySchema>
+
+// ============================================================================
+// JOB PACKAGE RESOURCE SCHEMA - AUTO-TABLE CONFIGURATION
+// ============================================================================
+
+export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
+  // ============================================================================
+  // RESOURCE IDENTITY
+  // ============================================================================
+  databaseKey: 'jobPackages',
+  modelName: 'JobPackage', 
+  actionPrefix: 'jobPackages',
+  
+  // ============================================================================
+  // SERVER-ONLY CONFIGURATION
+  // ============================================================================
+  serverOnly: true, // High-volume job data - server-side rendering only
+  notHasBranchContext: true, // Job execution is tenant-level operational data, not branch-specific
+  cacheStrategy: 'server-only' as const,
+  
+  // ============================================================================
+  // UI DISPLAY
+  // ============================================================================
+  display: {
+    title: 'Job Packages',
+    description: 'Distributed job execution monitoring and management',
+    icon: 'Package'
+  },
+  
+  // ============================================================================
+  // FIELD DEFINITIONS
+  // ============================================================================
+  fields: [
+    {
+      key: 'id',
+      label: 'ID',
+      type: 'text' as const,
+      autoValue: { source: 'auto.uuid' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
+    },
+    {
+      key: 'jobId',
+      label: 'Job ID',
+      type: 'text' as const,
+      required: true,
+      table: {
+        width: 'lg'
+      },
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select' as const,
+      required: true,
+      options: {
+        static: [
+          { value: 'QUEUED', label: 'Queued' },
+          { value: 'RUNNING', label: 'Running' },
+          { value: 'COMPLETED', label: 'Completed' },
+          { value: 'FAILED', label: 'Failed' },
+          { value: 'CANCELLED', label: 'Cancelled' },
+          { value: 'RETRYING', label: 'Retrying' },
+          { value: 'TIMEOUT', label: 'Timeout' }
+        ]
+      },
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const }
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      type: 'select' as const,
+      required: true,
+      options: {
+        static: [
+          { value: 'LOW', label: 'Low' },
+          { value: 'NORMAL', label: 'Normal' },
+          { value: 'HIGH', label: 'High' },
+          { value: 'CRITICAL', label: 'Critical' },
+          { value: 'URGENT', label: 'Urgent' }
+        ]
+      },
+      table: {
+        width: 'sm',
+        filterable: true
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
+    },
+    {
+      key: 'jobType',
+      label: 'Job Type',
+      type: 'text' as const,
+      required: true,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const }
+    },
+    {
+      key: 'workerId',
+      label: 'Worker ID',
+      type: 'text' as const,
+      required: false,
+      table: {
+        width: 'lg',
+        filterable: true,
+        sortable: true // ✅ Enable sorting by workerId
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'triggerType',
+      label: 'Trigger',
+      type: 'select' as const,
+      required: true,
+      options: {
+        static: [
+          { value: 'SCHEDULED', label: 'Scheduled' },
+          { value: 'API_CALL', label: 'API Call' },
+          { value: 'WEBHOOK', label: 'Webhook' },
+          { value: 'MANUAL', label: 'Manual' },
+          { value: 'DEPENDENCY', label: 'Dependency' },
+          { value: 'QUEUE_EVENT', label: 'Queue Event' }
+        ]
+      },
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const }
+    },
+    {
+      key: 'duration',
+      label: 'Duration (ms)',
+      type: 'number' as const,
+      required: false,
+      table: {
+        width: 'sm'
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
+    },
+    {
+      key: 'retryCount',
+      label: 'Retries',
+      type: 'number' as const,
+      required: false,
+      defaultValue: 0,
+      table: {
+        width: 'xs'
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'xs' as const }
+    },
+    {
+      key: 'queuedAt',
+      label: 'Queued At',
+      type: 'datetime' as const,
+      required: true,
+      table: {
+        width: 'lg'
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'startedAt',
+      label: 'Started At',
+      type: 'datetime' as const,
+      required: false,
+      table: {
+        width: 'lg'
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'completedAt',
+      label: 'Completed At',
+      type: 'datetime' as const,
+      required: false,
+      table: {
+        width: 'lg'
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'error',
+      label: 'Error Message',
+      type: 'textarea' as const,
+      required: false,
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'xl' as const }
+    },
+    // System fields
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text' as const,
+      autoValue: { source: 'session.user.tenantId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
+    },
+    {
+      key: 'branchId',
+      label: 'Branch ID',
+      type: 'text' as const,
+      autoValue: { source: 'session.user.branchContext.currentBranchId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
+    }
+  ],
+  
+  // ============================================================================
+  // SEARCH CONFIGURATION
+  // ============================================================================
+  search: {
+    fields: ['jobId', 'jobType', 'workerId', 'error'],
+    placeholder: 'Search jobs...',
+    fuzzy: true
+  },
+  
+  // ============================================================================
+  // FILTERING CONFIGURATION - Multi-Level Job Filtering
+  // ============================================================================
+  filtering: {
+    level1: {
+      title: 'Job Status',
+      filterField: 'status',
+      tabs: [
+        { id: 'all', label: 'All Jobs', value: 'all' },
+        { id: 'running', label: 'Running', value: 'RUNNING', icon: 'Play' },
+        { id: 'completed', label: 'Completed', value: 'COMPLETED', icon: 'CheckCircle' },
+        { id: 'failed', label: 'Failed', value: 'FAILED', icon: 'XCircle' },
+        { id: 'queued', label: 'Queued', value: 'QUEUED', icon: 'Clock' },
+        { id: 'retrying', label: 'Retrying', value: 'RETRYING', icon: 'RotateCcw' }
+      ],
+      showAll: true,
+      defaultTab: 'all'
+    },
+    level2: {
+      title: 'Priority',
+      filterField: 'priority',
+      groupBy: 'priority',
+      showAll: true
+    }
+  },
+  
+  // ============================================================================
+  // ACTIONS CONFIGURATION
+  // ============================================================================
+  actions: {
+    create: true,
+    update: false, // Jobs are managed by the system
+    delete: false, // Jobs have retention policies
+    duplicate: false,
+    bulk: true,
+    optimistic: false,
+    serverOnly: true
+  },
+
+  // ============================================================================
+  // ROW-LEVEL ACTIONS - Job Management
+  // ============================================================================
+  rowActions: [
+    {
+      key: 'retry',
+      label: 'Retry',
+      icon: 'RotateCcw',
+      variant: 'default' as const,
+      size: 'sm' as const,
+      actionType: 'mutation' as const,
+      condition: {
+        field: 'status',
+        operator: 'in' as const,
+        value: ['FAILED', 'TIMEOUT', 'CANCELLED']
+      },
+      mutation: {
+        action: 'jobPackages.retry',
+        payload: { status: 'QUEUED', retryCount: '+1' }
+      },
+      tooltip: 'Retry failed job',
+      loadingText: 'Retrying...'
+    },
+    {
+      key: 'cancel',
+      label: 'Cancel',
+      icon: 'X',
+      variant: 'destructive' as const,
+      size: 'sm' as const,
+      actionType: 'mutation' as const,
+      condition: {
+        field: 'status',
+        operator: 'in' as const,
+        value: ['QUEUED', 'RUNNING']
+      },
+      mutation: {
+        action: 'jobPackages.update',
+        payload: { status: 'CANCELLED' },
+        confirmMessage: 'This will cancel the running job. Are you sure?'
+      },
+      tooltip: 'Cancel job',
+      loadingText: 'Cancelling...'
+    }
+  ],
+  
+  // ============================================================================
+  // MOBILE CONFIGURATION
+  // ============================================================================
+  mobile: {
+    cardFormat: 'detailed' as const,
+    primaryField: 'jobId',
+    secondaryFields: ['status', 'priority', 'jobType', 'workerId'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right' as const
+  },
+  
+  // ============================================================================
+  // DESKTOP CONFIGURATION
+  // ============================================================================
+  desktop: {
+    sortField: 'queuedAt',
+    sortOrder: 'desc' as const, // Latest jobs first
+    editableField: undefined,
+    rowActions: true,
+    bulkActions: true,
+    density: 'normal' as const
+  },
+  
+  // ============================================================================
+  // TABLE CONFIGURATION
+  // ============================================================================
+  table: {
+    width: 'full',
+    bulkSelect: true,
+    columnFilter: true,
+    sortableColumns: true,
+    bulkSelectOptions: [
+      {
+        id: 'retry',
+        label: 'Retry Selected',
+        icon: 'RotateCcw',
+        description: 'Retry selected failed jobs',
+        handler: 'bulkRetryJobs'
+      },
+      {
+        id: 'cancel',
+        label: 'Cancel Selected',
+        icon: 'X',
+        description: 'Cancel selected jobs',
+        handler: 'bulkCancelJobs',
+        confirmMessage: 'Are you sure you want to cancel the selected jobs?'
+      },
+      {
+        id: 'export',
+        label: 'Export Selected',
+        icon: 'Download',
+        description: 'Export selected jobs to CSV',
+        handler: 'bulkExportJobs'
+      }
+    ]
+  },
+  
+  // ============================================================================
+  // INDEXEDDB CONFIGURATION
+  // ============================================================================
+  indexedDBKey: (record: any) => record.id,
+}
+
+// ============================================================================
+// JOB ACTIVITY RESOURCE SCHEMA - ACTIVITY STREAM CONFIGURATION
+// ============================================================================
+
+export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
+  // ============================================================================
+  // RESOURCE IDENTITY
+  // ============================================================================
+  databaseKey: 'jobActivities',
+  modelName: 'JobActivity', 
+  actionPrefix: 'jobActivities',
+  
+  // ============================================================================
+  // SERVER-ONLY CONFIGURATION
+  // ============================================================================
+  serverOnly: true, // High-volume activity stream - server-side only
+  notHasBranchContext: true, // Activity logs are tenant-level operational data, not branch-specific
+  cacheStrategy: 'server-only' as const,
+  
+  // ============================================================================
+  // UI DISPLAY
+  // ============================================================================
+  display: {
+    title: 'Activity Stream',
+    description: 'Real-time job activity and event monitoring',
+    icon: 'Activity'
+  },
+  
+  // ============================================================================
+  // FIELD DEFINITIONS
+  // ============================================================================
+  fields: [
+    {
+      key: 'id',
+      label: 'Activity ID',
+      type: 'text' as const,
+      autoValue: { source: 'auto.uuid' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
+    },
+    {
+      key: 'jobId',
+      label: 'Job ID',
+      type: 'text' as const,
+      required: true,
+      table: {
+        width: 'lg',
+        filterable: true
+      },
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'activityType',
+      label: 'Activity',
+      type: 'select' as const,
+      required: true,
+      options: {
+        static: [
+          { value: 'JOB_CREATED', label: 'Job Created' },
+          { value: 'JOB_STARTED', label: 'Job Started' },
+          { value: 'JOB_COMPLETED', label: 'Job Completed' },
+          { value: 'JOB_FAILED', label: 'Job Failed' },
+          { value: 'JOB_CANCELLED', label: 'Job Cancelled' },
+          { value: 'JOB_RETRIED', label: 'Job Retried' },
+          { value: 'JOB_TIMEOUT', label: 'Job Timeout' },
+          { value: 'WORKER_ASSIGNED', label: 'Worker Assigned' },
+          { value: 'WORKER_RELEASED', label: 'Worker Released' },
+          { value: 'RESOURCE_ALLOCATED', label: 'Resource Allocated' },
+          { value: 'RESOURCE_RELEASED', label: 'Resource Released' },
+          { value: 'ERROR_OCCURRED', label: 'Error Occurred' },
+          { value: 'USER_ACTION', label: 'User Action' },
+          { value: 'SYSTEM_EVENT', label: 'System Event' }
+        ]
+      },
+      table: {
+        width: 'lg',
+        filterable: true
+      },
+      mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'title',
+      label: 'Title',
+      type: 'text' as const,
+      required: true,
+      table: {
+        width: 'xl'
+      },
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'xl' as const }
+    },
+    {
+      key: 'severity',
+      label: 'Severity',
+      type: 'select' as const,
+      required: false,
+      options: {
+        static: [
+          { value: 'INFO', label: 'Info' },
+          { value: 'WARNING', label: 'Warning' },
+          { value: 'ERROR', label: 'Error' },
+          { value: 'CRITICAL', label: 'Critical' }
+        ]
+      },
+      table: {
+        width: 'sm',
+        filterable: true
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      type: 'textarea' as const,
+      required: false,
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'xl' as const }
+    },
+    {
+      key: 'userId',
+      label: 'User',
+      type: 'text' as const,
+      required: false,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const }
+    },
+    {
+      key: 'systemComponent',
+      label: 'Component',
+      type: 'text' as const,
+      required: false,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'md' as const }
+    },
+    {
+      key: 'duration',
+      label: 'Duration (ms)',
+      type: 'number' as const,
+      required: false,
+      table: {
+        width: 'sm'
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'sm' as const }
+    },
+    {
+      key: 'correlationId',
+      label: 'Correlation ID',
+      type: 'text' as const,
+      required: false,
+      table: {
+        width: 'lg',
+        filterable: true
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'traceId',
+      label: 'Trace ID',
+      type: 'text' as const,
+      required: false,
+      table: {
+        width: 'lg',
+        filterable: true
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: false, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'createdAt',
+      label: 'Timestamp',
+      type: 'datetime' as const,
+      required: true,
+      table: {
+        width: 'lg'
+      },
+      mobile: { priority: 'high' as const, displayFormat: 'text' as const },
+      desktop: { showInTable: true, tableWidth: 'lg' as const }
+    },
+    {
+      key: 'isVisible',
+      label: 'Visible',
+      type: 'switch' as const,
+      required: true,
+      defaultValue: true,
+      mobile: { priority: 'low' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
+    },
+    {
+      key: 'isSystemGenerated',
+      label: 'System',
+      type: 'switch' as const,
+      required: true,
+      defaultValue: false,
+      table: {
+        width: 'xs',
+        filterable: true
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'badge' as const },
+      desktop: { showInTable: true, tableWidth: 'xs' as const }
+    },
+    // System fields
+    {
+      key: 'tenantId',
+      label: 'Tenant ID',
+      type: 'text' as const,
+      autoValue: { source: 'session.user.tenantId' as const },
+      mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
+      desktop: { showInTable: false, tableWidth: 'xs' as const }
+    }
+  ],
+  
+  // ============================================================================
+  // SEARCH CONFIGURATION
+  // ============================================================================
+  search: {
+    fields: ['title', 'description', 'jobId', 'correlationId', 'traceId'],
+    placeholder: 'Search activities...',
+    fuzzy: true
+  },
+  
+  // ============================================================================
+  // FILTERING CONFIGURATION - Advanced Activity Stream Filtering
+  // ============================================================================
+  filtering: {
+    level1: {
+      title: 'Activity Type',
+      filterField: 'activityType',
+      tabs: [
+        { id: 'all', label: 'All Activities', value: 'all' },
+        { id: 'job-lifecycle', label: 'Job Lifecycle', value: 'JOB_CREATED,JOB_STARTED,JOB_COMPLETED', icon: 'Package' },
+        { id: 'errors', label: 'Errors', value: 'JOB_FAILED,ERROR_OCCURRED,JOB_TIMEOUT', icon: 'AlertTriangle' },
+        { id: 'workers', label: 'Workers', value: 'WORKER_ASSIGNED,WORKER_RELEASED', icon: 'Users' },
+        { id: 'resources', label: 'Resources', value: 'RESOURCE_ALLOCATED,RESOURCE_RELEASED', icon: 'Server' },
+        { id: 'user-actions', label: 'User Actions', value: 'USER_ACTION', icon: 'User' }
+      ],
+      showAll: true,
+      defaultTab: 'all'
+    },
+    level2: {
+      title: 'Severity',
+      filterField: 'severity',
+      groupBy: 'severity',
+      showAll: true
+    }
+  },
+  
+  // ============================================================================
+  // ACTIONS CONFIGURATION
+  // ============================================================================
+  actions: {
+    create: true,  // Activities can be logged manually
+    update: false, // Activities are immutable
+    delete: false, // Auto-cleanup handles deletion
+    duplicate: false,
+    bulk: false,
+    optimistic: false,
+    serverOnly: true
+  },
+  
+  // ============================================================================
+  // MOBILE CONFIGURATION
+  // ============================================================================
+  mobile: {
+    cardFormat: 'detailed' as const,
+    primaryField: 'title',
+    secondaryFields: ['activityType', 'severity', 'createdAt', 'jobId'],
+    showSearch: true,
+    showFilters: true,
+    fabPosition: 'bottom-right' as const
+  },
+  
+  // ============================================================================
+  // DESKTOP CONFIGURATION
+  // ============================================================================
+  desktop: {
+    sortField: 'createdAt',
+    sortOrder: 'desc' as const, // Latest activities first
+    editableField: undefined, // Activities are read-only
+    rowActions: false,
+    bulkActions: false,
+    density: 'compact' as const // More activities visible
+  },
+  
+  // ============================================================================
+  // TABLE CONFIGURATION
+  // ============================================================================
+  table: {
+    width: 'full',
+    bulkSelect: false, // No bulk operations for activities
+    columnFilter: true,
+    sortableColumns: true
+  },
+  
+  // ============================================================================
+  // INDEXEDDB CONFIGURATION
+  // ============================================================================
+  indexedDBKey: (record: any) => record.id,
+}

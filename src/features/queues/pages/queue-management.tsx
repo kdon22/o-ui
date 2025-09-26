@@ -1,14 +1,17 @@
 /**
  * Queue Management - Unified Tab Interface
  * 
- * Three-tab queue management system:
+ * Five-tab queue management system:
  * 1. Queue List - Live queue monitoring with row actions
- * 2. Activity Stream - Real-time event streaming  
- * 3. Scheduled Jobs - Job management and scheduling
+ * 2. Job Packages - Distributed job execution monitoring
+ * 3. Activity Stream - Real-time job activity and event streaming  
+ * 4. Queue Events - Queue-specific event monitoring
+ * 5. Scheduled Jobs - Job management and scheduling
  * 
  * Features:
  * - AutoTable-driven with schema-based row actions
  * - Real-time updates and live streaming
+ * - Distributed job execution monitoring
  * - Mobile-responsive tabbed interface
  * - Clean architecture with no legacy code
  */
@@ -21,13 +24,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AutoTable } from '@/components/auto-generated/table/auto-table';
+import { QueueTableWithSummary } from '../components/queue-table-with-summary';
+import { sampleQueueData } from '../components/queue-summary-panel';
+import { JOB_PACKAGE_SCHEMA, JOB_ACTIVITY_SCHEMA } from '../queues.schema';
 import { 
   Activity, 
   Settings, 
   Clock,
   ListChecks,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Package,
+  PlayCircle
 } from 'lucide-react';
 
 interface QueueManagementProps {
@@ -46,28 +54,24 @@ export default function QueueManagement({ className }: QueueManagementProps) {
   return (
     <div className={`h-screen flex flex-col bg-gray-50 ${className}`}>
       
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      {/* Ultra Compact Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-2">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Queue Management
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Live queue monitoring, activity streaming, and job scheduling
-            </p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <Activity className="h-4 w-4" />
-              <span>Live updates: {refreshInterval / 1000}s</span>
-            </div>
-            <Button onClick={handleRefresh} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh All
+          <h1 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-blue-600" />
+            Queue Management
+          </h1>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="bg-green-50 text-green-700 text-xs px-2 py-1">
+              <div className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+              Live ({refreshInterval / 1000}s)
+            </Badge>
+            <Button onClick={handleRefresh} variant="outline" size="sm" className="h-7 px-2">
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Refresh
             </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" className="h-7 px-2">
+              <Settings className="h-3 w-3 mr-1" />
               Settings
             </Button>
           </div>
@@ -75,26 +79,34 @@ export default function QueueManagement({ className }: QueueManagementProps) {
       </div>
 
       {/* Tab Interface */}
-      <div className="flex-1 overflow-hidden p-6">
+      <div className="flex-1 overflow-hidden px-6 pt-2 pb-4">
         <Tabs 
           value={activeTab} 
           onValueChange={setActiveTab}
           className="h-full flex flex-col"
         >
           
-          {/* Tab Navigation */}
-          <div className="mb-6">
-            <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
-              <TabsTrigger value="queues" className="flex items-center gap-2">
-                <ListChecks className="h-4 w-4" />
-                Queue List
+          {/* Spacious Tab Navigation */}
+          <div className="mb-3">
+            <TabsList className="grid w-full grid-cols-5 lg:w-[1000px] h-12 p-1">
+              <TabsTrigger value="queues" className="flex items-center gap-2 text-sm px-3 py-2 pb-3">
+                <ListChecks className="h-3.5 w-3.5" />
+                Queues
               </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
+              <TabsTrigger value="job-packages" className="flex items-center gap-2 text-sm px-3 py-2 pb-3">
+                <Package className="h-3.5 w-3.5" />
+                Job Packages
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2 text-sm px-3 py-2 pb-3">
+                <Activity className="h-3.5 w-3.5" />
                 Activity Stream
               </TabsTrigger>
-              <TabsTrigger value="jobs" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+              <TabsTrigger value="queue-events" className="flex items-center gap-2 text-sm px-3 py-2 pb-3">
+                <PlayCircle className="h-3.5 w-3.5" />
+                Queue Events
+              </TabsTrigger>
+              <TabsTrigger value="jobs" className="flex items-center gap-2 text-sm px-3 py-2 pb-3">
+                <Calendar className="h-3.5 w-3.5" />
                 Scheduled Jobs
               </TabsTrigger>
             </TabsList>
@@ -102,45 +114,110 @@ export default function QueueManagement({ className }: QueueManagementProps) {
 
           {/* Tab 1: Queue List */}
           <TabsContent value="queues" className="flex-1 overflow-hidden">
+            <QueueTableWithSummary 
+              data={sampleQueueData}
+              className="h-full"
+            />
+          </TabsContent>
+
+          {/* Tab 2: Job Packages - Distributed Job Execution */}
+          <TabsContent value="job-packages" className="flex-1 overflow-hidden">
             <Card className="h-full">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <ListChecks className="h-5 w-5 text-blue-600" />
-                      Live Queue Status
+                      <Package className="h-5 w-5 text-blue-600" />
+                      Job Packages
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      Monitor and control individual queue operations with real-time actions
+                      Monitor distributed job execution with full lifecycle tracking
                     </p>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                    <div className="h-2 w-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                    Live
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                    <div className="h-2 w-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                    Live Execution
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="h-full overflow-hidden">
                 <AutoTable 
-                  resourceKey="queues"
+                  resourceKey="jobPackages"
                   className="h-full"
                 />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab 2: Activity Stream */}
+          {/* Tab 3: Activity Stream - Job Activities */}
           <TabsContent value="activity" className="flex-1 overflow-hidden">
+            <div className="h-full flex flex-col bg-white border border-gray-200 rounded-lg">
+              {/* Compact Header with Inline Controls */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-gray-50/50">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-sm">Live Activity</span>
+                    <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                  
+                  {/* Inline Activity Type Filters */}
+                  <div className="flex items-center gap-1 ml-4">
+                    <span className="text-xs text-gray-500">Type:</span>
+                    <div className="flex gap-1">
+                      <button className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md border border-blue-200">All</button>
+                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">Job Lifecycle</button>
+                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">Errors</button>
+                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">Workers</button>
+                    </div>
+                  </div>
+
+                  {/* Inline Severity Filters */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">Severity:</span>
+                    <div className="flex gap-1">
+                      <button className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md border border-blue-200">All <span className="ml-1 bg-blue-200 px-1 rounded">4</span></button>
+                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">INFO <span className="ml-1 bg-gray-200 px-1 rounded">3</span></button>
+                      <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200">ERROR <span className="ml-1 bg-gray-200 px-1 rounded">1</span></button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search */}
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Search activities..." 
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-48"
+                  />
+                </div>
+              </div>
+
+              {/* Table Content */}
+              <div className="flex-1 overflow-hidden">
+                <AutoTable 
+                  resourceKey="jobActivities"
+                  className="h-full"
+                  filteringConfig={{}}
+                  customTitle=""
+                  customSearchPlaceholder="Search activities..."
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Tab 4: Queue Events - Original Queue Monitoring */}
+          <TabsContent value="queue-events" className="flex-1 overflow-hidden">
             <Card className="h-full">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-orange-600" />
-                      Live Activity Stream
+                      <PlayCircle className="h-5 w-5 text-orange-600" />
+                      Queue Event Stream  
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      Real-time event monitoring and processing metrics
+                      Traditional queue event monitoring and processing metrics
                     </p>
                   </div>
                   <Badge variant="outline" className="bg-orange-50 text-orange-700">
@@ -158,7 +235,7 @@ export default function QueueManagement({ className }: QueueManagementProps) {
             </Card>
           </TabsContent>
 
-          {/* Tab 3: Scheduled Jobs */}
+          {/* Tab 5: Scheduled Jobs */}
           <TabsContent value="jobs" className="flex-1 overflow-hidden">
             <Card className="h-full">
               <CardHeader>
