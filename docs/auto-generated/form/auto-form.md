@@ -4,6 +4,7 @@ This document is now split for maintainability. Start here, then drill into focu
 
 Updated docs:
 - Overview: `docs/auto-generated/form/overview.md`
+- **🚀 SmartSelect System: `docs/auto-generated/form/smart-select.md`** (NEW!)
 - API (Props & Utilities): `docs/auto-generated/form/api.md`
 - Validation & Layout: `docs/auto-generated/form/validation-and-layout.md`
 - Fields & Rendering: `docs/auto-generated/form/fields.md`
@@ -12,6 +13,23 @@ Updated docs:
 - Debugging: `docs/auto-generated/form/debugging.md`
 
 — Legacy guide below —
+
+## 🚀 NEW: SmartSelect System
+
+**The most incredible update to AutoForm!** Dynamic select fields are now ridiculously simple:
+
+```typescript
+// Before: 50+ lines of complex conditional logic
+// After: 3 lines of pure magic ✨
+options: {
+  source: 'offices.list',
+  when: { vendor: '=${vendor}', type: { 'GDS': { supportedTypes: 'GDS' } } }
+}
+```
+
+**See full documentation:** [`smart-select.md`](./smart-select.md)
+
+---
 
 ## Table of Contents
 

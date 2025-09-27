@@ -61,10 +61,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 1,
         width: 'full',
         showInForm: false
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
       }
     },
     {
@@ -76,10 +72,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 1,
         width: 'full',
         showInForm: false
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
       }
     },
 
@@ -97,10 +89,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         width: 'full',
         showInForm: false
       },
-      table: {
-        width: 'sm',
-        showInTable: false
-      }
     },
     {
       key: 'branchId',
@@ -113,9 +101,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 1,
         width: 'full',
         showInForm: false
-      },
-      table: {
-        width: 'xs'
       }
     },
 
@@ -136,35 +121,12 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         order: 1
       },
       table: {
-        width: 'lg'
+        width: 'md'
       },
       validation: [
         { type: 'required', message: 'Name is required' },
         { type: 'maxLength', value: 255, message: 'Name cannot exceed 255 characters' }
       ]
-    },
-    {
-      key: 'workflowType',
-      label: 'Type',
-      type: 'select',
-      required: true,
-      tab: 'General',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'sm'
-      },
-      options: {
-        static: [
-          { value: 'SEQUENTIAL', label: 'Sequential' },
-          { value: 'PARALLEL', label: 'Parallel' },
-          { value: 'CONDITIONAL', label: 'Conditional' },
-          { value: 'LOOP', label: 'Loop' }
-        ]
-      }
     },
     {
       key: 'description',
@@ -178,8 +140,7 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         width: 'full'
       },
       table: {
-        width: 'xl',
-        showInTable: false
+        width: 'lg',
       },
       validation: [
         { type: 'maxLength', value: 1000, message: 'Description cannot exceed 1000 characters' }
@@ -195,265 +156,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 3,
         width: 'half',
         order: 1
-      },
-      table: {
-        width: 'xs'
-      }
-    },
-    {
-      key: 'priority',
-      label: 'Priority',
-      type: 'select',
-      tab: 'General',
-      form: {
-        row: 3,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'sm'
-      },
-      options: {
-        static: [
-          { value: 'LOW', label: 'Low' },
-          { value: 'MEDIUM', label: 'Medium' },
-          { value: 'HIGH', label: 'High' },
-          { value: 'URGENT', label: 'Urgent' }
-        ]
-      }
-    },
-
-    // ============================================================================
-    // EXECUTION CONFIGURATION - EXECUTION TAB
-    // ============================================================================
-    {
-      key: 'timeout',
-      label: 'Timeout (seconds)',
-      type: 'number',
-      placeholder: '300',
-      description: 'Maximum execution time in seconds',
-      tab: 'Execution',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 1
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
-      },
-      validation: [
-        { type: 'min', value: 1, message: 'Timeout must be at least 1 second' },
-        { type: 'max', value: 7200, message: 'Timeout cannot exceed 2 hours' }
-      ]
-    },
-    {
-      key: 'retryCount',
-      label: 'Retry Count',
-      type: 'number',
-      placeholder: '3',
-      description: 'Number of retry attempts on failure',
-      tab: 'Execution',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
-      },
-      validation: [
-        { type: 'min', value: 0, message: 'Retry count cannot be negative' },
-        { type: 'max', value: 10, message: 'Retry count cannot exceed 10' }
-      ]
-    },
-    {
-      key: 'environment',
-      label: 'Environment',
-      type: 'select',
-      tab: 'Execution',
-      form: {
-        row: 2,
-        width: 'half',
-        order: 1
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
-      },
-      options: {
-        static: [
-          { value: 'DEVELOPMENT', label: 'Development' },
-          { value: 'STAGING', label: 'Staging' },
-          { value: 'PRODUCTION', label: 'Production' }
-        ]
-      }
-    },
-    {
-      key: 'logLevel',
-      label: 'Log Level',
-      type: 'select',
-      tab: 'Execution',
-      form: {
-        row: 2,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
-      },
-      options: {
-        static: [
-          { value: 'DEBUG', label: 'Debug' },
-          { value: 'INFO', label: 'Info' },
-          { value: 'WARN', label: 'Warning' },
-          { value: 'ERROR', label: 'Error' }
-        ]
-      }
-    },
-
-    // ============================================================================
-    // DEPLOYMENT CONFIGURATION - DEPLOYMENT TAB
-    // ============================================================================
-    {
-      key: 'deploymentStrategy',
-      label: 'Deployment Strategy',
-      type: 'select',
-      tab: 'Deployment',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 1
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
-      },
-      options: {
-        static: [
-          { value: 'ROLLING', label: 'Rolling' },
-          { value: 'BLUE_GREEN', label: 'Blue/Green' },
-          { value: 'CANARY', label: 'Canary' }
-        ]
-      }
-    },
-    {
-      key: 'deploymentStatus',
-      label: 'Deployment Status',
-      type: 'select',
-      tab: 'Deployment',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'sm'
-      },
-      options: {
-        static: [
-          { value: 'PENDING', label: 'Pending' },
-          { value: 'DEPLOYING', label: 'Deploying' },
-          { value: 'DEPLOYED', label: 'Deployed' },
-          { value: 'FAILED', label: 'Failed' },
-          { value: 'ROLLED_BACK', label: 'Rolled Back' }
-        ]
-      }
-    },
-    {
-      key: 'lastDeployedAt',
-      label: 'Last Deployed',
-      type: 'date',
-      description: 'When this workflow was last deployed',
-      tab: 'Deployment',
-      form: {
-        row: 2,
-        width: 'half',
-        order: 1
-      },
-      table: {
-        width: 'sm'
-      }
-    },
-    {
-      key: 'deployedBy',
-      label: 'Deployed By',
-      type: 'text',
-      description: 'User who deployed this workflow',
-      tab: 'Deployment',
-      form: {
-        row: 2,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'md',
-        showInTable: false
-      }
-    },
-
-    // ============================================================================
-    // MONITORING FIELDS - MONITORING TAB
-    // ============================================================================
-    {
-      key: 'executionCount',
-      label: 'Execution Count',
-      type: 'number',
-      description: 'Total number of executions',
-      tab: 'Monitoring',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 1
-      },
-      table: {
-        width: 'sm'
-      }
-    },
-    {
-      key: 'successRate',
-      label: 'Success Rate (%)',
-      type: 'number',
-      description: 'Percentage of successful executions',
-      tab: 'Monitoring',
-      form: {
-        row: 1,
-        width: 'half',
-        order: 2
-      },
-      table: {
-        width: 'sm'
-      }
-    },
-    {
-      key: 'averageExecutionTime',
-      label: 'Average Execution Time (ms)',
-      type: 'number',
-      description: 'Average execution time in milliseconds',
-      tab: 'Monitoring',
-      form: {
-        row: 2,
-        width: 'full'
-      },
-      table: {
-        width: 'sm',
-        showInTable: false
-      }
-    },
-    {
-      key: 'lastExecuted',
-      label: 'Last Executed',
-      type: 'date',
-      description: 'When this workflow was last executed',
-      tab: 'Monitoring',
-      form: {
-        row: 3,
-        width: 'full'
-      },
-      table: {
-        width: 'sm'
       }
     },
 
@@ -469,10 +171,7 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         width: 'full',
         showInForm: false
       },
-      table: {
-        width: 'xs',
-        showInTable: false
-      }
+      
     },
     {
       key: 'createdAt',
@@ -495,9 +194,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 1,
         width: 'full',
         showInForm: false
-      },
-      table: {
-        width: 'sm'
       }
     },
     {
@@ -508,10 +204,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 1,
         width: 'full',
         showInForm: false
-      },
-      table: {
-        width: 'md',
-        showInTable: false
       }
     },
     {
@@ -522,10 +214,6 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
         row: 1,
         width: 'full',
         showInForm: false
-      },
-      table: {
-        width: 'md',
-        showInTable: false
       }
     }
   ],
@@ -584,7 +272,7 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
   // SEARCH AND FILTERING
   // ============================================================================
   search: {
-    fields: ['name', 'description', 'workflowType', 'deploymentStatus'],
+    fields: ['name', 'description'],
     placeholder: 'Search workflows...',
     mobileFilters: true,
     fuzzy: true
@@ -658,7 +346,7 @@ export const WORKFLOW_SCHEMA: ResourceSchema = {
   mobile: {
     cardFormat: 'detailed',
     primaryField: 'name',
-    secondaryFields: ['workflowType', 'deploymentStatus', 'isActive', 'lastExecuted'],
+    secondaryFields: ['isActive'],
     showSearch: true,
     showFilters: true,
     fabPosition: 'bottom-right',
@@ -851,10 +539,7 @@ export type Workflow = {
   id: string;
   name: string;
   description?: string;
-  workflowType?: 'SEQUENTIAL' | 'PARALLEL' | 'CONDITIONAL' | 'EVENT_DRIVEN' | 'SCHEDULED' | 'HYBRID';
   executionMode?: 'SYNC' | 'ASYNC' | 'MIXED';
-  priority?: number;
-  timeout?: number;
   enableRetry?: boolean;
   enableRollback?: boolean;
   enableNotifications?: boolean;
@@ -863,9 +548,6 @@ export type Workflow = {
   triggers?: Record<string, any>;
   conditions?: Record<string, any>;
   variables?: Record<string, any>;
-  deploymentStatus?: 'DRAFT' | 'DEPLOYED' | 'DEPRECATED' | 'ARCHIVED';
-  deployedAt?: Date;
-  deployedBy?: string;
   tenantId: string;
   branchId: string;
   originalWorkflowId?: string;
@@ -879,29 +561,6 @@ export type Workflow = {
 
 export type CreateWorkflow = Omit<Workflow, 'id' | 'createdAt' | 'updatedAt' | 'version'>;
 export type UpdateWorkflow = Partial<Omit<Workflow, 'id' | 'createdAt' | 'tenantId'>>;
-
-// ============================================================================
-// QUERY TYPES
-// ============================================================================
-export interface WorkflowQuery {
-  tenantId: string;
-  branchId?: string;
-  type?: 'SEQUENTIAL' | 'PARALLEL' | 'CONDITIONAL' | 'EVENT_DRIVEN' | 'SCHEDULED' | 'HYBRID';
-  deploymentStatus?: 'DRAFT' | 'DEPLOYED' | 'DEPRECATED' | 'ARCHIVED';
-  isActive?: boolean;
-  search?: string;
-  limit?: number;
-  offset?: number;
-  sortBy?: 'name' | 'type' | 'deploymentStatus' | 'createdAt';
-  sortOrder?: 'asc' | 'desc';
-}
-
-export interface WorkflowListQuery extends WorkflowQuery {
-  includeInactive?: boolean;
-  includeProcesses?: boolean;
-  includeDeployments?: boolean;
-  includeCustomers?: boolean;
-}
 
 // ============================================================================
 // NOTE: WorkflowProcess relationship removed - workflows now use queue-based execution

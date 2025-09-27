@@ -145,7 +145,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       name,
       description,
       type,
-      steps,
+      steps, // legacy support
+      definition, // preferred field
       executionSettings,
       tenantId,
       branchId = 'main',
@@ -156,8 +157,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
     }
 
-    // Validate steps structure if provided
-    if (steps && !isValidWorkflowDefinition(steps)) {
+    // Validate definition/steps structure if provided
+    const defToValidate = definition || steps;
+    if (defToValidate && !isValidWorkflowDefinition(defToValidate)) {
       return NextResponse.json(
         { error: 'Invalid workflow definition structure' },
         { status: 400 }
@@ -192,7 +194,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             name: name || existingWorkflow.name,
             description: description !== undefined ? description : existingWorkflow.description,
             type: type || existingWorkflow.type,
-            steps: steps !== undefined ? steps : existingWorkflow.steps,
+            // Prefer `definition`; fall back to legacy `steps` for backward compat
+            steps: defToValidate !== undefined ? defToValidate : existingWorkflow.steps,
             executionSettings: executionSettings !== undefined ? executionSettings : existingWorkflow.executionSettings,
             updatedById: session.user.id,
             version: existingWorkflow.version + 1

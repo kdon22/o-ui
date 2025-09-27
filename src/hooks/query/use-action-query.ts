@@ -83,6 +83,16 @@ export function useActionQuery<TData = any>(
   const queryFn = useCallback(async (): Promise<ActionResponse<TData>> => {
     const startTime = performance.now();
     
+    // 🚨 SAFEGUARD: Prevent calling with invalid actions
+    if (!action || action === '' || action === 'noop' || action === 'disabled.action' || typeof action !== 'string') {
+      return {
+        success: true,
+        data: [] as TData,
+        cached: false,
+        executionTime: 0
+      } as ActionResponse<TData>;
+    }
+    
     const request: ActionRequest = {
       action,
       data,

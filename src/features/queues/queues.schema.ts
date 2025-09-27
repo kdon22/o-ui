@@ -6,41 +6,55 @@ import type { ResourceSchema } from '@/lib/resource-system/schemas'
 // ============================================================================
 
 /**
- * Queue Entity Schema
- * Represents a processing queue with real-time status
+ * Queue Entity Schema  
+ * Represents a travel industry queue (GDS or Virtual) with container support
  */
 export const QueueSchema = z.object({
   id: z.string(),
   name: z.string(),
-  displayName: z.string(),
-  queueType: z.enum(['VENDOR', 'INTERNAL', 'CRITICAL', 'STANDARD', 'ROUTINE']),
-  office: z.string().nullable(),
-  queueNumber: z.number(),
-  category: z.string().nullable(),
-  maxAge: z.number().default(0),
+  displayName: z.string().nullable(),
+  description: z.string().nullable(),
+  type: z.enum(['VIRTUAL', 'GDS']),
+  
+  // Container hierarchy for Named Queues
+  isContainer: z.boolean().default(false),
+  parentQueueId: z.string().nullable(),
+  
+  // GDS-specific fields
+  vendor: z.enum(['SABRE', 'AMADEUS', 'TRAVELPORT']).nullable(),
+  officeId: z.string().nullable(),
+  queueNumber: z.string().nullable(), // String to support alphanumeric
+  queueCategory: z.string().nullable(),
+  
+  // Virtual Queue fields
+  vendors: z.array(z.enum(['SABRE', 'AMADEUS', 'TRAVELPORT'])).nullable(),
+  
+  // Scheduling configuration
+  scheduleConfig: z.object({
+    type: z.enum(['single', 'multiple']).optional(),
+    checkInterval: z.number().optional(), // minutes
+    schedules: z.array(z.object({
+      days: z.array(z.string()).optional(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(), 
+      timezone: z.string().optional()
+    })).optional()
+  }).nullable(),
+  
+  // Workflow integration
+  workflowId: z.string().nullable(),
+  
+  // Health and status
+  healthStatus: z.string().default('ACTIVE'), // ACTIVE, PAUSED, ERROR
+  maxAge: z.number().nullable(),
   isActive: z.boolean().default(true),
-  
-  // Real-time metrics
-  monitoring: z.number().default(0),
-  failed: z.number().default(0),
-  sleeping: z.number().default(0),
-  pnrsOnQueue: z.number().default(0),
-  
-  // Health indicators
-  healthStatus: z.enum(['HEALTHY', 'WARNING', 'CRITICAL', 'OFFLINE']).default('HEALTHY'),
-  lastProcessedAt: z.string().nullable(),
-  processingRate: z.number().default(0), // items per minute
-  averageWaitTime: z.number().default(0), // milliseconds
   
   // System fields
   tenantId: z.string(),
-  branchId: z.string(),
-  isDeleted: z.boolean().default(false),
   createdAt: z.string(),
   updatedAt: z.string(),
   createdById: z.string().nullable(),
   updatedById: z.string().nullable(),
-  originalQueueId: z.string().nullable(),
 })
 
 export type Queue = z.infer<typeof QueueSchema>
@@ -129,6 +143,15 @@ export const QUEUE_SCHEMA: ResourceSchema = {
     icon: 'Queue'
   },
   
+    // ============================================================================
+  // FORM CONFIGURATION - SINGLE MODAL NO TABS
+  // ============================================================================
+  form: {
+    width: 'md',
+    layout: 'compact',
+    showDescriptions: true
+  },
+
   // ============================================================================
   // FIELD DEFINITIONS
   // ============================================================================
@@ -139,15 +162,20 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'auto.uuid' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'name',
-      label: 'Queue Name',
+      label: 'Name',
       type: 'text' as const,
       required: true,
       table: {
         width: 'md'
+      },
+      form: {
+        row: 1,
+        width: '3quarters',
+        order: 1
       },
       validation: [
         { type: 'required' as const, message: 'Queue name is required' },
@@ -155,95 +183,249 @@ export const QUEUE_SCHEMA: ResourceSchema = {
         { type: 'maxLength' as const, value: 100, message: 'Name too long' }
       ],
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'displayName',
       label: 'Display Name', 
       type: 'text' as const,
-      required: true,
+      required: false, // Made optional to not clutter the form
+      table: {
+        width: 'md'
+      },
       validation: [
-        { type: 'required' as const, message: 'Display name is required' },
         { type: 'minLength' as const, value: 3, message: 'Display name too short' },
         { type: 'maxLength' as const, value: 150, message: 'Display name too long' }
       ],
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
-      key: 'queueType',
-      label: 'Queue Type',
-      type: 'select' as const,
-      required: true,
-      options: {
-        static: [
-          { value: 'VENDOR', label: 'Vendor Queue' },
-          { value: 'INTERNAL', label: 'Internal Queue' },
-          { value: 'CRITICAL', label: 'Critical Operations' },
-          { value: 'STANDARD', label: 'Standard Operations' },
-          { value: 'ROUTINE', label: 'Routine Operations' }
-        ]
+      key: 'description',
+      label: 'Description',
+      type: 'textarea' as const,
+      required: false,
+      table: {
+        width: 'lg'
       },
-      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const },
+      form: {
+        row: 2,
+        width: 'full',
+        order: 1
+      },
+      mobile: { priority: 'low' as const, displayFormat: 'text' as const },
+      desktop: { tableWidth: 'lg' as const }
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'radio' as const,
+      required: true,
       table: {
         width: 'md',
         filterable: true
-      }
+      },
+      form: {
+        row: 3,
+        width: 'half',
+        order: 1
+      },
+      options: {
+        static: [
+          { value: 'GDS', label: 'GDS' },
+          { value: 'VIRTUAL', label: 'Virtual' }
+        ],
+        layout: 'horizontal'
+      },
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { tableWidth: 'md' as const },
+    },
+    {
+      key: 'isContainer',
+      label: 'Named Queue',
+      type: 'switch' as const,
+      required: false,
+      defaultValue: false,
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { tableWidth: 'sm' as const }
+    },
+    {
+      key: 'parentQueueId',
+      label: 'Parent Queue',
+      type: 'select' as const,
+      required: false,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      options: {
+        source: 'queues.list',     // ✅ CORRECT: queues is plural in the schema
+        when: {
+          isContainer: true  // Only show Named Queues as parent options
+        }
+      } as any, // TODO: Update FieldOptions type to include SmartSelectOptions
+      description: 'Select parent Named Queue (only shown for child queues)',
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { tableWidth: 'md' as const }
+    },
+    {
+      key: 'vendor',
+      label: 'Vendor',
+      type: 'select' as const,
+      required: false,
+      table: {
+        width: 'sm',
+        filterable: true
+      },
+      form: {
+        row: 4,
+        width: 'half',
+        order: 1
+      },
+      options: {
+        static: [
+          { value: 'SABRE', label: 'Sabre' },
+          { value: 'AMADEUS', label: 'Amadeus' },
+          { value: 'TRAVELPORT', label: 'Travelport' }
+        ]
+      },
+      description: '',
+      mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
+      desktop: { tableWidth: 'sm' as const }
+    },
+    {
+      key: 'officeId',
+      label: 'Office',
+      type: 'select' as const,
+      required: false,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      form: {
+        row: 4,
+        width: 'half',
+        order: 2
+      },
+      options: {
+        source: 'office.list',     // ✅ FIXED: Use correct singular action name
+        when: {
+          vendor: '=${vendor}',      // Filter by selected vendor
+          type: {                    // Complex conditional logic made simple
+            'GDS': { supportedTypes: 'GDS' },
+            'VIRTUAL': { supportedTypes: 'VIRTUAL' },
+            '*': { isActive: true }  // Default for all other values
+          }
+        },
+        cache: '2m'               // Cache for 2 minutes
+      } as any, // TODO: Update FieldOptions type to include SmartSelectOptions
+      description: 'Office filtered by vendor and queue type',
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'queueNumber',
-      label: 'Queue #',
-      type: 'number' as const,
+      label: 'Queue Number',
+      type: 'text' as const,
       required: true,
       table: {
         width: 'sm'
       },
+      form: {
+        row: 5,
+        width: 'sm',
+        order: 1
+      },
       validation: [
-        { type: 'required' as const, message: 'Queue number is required' },
-        { type: 'min' as const, value: 1, message: 'Queue number must be positive' },
-        { type: 'max' as const, value: 999, message: 'Queue number too large' }
+        { type: 'maxLength' as const, value: 10, message: 'Queue number too long' }
       ],
+      description: '',
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     {
-      key: 'category',
-      label: 'Category',
+      key: 'queueCategory',
+      label: 'Queue Category',
       type: 'text' as const,
       required: false,
       table: {
-        width: 'md'
+        width: 'sm'
       },
+      form: {
+        row: 5,
+        width: 'sm',
+        order: 2
+      },
+      description: 'Queue category (Not applicable for Sabre - GDS queues only)',
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'md' as const }
-    },
-    {
-      key: 'office',
-      label: 'Office',
-      type: 'text' as const,
-      required: false,
-      table: {
-        width: 'md',
-        filterable: true
-      },
-      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'maxAge',
       label: 'Max Age (min)',
       type: 'number' as const,
-      required: true,
+      required: false,
       defaultValue: 0,
       table: {
-        width: 'sm'
+        width: 'sm',
+        filterable: true
+      },
+      form: {
+        row: 5, // Hidden from main form layout
+        width: 'sm',
+        order: 3
       },
       validation: [
         { type: 'min' as const, value: 0, message: 'Max age must be non-negative' }
       ],
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
+    },
+    {
+      key: 'workflowId',
+      label: 'Workflow',
+      type: 'select' as const,
+      required: false,
+      table: {
+        width: 'md',
+        filterable: true
+      },
+      form: {
+        row: 6,
+        width: 'half',
+        order: 2
+      },
+      options: {
+        source: 'workflow.list',   // ✅ FIXED: Use correct singular action name
+        searchable: true,           // Force enable search
+        cache: '5m',               // Cache for 5 minutes
+        transform: (workflow: any) => ({
+          value: workflow.id,
+          label: `${workflow.name} (${workflow.type})`,
+          disabled: !workflow.isActive
+        })
+      } as any, // TODO: Update FieldOptions type to include SmartSelectOptions
+      description: 'Workflow to execute for queue processing (searchable, with type display)',
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { tableWidth: 'md' as const }
+    },
+    {
+      key: 'scheduleConfig',
+      label: 'Schedule Configuration',
+      type: 'schedule-builder' as const,
+      required: false,
+      table: {
+        width: 'lg'
+      },
+      form: {
+        row: 6,
+        width: 'half',
+        order: 3
+      },
+      description: 'Configure queue scheduling parameters using a user-friendly interface',
+      placeholder: 'Click to configure when this queue should be active',
+      mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'pnrsOnQueue',
@@ -255,13 +437,13 @@ export const QUEUE_SCHEMA: ResourceSchema = {
         width: 'sm'
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     {
       key: 'healthStatus',
       label: 'Health',
       type: 'select' as const,
-      required: true,
+      required: false,
       table: {
         width: 'md',
         filterable: true
@@ -273,19 +455,20 @@ export const QUEUE_SCHEMA: ResourceSchema = {
           { value: 'WARNING', label: 'Warning' },
           { value: 'CRITICAL', label: 'Critical' },
           { value: 'OFFLINE', label: 'Offline' }
-        ]
+        ],
+        searchable: false // Status dropdown doesn't need search
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'isActive',
       label: 'Active',
       type: 'switch' as const,
-      required: true,
+      required: false,
       defaultValue: true,
       mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     // System fields
     {
@@ -294,7 +477,7 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.tenantId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'branchId', 
@@ -302,7 +485,7 @@ export const QUEUE_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.branchContext.currentBranchId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     }
   ],
   
@@ -528,7 +711,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'auto.uuid' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'queueId',
@@ -536,7 +719,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       required: true,
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'eventType',
@@ -555,7 +738,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
         ]
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'message',
@@ -563,7 +746,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       required: true,
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'xl' as const }
+      desktop: { tableWidth: 'xl' as const }
     },
     {
       key: 'severity',
@@ -580,7 +763,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
         ]
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'timestamp',
@@ -588,7 +771,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'datetime' as const,
       required: true,
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     // System fields
     {
@@ -597,7 +780,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.tenantId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'branchId',
@@ -605,7 +788,7 @@ export const QUEUE_EVENT_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.branchContext.currentBranchId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     }
   ],
   
@@ -947,7 +1130,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'auto.uuid' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'jobId',
@@ -958,7 +1141,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         width: 'lg'
       },
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'status',
@@ -981,7 +1164,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'priority',
@@ -1002,7 +1185,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     {
       key: 'jobType',
@@ -1014,7 +1197,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'workerId',
@@ -1027,7 +1210,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         sortable: true // ✅ Enable sorting by workerId
       },
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'triggerType',
@@ -1049,7 +1232,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'low' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'duration',
@@ -1060,7 +1243,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         width: 'sm'
       },
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     {
       key: 'retryCount',
@@ -1072,7 +1255,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         width: 'xs'
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'queuedAt',
@@ -1083,7 +1266,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         width: 'lg'
       },
       mobile: { priority: 'medium' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'startedAt',
@@ -1094,7 +1277,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         width: 'lg'
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'completedAt',
@@ -1105,7 +1288,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
         width: 'lg'
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'error',
@@ -1113,7 +1296,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
       type: 'textarea' as const,
       required: false,
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'xl' as const }
+      desktop: { tableWidth: 'xl' as const }
     },
     // System fields
     {
@@ -1122,7 +1305,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.tenantId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'branchId',
@@ -1130,7 +1313,7 @@ export const JOB_PACKAGE_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.branchContext.currentBranchId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     }
   ],
   
@@ -1329,7 +1512,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'auto.uuid' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'jobId',
@@ -1341,7 +1524,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'activityType',
@@ -1371,7 +1554,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'high' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'title',
@@ -1382,7 +1565,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         width: 'xl'
       },
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'xl' as const }
+      desktop: { tableWidth: 'xl' as const }
     },
     {
       key: 'severity',
@@ -1402,7 +1585,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'medium' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     {
       key: 'description',
@@ -1410,7 +1593,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
       type: 'textarea' as const,
       required: false,
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'xl' as const }
+      desktop: { tableWidth: 'xl' as const }
     },
     {
       key: 'userId',
@@ -1422,7 +1605,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'systemComponent',
@@ -1434,7 +1617,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'md' as const }
+      desktop: { tableWidth: 'md' as const }
     },
     {
       key: 'duration',
@@ -1445,7 +1628,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         width: 'sm'
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'sm' as const }
+      desktop: { tableWidth: 'sm' as const }
     },
     {
       key: 'correlationId',
@@ -1457,7 +1640,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'traceId',
@@ -1469,7 +1652,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'low' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: false, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'createdAt',
@@ -1480,7 +1663,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         width: 'lg'
       },
       mobile: { priority: 'high' as const, displayFormat: 'text' as const },
-      desktop: { showInTable: true, tableWidth: 'lg' as const }
+      desktop: { tableWidth: 'lg' as const }
     },
     {
       key: 'isVisible',
@@ -1489,7 +1672,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
       required: true,
       defaultValue: true,
       mobile: { priority: 'low' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     {
       key: 'isSystemGenerated',
@@ -1502,7 +1685,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
         filterable: true
       },
       mobile: { priority: 'low' as const, displayFormat: 'badge' as const },
-      desktop: { showInTable: true, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     },
     // System fields
     {
@@ -1511,7 +1694,7 @@ export const JOB_ACTIVITY_SCHEMA: ResourceSchema = {
       type: 'text' as const,
       autoValue: { source: 'session.user.tenantId' as const },
       mobile: { priority: 'low' as const, displayFormat: 'hidden' as const },
-      desktop: { showInTable: false, tableWidth: 'xs' as const }
+      desktop: { tableWidth: 'xs' as const }
     }
   ],
   

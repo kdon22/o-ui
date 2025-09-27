@@ -149,7 +149,7 @@ export const OFFICE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: false
+        
       },
       validation: [
         { type: 'maxLength', value: 1000, message: 'Description cannot exceed 1000 characters' }

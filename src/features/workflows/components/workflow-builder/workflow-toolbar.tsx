@@ -106,9 +106,7 @@ export function WorkflowToolbar({
           type: 'process',
           label: 'Process',
           size: { width: 140, height: 80 },
-          rules: [],
-          timeout: 30,
-          retryCount: 3
+          
         };
 
       case 'decision':

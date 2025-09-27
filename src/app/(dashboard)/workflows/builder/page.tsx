@@ -11,11 +11,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Play, Download, X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { useActionQuery } from '@/hooks/use-action-api';
 import { queryKeys } from '@/hooks/use-action-api';
 import { useActionClientContext } from '@/lib/session';
 import dynamic from 'next/dynamic';
+import { InlineNameEditor } from '@/features/workflows/components/workflow-builder/inline-name-editor';
 
 // Lazy-load heavy components for better performance
 const WorkflowBuilder = dynamic(
@@ -59,6 +60,7 @@ export default function WorkflowBuilderPage() {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [canSaveWorkflow, setCanSaveWorkflow] = useState(true);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // Unsaved changes modal
   const {
@@ -166,12 +168,7 @@ export default function WorkflowBuilderPage() {
     // In a real implementation, we'd expose a save method from WorkflowBuilder
   };
 
-  const handleTestWorkflow = () => {
-    if (!workflow) return;
-    
-    // TODO: Implement workflow testing
-    // Could navigate to a test runner page or open a modal
-  };
+  
 
   // ============================================================================
   // LOADING STATES
@@ -245,55 +242,45 @@ export default function WorkflowBuilderPage() {
             Back to Workflows
           </Button>
           
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {isEditing ? 'Edit Workflow' : 'Create New Workflow'}
-            </h1>
-            {workflow && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {workflow.name} • {workflow.workflowType || 'SEQUENTIAL'}
-              </p>
-            )}
-          </div>
-          
-          {hasUnsavedChanges && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-full">
-              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-              <span className="text-sm text-amber-700 dark:text-amber-300">
-                Unsaved changes
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <h1 className="text-2xl font-bold">
+                {workflow ? (
+                  <InlineNameEditor
+                    name={workflow.name}
+                    isEditing={isEditingName}
+                    onStartEdit={() => setIsEditingName(true)}
+                    onCancel={() => setIsEditingName(false)}
+                    onSave={(newName) => {
+                      console.log('Saving new name:', newName);
+                      setWorkflow(prev => (prev ? { ...prev, name: newName } : prev));
+                      setIsEditingName(false);
+                    }}
+                  />
+                ) : (
+                  <span>Untitled Workflow</span>
+                )}
+              </h1>
+              <span className="text-gray-400">•</span>
+              <span className="text-sm text-gray-500">
+                {workflow?.name || 'Untitled Workflow'}
               </span>
             </div>
-          )}
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasUnsavedChanges && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-full">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                <span className="text-sm text-amber-700 dark:text-amber-300">
+                  Unsaved changes
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-
-          {workflow && (
-            <>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleTestWorkflow}
-              >
-                <Play size={16} className="mr-2" />
-                Test
-              </Button>
-
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  // TODO: Export workflow functionality
-                  console.log('Exporting workflow');
-                }}
-              >
-                <Download size={16} className="mr-2" />
-                Export
-              </Button>
-            </>
-          )}
-
           <Button
             variant="ghost"
             size="sm"

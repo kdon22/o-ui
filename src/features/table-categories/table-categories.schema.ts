@@ -56,7 +56,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -75,7 +75,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -94,7 +94,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -110,7 +110,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
 
@@ -150,7 +150,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: false
+        
       },
       validation: [
         { type: 'maxLength', value: 500, message: 'Description cannot exceed 500 characters' }
@@ -203,7 +203,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -217,7 +217,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -231,7 +231,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     },
     {
@@ -245,7 +245,7 @@ export const TABLE_CATEGORY_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     }
   ],

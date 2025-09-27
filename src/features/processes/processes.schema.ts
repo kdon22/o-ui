@@ -63,7 +63,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -82,7 +82,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -101,7 +101,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -118,7 +118,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
 
@@ -192,7 +192,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: false
+        
       },
       validation: [
         { type: 'maxLength', value: 1000, message: 'Description cannot exceed 1000 characters' }
@@ -230,7 +230,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -244,7 +244,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -258,7 +258,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     },
     {
@@ -272,7 +272,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     },
     {
@@ -286,7 +286,7 @@ export const PROCESS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     }
   ],

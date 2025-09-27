@@ -1,0 +1,65 @@
+{
+  "definition": {
+    "visual": {
+      "nodes": [
+        {
+          "id": "start-node",
+          "type": "start",
+          "position": { "x": 100, "y": 200 },
+          "size": { "width": 60, "height": 60 },
+          "label": "Start",
+          "trigger": { "type": "manual" }
+        },
+        {
+          "id": "p1",
+          "type": "process",
+          "position": { "x": 300, "y": 190 },
+          "size": { "width": 140, "height": 80 },
+          "label": "Process A",
+          "processId": "proc_A",
+          "processName": "Process A",
+          "processType": "SYSTEM"
+        },
+        {
+          "id": "p2",
+          "type": "process",
+          "position": { "x": 520, "y": 190 },
+          "size": { "width": 140, "height": 80 },
+          "label": "Process B (skipped)",
+          "processId": "proc_B",
+          "processName": "Process B",
+          "processType": "SYSTEM"
+        },
+        {
+          "id": "end-success",
+          "type": "end",
+          "position": { "x": 780, "y": 150 },
+          "size": { "width": 60, "height": 60 },
+          "label": "Success",
+          "action": { "type": "success" }
+        },
+        {
+          "id": "end-fail",
+          "type": "end",
+          "position": { "x": 780, "y": 260 },
+          "size": { "width": 60, "height": 60 },
+          "label": "Fail",
+          "action": { "type": "failure" }
+        }
+      ],
+      "connections": [
+        { "id": "c0", "sourceNodeId": "start-node", "targetNodeId": "p1", "sourcePort": "output", "targetPort": "input" },
+        { "id": "c1", "sourceNodeId": "p1", "targetNodeId": "p2", "sourcePort": "success", "targetPort": "input", "label": "forward" },
+        { "id": "c2", "sourceNodeId": "p1", "targetNodeId": "end-fail", "sourcePort": "error", "targetPort": "input", "label": "onError" },
+        { "id": "c3", "sourceNodeId": "p1", "targetNodeId": "end-success", "sourcePort": "success", "targetPort": "input", "label": "skipToEnd", "condition": "skip_b" }
+      ],
+      "viewport": { "x": 0, "y": 0, "zoom": 1 },
+      "layout": { "gridSize": 20, "snapToGrid": true, "showGrid": true }
+    },
+    "execution": {},
+    "metadata": { "nodeCount": 5, "connectionCount": 4, "complexity": 1 }
+  }
+}
+
+
+

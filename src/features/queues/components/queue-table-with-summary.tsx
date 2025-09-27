@@ -7,7 +7,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { AutoTable } from '@/components/auto-generated/table/auto-table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils/generalUtils';
@@ -17,6 +17,7 @@ import {
   PauseCircle, 
   FileText
 } from 'lucide-react';
+import { SplitButton } from '@/components/ui/split-button';
 
 interface QueueSummaryData {
   queueType: string;
@@ -130,6 +131,25 @@ export function QueueTableWithSummary({
           resourceKey="queues"
           className="h-full"
           customSearchPlaceholder="Search queues by name, type, or office..."
+          headerActions={(handleAdd) => (
+            <SplitButton
+              primaryAction={{
+                label: '+ Add GDS Queue',
+                onClick: handleAdd
+              }}
+              secondaryActions={[
+                {
+                  label: '+ Add Virtual Queue',
+                  onClick: handleAdd
+                },
+                {
+                  label: '+ Add Named Queue',
+                  onClick: handleAdd
+                }
+              ]}
+              variant="default"
+            />
+          )}
         />
       </div>
     </div>

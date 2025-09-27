@@ -67,7 +67,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -86,7 +86,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -105,7 +105,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -120,7 +120,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
 
@@ -164,7 +164,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: false
+        
       }
     },
     {
@@ -180,7 +180,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: false
+        
       },
       validation: [
         { type: 'maxLength', value: 2000, message: 'Description cannot exceed 2000 characters' }
@@ -233,7 +233,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -247,7 +247,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -261,7 +261,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     },
     {
@@ -275,7 +275,7 @@ export const DATA_TABLE_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     }
   ],

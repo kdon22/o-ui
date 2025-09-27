@@ -56,8 +56,8 @@ export class WorkflowSerializer {
       workflowType,
       executionMode,
       priority: 50, // Default priority
-      timeout: WorkflowSerializer.calculateTimeout(visualWorkflow),
-      enableRetry: WorkflowSerializer.hasRetryLogic(visualWorkflow),
+      // Simplified: runtime will manage retries/timeouts dynamically
+      enableRetry: false,
       enableRollback: WorkflowSerializer.hasErrorHandling(visualWorkflow),
       enableNotifications: true, // Default
       enableAuditLog: true, // Default
@@ -65,7 +65,11 @@ export class WorkflowSerializer {
       // Store the visual definition
       definition: {
         visual: {
-          nodes: visualWorkflow.nodes,
+          nodes: visualWorkflow.nodes.map((n) => {
+            if ((n as any).type !== 'process') return n as any;
+            const { rules, timeout, retryCount, ...rest } = n as any;
+            return rest;
+          }),
           connections: visualWorkflow.connections,
           viewport: visualWorkflow.viewport,
           layout: visualWorkflow.layout
@@ -188,23 +192,9 @@ export class WorkflowSerializer {
   // ANALYSIS HELPERS
   // ============================================================================
 
-  private static calculateTimeout(visual: VisualWorkflow): number {
-    const processNodes = visual.nodes.filter(n => n.type === 'process');
-    const totalTimeout = processNodes.reduce((sum, node) => {
-      if ('timeout' in node && node.timeout) {
-        return sum + node.timeout;
-      }
-      return sum + 30; // Default timeout
-    }, 0);
-    
-    return Math.max(totalTimeout, 300); // Minimum 5 minutes
-  }
+  // Removed timeout calculation – runtime manages timeouts
 
-  private static hasRetryLogic(visual: VisualWorkflow): boolean {
-    return visual.nodes.some(node => 
-      node.type === 'process' && 'retryCount' in node && node.retryCount && node.retryCount > 0
-    );
-  }
+  // Removed retry detection – runtime manages retries
 
   private static hasErrorHandling(visual: VisualWorkflow): boolean {
     return visual.connections.some(conn => conn.sourcePort === 'error');
@@ -312,10 +302,7 @@ export class WorkflowSerializer {
     switch (node.type) {
       case 'process':
         return {
-          processId: 'processId' in node ? node.processId : null,
-          timeout: 'timeout' in node ? node.timeout : 30,
-          retryCount: 'retryCount' in node ? node.retryCount : 0,
-          rules: 'rules' in node ? node.rules : []
+          processId: 'processId' in node ? (node as any).processId : null
         };
       
       case 'decision':

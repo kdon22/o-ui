@@ -91,6 +91,7 @@ export const FIELD_TYPES = {
   multiSelect: { input: 'MultiSelectInput', display: 'BadgeListDisplay' },
   tags: { input: 'TagInput', display: 'TagDisplay' },
   switch: { input: 'SwitchInput', display: 'BadgeDisplay' },
+  radio: { input: 'RadioInput', display: 'BadgeDisplay' },
   number: { input: 'NumberInput', display: 'TextDisplay' },
   color: { input: 'ColorInput', display: 'ColorDisplay' },
   icon: { input: 'IconInput', display: 'IconDisplay' },
@@ -117,7 +118,9 @@ export const FIELD_TYPES = {
   // Permission management field types
   'permission-matrix': { input: 'PermissionMatrixInput', display: 'PermissionMatrixDisplay' },
   // Generic matrix field type (replaces permission-matrix for flexibility)
-  matrix: { input: 'MatrixInput', display: 'MatrixDisplay' }
+  matrix: { input: 'MatrixInput', display: 'MatrixDisplay' },
+  // Queue scheduling field type
+  'schedule-builder': { input: 'ScheduleBuilderInput', display: 'ScheduleBuilderDisplay' }
 } as const;
 
 export type FieldType = keyof typeof FIELD_TYPES;
@@ -139,7 +142,6 @@ export interface FieldFormConfig {
 
 export interface FieldTableConfig {
   width: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'auto';
-  showInTable?: boolean;
   sortable?: boolean;
   filterable?: boolean;
   mobile?: {
@@ -148,7 +150,10 @@ export interface FieldTableConfig {
 }
 
 export interface FieldOptions {
-  static?: Array<{label: string; value: string; icon?: string}>;
+  // Static options
+  static?: Array<{label: string; value: string; icon?: string; disabled?: boolean}>;
+  
+  // Dynamic options (API-driven)
   dynamic?: {
     resource: string;
     valueField: string;
@@ -156,10 +161,23 @@ export interface FieldOptions {
     displayField?: string;
     filter?: (item: any) => boolean;
   };
-  // Component selector options
+  
+  // Enable search functionality (defaults to true)
+  searchable?: boolean;
+  
+  // Conditional filtering based on other field values
+  conditional?: Array<{
+    watchField: string;
+    apiFilters?: Record<string, string | ((value: any) => Record<string, any>)>;
+    localFilter?: (option: any, watchedValue: any) => boolean;
+  }>;
+  
+  // Component selector specific options
   componentType?: 'rules' | 'classes' | 'tables' | 'workflows';
   multiSelect?: boolean;
-  showPreview?: boolean;
+  
+  // Radio button layout options
+  layout?: 'vertical' | 'horizontal';
 }
 
 // Context sources for auto-population
@@ -237,11 +255,9 @@ export interface FieldSchema {
   mobile?: {
     priority?: 'high' | 'medium' | 'low';
     displayFormat?: string;
-    showInTable?: boolean;
     tableWidth?: string | number;
   };
   desktop?: {
-    showInTable?: boolean;
     tableWidth?: string | number;
   };
 }

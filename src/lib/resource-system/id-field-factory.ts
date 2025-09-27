@@ -29,7 +29,7 @@ export function createBulletproofIdField(): FieldDefinition {
     },
     table: {
       width: 'sm',
-      showInTable: false // Usually hidden in tables too
+       // Usually hidden in tables too
     },
     validation: [
       { 
@@ -60,7 +60,7 @@ export function createBulletproofOriginalIdField(entityName: string): FieldDefin
     },
     table: {
       width: 'sm',
-      showInTable: false
+      
     }
   };
 }
@@ -87,7 +87,7 @@ export function createBulletproofContextFields(): FieldDefinition[] {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -107,7 +107,7 @@ export function createBulletproofContextFields(): FieldDefinition[] {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     }
   ];

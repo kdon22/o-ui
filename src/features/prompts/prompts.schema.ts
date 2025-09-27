@@ -94,7 +94,7 @@ export const PROMPT_SCHEMA: ResourceSchema = {
         ]
       },
       form: { row: 3, width: 'half', showInForm: false },
-      table: { width: 'sm', sortable: true, showInTable: false }
+      table: { width: 'sm', sortable: true,  }
     },
     
     {
@@ -119,7 +119,7 @@ export const PROMPT_SCHEMA: ResourceSchema = {
         { type: 'required', message: 'Layout configuration is required' }
       ],
       form: { row: 4, width: 'full', showInForm: false },
-      table: { width: 'auto', showInTable: false }
+      table: { width: 'auto',  }
     },
     
     // Relationship to rule  
@@ -133,7 +133,7 @@ export const PROMPT_SCHEMA: ResourceSchema = {
         required: true
       },
       form: { row: 5, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     }
   ],
 

@@ -89,7 +89,7 @@ export const CLASS_SCHEMA: ResourceSchema = {
         sortable: true,
         filterable: true,
         searchable: true,
-        showInTable: false
+        
       },
       validation: [
         { type: 'maxLength', value: 10, message: 'Class ID cannot exceed 10 characters' }
@@ -122,7 +122,7 @@ export const CLASS_SCHEMA: ResourceSchema = {
         sortable: true,
         filterable: true,
         searchable: true,
-        showInTable: true
+        
       },
       validation: [
         { type: 'required', message: 'Class name is required' },
@@ -149,7 +149,7 @@ export const CLASS_SCHEMA: ResourceSchema = {
         sortable: true,
         filterable: true,
         searchable: true,
-        showInTable: false // Hidden by default
+         // Hidden by default
       },
       validation: [
         { type: 'maxLength', value: 100, message: 'Python class name cannot exceed 100 characters' }
@@ -174,7 +174,7 @@ export const CLASS_SCHEMA: ResourceSchema = {
         sortable: false,
         filterable: false,
         searchable: true,
-        showInTable: true // Too long for table
+         // Too long for table
       },
       validation: [
         { type: 'maxLength', value: 1000, message: 'Description cannot exceed 1000 characters' }
@@ -194,7 +194,7 @@ export const CLASS_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: true
+        
       }
     },
     {
@@ -216,7 +216,6 @@ export const CLASS_SCHEMA: ResourceSchema = {
         sortable: true,
         filterable: true,
         searchable: false,
-        showInTable: false,
         displayType: 'status'
       }
     },
@@ -242,7 +241,6 @@ export const CLASS_SCHEMA: ResourceSchema = {
         sortable: true,
         filterable: true,
         searchable: false,
-        showInTable: false,
         displayType: 'status'
       }
     }

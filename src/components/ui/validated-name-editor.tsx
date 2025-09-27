@@ -127,17 +127,6 @@ export function ValidatedNameEditor({
     }
   };
 
-  const handleBlur = () => {
-    // Small delay to allow clicking save button or suggestions
-    setTimeout(() => {
-      if (canSave) {
-        handleSave();
-      } else {
-        onCancel();
-      }
-    }, 150);
-  };
-
   // ============================================================================
   // RENDER - DISPLAY MODE
   // ============================================================================
@@ -171,7 +160,6 @@ export function ValidatedNameEditor({
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
             placeholder={placeholder}
             className={cn(
               "h-8 text-lg font-semibold bg-white dark:bg-gray-800",

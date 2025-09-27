@@ -51,7 +51,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
 
@@ -74,7 +74,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: true
+        
       },
       validation: [
         { type: 'maxLength', value: 255, message: 'Name cannot exceed 255 characters' }
@@ -95,7 +95,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: true
+        
       },
       validation: [
         { type: 'email', message: 'Please enter a valid email address' }
@@ -116,7 +116,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: true
+        
       },
       options: {
         dynamic: {
@@ -147,7 +147,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       },
       options: {
         static: [
@@ -174,7 +174,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       },
       validation: [
         { type: 'min', value: 8, message: 'Font size must be at least 8px' },
@@ -195,7 +195,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: false
+        
       },
       options: {
         static: [
@@ -222,7 +222,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -240,7 +240,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -258,7 +258,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       },
       options: {
         static: [
@@ -284,7 +284,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       },
       validation: [
         { type: 'min', value: 1, message: 'Tab size must be at least 1' },
@@ -310,7 +310,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       },
       options: {
         static: [
@@ -337,7 +337,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       },
       options: {
         static: [
@@ -363,7 +363,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -381,7 +381,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     },
     {
@@ -399,7 +399,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       },
       options: {
         static: [
@@ -426,7 +426,7 @@ export const USER_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xs',
-        showInTable: false
+        
       }
     }
   ],

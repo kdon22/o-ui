@@ -56,7 +56,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -65,7 +65,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       type: 'text',
       autoValue: { source: 'session.user.tenantId', required: true },
       form: { row: 1, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     },
     {
       key: 'branchId',
@@ -73,7 +73,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       type: 'text',
       autoValue: { source: 'session.user.branchContext.currentBranchId', required: true },
       form: { row: 1, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     },
     {
       key: 'originalTagGroupId',
@@ -81,7 +81,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       type: 'text',
       description: 'Reference to the original tag group for branching',
       form: { row: 1, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     },
     {
       key: 'name',
@@ -96,7 +96,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: true
+        
       }
     },
     {
@@ -111,7 +111,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: true
+        
       }
     },
     {
@@ -126,7 +126,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
     {
@@ -141,7 +141,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
     {
@@ -156,7 +156,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
 
@@ -172,7 +172,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     },
     {
@@ -186,7 +186,7 @@ export const TAG_GROUP_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     }
   ],

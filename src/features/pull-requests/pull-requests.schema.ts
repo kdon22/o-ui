@@ -356,7 +356,7 @@ export const PULL_REQUEST_SCHEMA = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     // User input fields
@@ -393,7 +393,7 @@ export const PULL_REQUEST_SCHEMA = {
       },
       table: {
         width: 'xl',
-        showInTable: false
+        
       }
     },
     {
@@ -444,7 +444,7 @@ export const PULL_REQUEST_SCHEMA = {
         showInForm: false
       },
       table: {
-        showInTable: false
+        
       }
     },
     {
@@ -460,7 +460,7 @@ export const PULL_REQUEST_SCHEMA = {
         showInForm: false
       },
       table: {
-        showInTable: false
+        
       }
     },
     {
@@ -493,7 +493,7 @@ export const PULL_REQUEST_SCHEMA = {
         showInForm: false
       },
       table: {
-        showInTable: false
+        
       }
     },
     {
@@ -504,7 +504,7 @@ export const PULL_REQUEST_SCHEMA = {
         showInForm: false
       },
       table: {
-        showInTable: false
+        
       }
     }
   ],

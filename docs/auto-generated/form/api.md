@@ -26,8 +26,44 @@ interface AutoFormProps {
 Important exports:
 - `AutoForm` from `auto-form.tsx`
 - `FormField` from `form-field.tsx`
-- `useDynamicOptions` from `use-dynamic-options.ts`
+- `useSmartSelect` from `use-smart-select.ts` 🚀
+- `useSelectOptions` from `use-select-options.ts` (SmartSelect compatibility wrapper)
 - Utilities and types from `form-utils.ts`, `types.ts`
+
+### SmartSelect Options API
+
+```typescript
+interface SmartSelectOptions {
+  // CORE CONFIG - ONE LINE TO RULE THEM ALL
+  source?: string;                    // 'offices.list', 'workflows.list', etc.
+  
+  // SMART DEFAULTS (optional)
+  valueField?: string;                // Auto-infers 'id' if not specified
+  labelField?: string;                // Auto-infers 'name' if not specified  
+  searchable?: boolean;               // Auto-enables for 10+ items
+  placeholder?: string | 'auto';      // Auto-generates "Select {label}..."
+  
+  // DECLARATIVE DEPENDENCIES 
+  when?: Record<string, any>;         // { vendor: '=${vendor}', type: { 'GDS': {...} }}
+  
+  // ADVANCED FEATURES (optional)
+  transform?: (item: any) => SmartSelectOption;  // Custom display logic
+  cache?: string | number;            // Cache duration: '5m', 300, etc.
+  debounce?: number;                  // Debounce dependency changes (ms)
+  
+  // LEGACY SUPPORT (auto-converted)
+  static?: Array<{ value: string; label: string; disabled?: boolean }>;
+  dynamic?: { resource: string; valueField: string; labelField: string };
+  conditional?: any[];                // Legacy conditional format
+}
+
+interface SmartSelectOption {
+  value: string;
+  label: string; 
+  disabled?: boolean;
+  metadata?: Record<string, any>;
+}
+```
 
 Utilities:
 - `getFormValidationSchema(schema, isCreate)` – Zod schema from `ResourceSchema`

@@ -611,7 +611,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -625,7 +625,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: true
+        
       }
     },
     {
@@ -648,7 +648,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: true
+        
       }
     },
     {
@@ -670,7 +670,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: true
+        
       }
     },
     {
@@ -690,7 +690,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: true
+        
       }
     },
     {
@@ -705,7 +705,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
     {
@@ -719,7 +719,7 @@ export const CREDENTIAL_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: false
+        
       }
     }
   ],

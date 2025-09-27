@@ -50,7 +50,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
         trigger: 'create'
       },
       ui: {
-        showInTable: false,
         showInForm: false
       }
     },
@@ -60,7 +59,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
       type: 'text',
       required: true,
       ui: {
-        showInTable: true,
         showInForm: true
       }
     },
@@ -70,7 +68,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
       type: 'text',
       required: true,
       ui: {
-        showInTable: true,
         showInForm: true
       }
     },
@@ -84,7 +81,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
         trigger: 'create'
       },
       ui: {
-        showInTable: false,
         showInForm: false
       }
     },
@@ -101,7 +97,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
       ],
       defaultValue: 'active',
       ui: {
-        showInTable: true,
         showInForm: true
       }
     },
@@ -117,7 +112,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
         { value: 'trial', label: 'Trial' }
       ],
       ui: {
-        showInTable: true,
         showInForm: true
       }
     },
@@ -131,7 +125,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
         trigger: 'create'
       },
       ui: {
-        showInTable: true,
         showInForm: true
       }
     },
@@ -140,7 +133,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
       label: 'End Date',
       type: 'datetime',
       ui: {
-        showInTable: true,
         showInForm: true
       }
     },
@@ -154,7 +146,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
         trigger: 'create'
       },
       ui: {
-        showInTable: true,
         showInForm: false
       }
     },
@@ -168,7 +159,6 @@ export const PACKAGE_SUBSCRIPTION_SCHEMA: ResourceSchema = {
         trigger: 'update'
       },
       ui: {
-        showInTable: false,
         showInForm: false
       }
     }

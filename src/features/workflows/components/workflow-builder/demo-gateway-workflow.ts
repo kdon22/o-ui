@@ -33,9 +33,7 @@ export const DEMO_GATEWAY_WORKFLOW: VisualWorkflow = {
       label: 'Level 2 Process',
       processId: 'level2-process-id',
       processName: 'Level 2 Processing',
-      rules: ['rule-1', 'rule-2'],
-      timeout: 30,
-      retryCount: 3
+      
     },
     
     // Parallel Gateway (Auto-created when connecting multiple processes)
@@ -58,9 +56,7 @@ export const DEMO_GATEWAY_WORKFLOW: VisualWorkflow = {
       label: 'UTR Processing',
       processId: 'utr-process-id',
       processName: 'UTR Data Processing',
-      rules: ['utr-rule-1', 'utr-rule-2'],
-      timeout: 45,
-      retryCount: 2
+      
     },
     
     // Level 3 Processing
@@ -72,9 +68,7 @@ export const DEMO_GATEWAY_WORKFLOW: VisualWorkflow = {
       label: 'Level 3 Processing',
       processId: 'level3-process-id',
       processName: 'Level 3 Advanced Processing',
-      rules: ['level3-rule-1', 'level3-rule-2'],
-      timeout: 60,
-      retryCount: 1
+      
     },
     
     // Merge Gateway (Combines parallel results)
@@ -97,9 +91,7 @@ export const DEMO_GATEWAY_WORKFLOW: VisualWorkflow = {
       label: 'Final Processing',
       processId: 'final-process-id',
       processName: 'Combine Results',
-      rules: ['final-rule-1'],
-      timeout: 30,
-      retryCount: 3
+      
     },
     
     // End Node
@@ -259,9 +251,7 @@ export function createCustomGatewayDemo(config: {
     label: config.sourceProcess,
     processId: `${config.sourceProcess.toLowerCase()}-id`,
     processName: config.sourceProcess,
-    rules: [],
-    timeout: 30,
-    retryCount: 3
+    
   });
   xPos += 200;
 
@@ -292,9 +282,7 @@ export function createCustomGatewayDemo(config: {
       label: processName,
       processId: `${processName.toLowerCase()}-id`,
       processName: processName,
-      rules: [],
-      timeout: 45,
-      retryCount: 2
+      
     });
     
     processNodeIds.push(processId);

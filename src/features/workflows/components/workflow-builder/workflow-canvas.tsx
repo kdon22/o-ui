@@ -146,9 +146,7 @@ export function WorkflowCanvas({
           processId: processData.processId,
           processName: processData.processName,
           processType: processData.processType,
-          rules: [],
-          timeout: 30,
-          retryCount: 3
+          
         };
 
         // Add node to workflow using the builder action

@@ -57,7 +57,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: false
+        
       }
     },
     {
@@ -66,7 +66,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       type: 'text',
       autoValue: { source: 'session.user.tenantId', required: true },
       form: { row: 1, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     },
     {
       key: 'branchId',
@@ -74,7 +74,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       type: 'text',
       autoValue: { source: 'session.user.branchContext.currentBranchId', required: true },
       form: { row: 1, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     },
     {
       key: 'originalTagId',
@@ -82,7 +82,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       type: 'text',
       description: 'Reference to the original tag for branching',
       form: { row: 1, width: 'full', showInForm: false },
-      table: { width: 'sm', showInTable: false }
+      table: { width: 'sm',  }
     },
     {
       key: 'name',
@@ -97,7 +97,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'lg',
-        showInTable: true
+        
       }
     },
     {
@@ -112,7 +112,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'xl',
-        showInTable: true
+        
       }
     },
     {
@@ -136,7 +136,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: true
+        
       }
     },
     {
@@ -151,7 +151,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
     {
@@ -166,7 +166,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
     {
@@ -181,7 +181,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
 
@@ -200,7 +200,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'sm',
-        showInTable: true
+        
       }
     },
 
@@ -216,7 +216,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     },
     {
@@ -230,7 +230,7 @@ export const TAG_SCHEMA: ResourceSchema = {
       },
       table: {
         width: 'md',
-        showInTable: false
+        
       }
     }
   ],

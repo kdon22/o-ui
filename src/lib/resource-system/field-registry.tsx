@@ -490,7 +490,6 @@ export function getFieldDisplayConfig(field: FieldSchema, isMobile: boolean) {
   const config = isMobile ? field.mobile : field.desktop;
   
   return {
-    showInTable: config?.showInTable ?? true,
     tableWidth: config?.tableWidth ?? 'auto',
     priority: field.mobile?.priority ?? 'medium',
     displayFormat: field.mobile?.displayFormat ?? 'text'

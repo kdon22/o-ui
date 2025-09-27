@@ -1,19 +1,21 @@
 import React, { useMemo, useEffect } from 'react';
 import { Controller } from 'react-hook-form';
 import type { FieldSchema } from '@/lib/resource-system/schemas';
-import { useDynamicOptions, type DynamicOption } from './use-dynamic-options';
+import { useSelectOptions } from './use-select-options';
+import { SearchableSelect } from './fields/searchable-select';
 import { Input } from '@/components/ui/input';
 import { TextArea } from '@/components/ui/text-area';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { AlertCircle } from 'lucide-react';
 import { convertToPythonName } from '@/components/editor/utils/python-name-converter'
 import { TagField } from '@/components/ui/tags/tag-field';
 import { ComponentSelector } from './fields/component-selector';
 import { CurrencyField } from './fields/currency-field';
 import { TagsField } from './fields/tags-field';
 import { MatrixField, createPermissionMatrixConfig, getMatrixDefaultValues } from './fields/matrix-field';
+import { ScheduleBuilder } from './fields/schedule-builder';
 // import { cn } from '@/lib/utils/generalUtils'; // No longer needed
 
 // ============================================================================
@@ -37,26 +39,17 @@ export const FormField: React.FC<FormFieldProps> = ({
   tenantId, 
   branchId 
 }) => {
-  // Always call useDynamicOptions hook but only use it when field has dynamic options
-  // This ensures the hook is called in the same order every time
-  const { options: dynamicOptions, loading: optionsLoading, error: optionsError } = useDynamicOptions(field, tenantId, branchId);
-
-  // Determine options to use
-  const options = useMemo(() => {
-
-
-    if (field.options?.static) {
-      const staticOptions = field.options.static.map((option: any) => ({
-        ...option,
-        disabled: option.disabled || false
-      }));
-      return staticOptions;
-    }
-    if (field.options?.dynamic) {
-      return dynamicOptions;
-    }
-    return [];
-  }, [field.options, dynamicOptions, field.key, field.label, field.type, optionsLoading, optionsError]);
+  // Use SmartSelect system for select and radio fields only 🚀
+  const selectResults = field.type === 'select' || field.type === 'radio' 
+    ? useSelectOptions(
+        field as any, // TODO: Update FieldSchema type to extend SmartSelectOptions
+        control, 
+        tenantId, 
+        branchId
+      )
+    : { options: [], loading: false, error: null, placeholder: '', searchable: false };
+    
+  const { options, loading: optionsLoading, error: optionsError, placeholder: smartPlaceholder, searchable: isSmartSearchable } = selectResults;
 
   const renderField = () => {
     switch (field.type) {
@@ -130,49 +123,61 @@ export const FormField: React.FC<FormFieldProps> = ({
           />
         );
 
+      case 'radio':
+        return (
+          <Controller
+            name={field.key}
+            control={control}
+            render={({ field: formField }) => {
+              const layout = field.options?.layout || 'vertical';
+              const isHorizontal = layout === 'horizontal';
+              
+              return (
+                <RadioGroup
+                  value={formField.value || ''}
+                  onValueChange={formField.onChange}
+                  className={isHorizontal 
+                    ? "flex flex-row gap-4 flex-wrap" 
+                    : "flex flex-col space-y-2"
+                  }
+                >
+                  {options.map((option) => (
+                    <div 
+                      key={option.value} 
+                      className="flex items-center space-x-2"
+                    >
+                      <RadioGroupItem value={option.value} id={`${field.key}-${option.value}`} />
+                      <Label 
+                        htmlFor={`${field.key}-${option.value}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              );
+            }}
+          />
+        );
+
       case 'select':
         return (
           <Controller
             name={field.key}
             control={control}
             render={({ field: formField }) => (
-              <Select
-                value={formField.value}
-                onValueChange={formField.onChange}
-                disabled={optionsLoading}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}...`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {optionsLoading && (
-                    <SelectItem value="" disabled>
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading...
-                      </div>
-                    </SelectItem>
-                  )}
-                  {optionsError && (
-                    <SelectItem value="" disabled>
-                      <div className="flex items-center gap-2 text-destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        Error loading options
-                      </div>
-                    </SelectItem>
-                  )}
-
-                  {options.map((option) => (
-                    <SelectItem 
-                      key={option.value} 
-                      value={option.value}
-                      disabled={option.disabled}
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={formField.value || ''}
+                onChange={formField.onChange}
+                options={options}
+                placeholder={smartPlaceholder || field.placeholder || `Select ${field.label.toLowerCase()}...`}
+                loading={optionsLoading}
+                error={optionsError}
+                disabled={false}
+                className="w-full"
+                searchable={isSmartSearchable}
+              />
             )}
           />
         );
@@ -219,7 +224,6 @@ export const FormField: React.FC<FormFieldProps> = ({
                 onChange={formField.onChange}
                 componentType={field.options?.componentType || 'rules'}
                 multiSelect={field.options?.multiSelect !== false}
-                showPreview={field.options?.showPreview !== false}
               />
             )}
           />
@@ -263,6 +267,22 @@ export const FormField: React.FC<FormFieldProps> = ({
                 />
               );
             }}
+          />
+        );
+
+      case 'schedule-builder':
+        return (
+          <Controller
+            name={field.key}
+            control={control}
+            render={({ field: formField }) => (
+              <ScheduleBuilder
+                value={formField.value || null}
+                onChange={formField.onChange}
+                placeholder={field.placeholder}
+                disabled={false}
+              />
+            )}
           />
         );
 

@@ -211,20 +211,12 @@ export function WorkflowBuilder({
       if (!workflow) {
         console.log('🐛 [DEBUG] Creating new workflow via mutation');
         // Create new workflow in database
+        const initialVisual = WorkflowSerializer.toSchema(visualWorkflow).definition;
         const result = await saveWorkflowMutation.mutateAsync({
           name: name.trim(),
           description: '',
           type: 'SEQUENTIAL',
-          steps: {
-            processes: [],
-            connections: [],
-            variables: {}
-          },
-          // executionSettings: {
-          //   timeouts: { default: 30000 },
-          //   parallelLimits: 5,
-          //   errorHandling: 'STOP_ON_ERROR'
-          // },
+          definition: initialVisual,
           isActive: true
         });
 
@@ -318,7 +310,7 @@ export function WorkflowBuilder({
       id: workflow.id,
       name: schemaData.name || visualWorkflow.name,
       description: schemaData.description || visualWorkflow.description,
-      steps: schemaData.definition || {
+      definition: schemaData.definition || {
         visual: {
           nodes: visualWorkflow.nodes || [],
           connections: visualWorkflow.connections || [],
@@ -335,12 +327,7 @@ export function WorkflowBuilder({
           connectionCount: visualWorkflow.connections?.length || 0,
           complexity: 1
         }
-      },
-      // executionSettings: schemaData.executionSettings || {
-      //   timeouts: { default: 30000 },
-      //   parallelLimits: 5,
-      //   errorHandling: 'STOP_ON_ERROR'
-      // }
+      }
     });
   }, [visualWorkflow, workflow, updateWorkflowMutation]);
 
